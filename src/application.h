@@ -7,6 +7,8 @@
 #include "sharedstate.h"
 #include "vga.h"
 #include "emustats.h"
+#include "probe.h"
+#include "debugger.h"
 
 typedef struct {
     EmuStats stats;
@@ -25,6 +27,7 @@ typedef struct {
     Audio audio;
     Vga vga;
     SharedState sharedState;
+    Debugger debugger;
     bool is_stepping; // true = paused, false = running    
 } Application;
 

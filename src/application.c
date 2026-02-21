@@ -30,6 +30,25 @@ static bool initAudio(Application *app) {
     return true;
 }
 
+static int dummyDisassemblyFunc(void *userdata, Disassembly *disassembly, int maxLines) {
+    if (maxLines > 0) {
+        strncpy(disassembly[0].instruction, "moveq #0,d0", DIS_INSTR_LEN);
+        strncpy(disassembly[0].address,  "$0010 0000", DIS_ADDR_LEN);
+        disassembly[1].current = false;
+        return 1;
+    }
+    return 0;
+}
+
+static int dummyCpuStateFunc(void *userdata, CpuState *cpuState, int maxLines) {
+    if (maxLines > 0) {
+        strcpy(cpuState[0].label, "D0");
+        strcpy(cpuState[0].value, "$12345678");
+        return 1;
+    }
+    return 0;
+}
+
 static void initVideo(Application *app) {
     vgaInit(&app->vga, &app->sharedState);
     SDL_SetAtomicPointer(&app->sharedState.readyFramePtr, NULL);
@@ -90,6 +109,9 @@ bool appInit(Application *app) {
     }
 
     emuStatsInit(&app->stats, SDL_GetTicksNS());
+
+    debuggerInit(&app->debugger, dummyDisassemblyFunc, dummyCpuStateFunc, app, app->renderer, &app->font, 
+        vgaGetWidth(&app->vga)/2, vgaGetHeight(&app->vga));
 
     app->running = true;
     app->is_fullscreen = false;
@@ -226,12 +248,21 @@ static void renderTargetTexture(Application *app) {
 }
 
 static void render(Application* app) {
-    SDL_SetRenderTarget(app->renderer, app->target);
+    bool showDebug = app->is_stepping;
+    if (showDebug) {
+        debuggerUpdate(&app->debugger);
+    }
+
+    SDL_SetRenderTarget(app->renderer, app->target);    
     // Clear to Black
     SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
     SDL_RenderClear(app->renderer);    
 
     renderEmulatorOutput(app);
+    if (showDebug) {
+        SDL_FRect destRect = {0, 0, debuggerWidth(&app->debugger), debuggerHeight(&app->debugger)};
+        SDL_RenderTexture(app->renderer, debuggerTexture(&app->debugger), NULL, &destRect);
+    }
 
     if (!app->is_stepping) {
         emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(&app->vga));
@@ -242,12 +273,8 @@ static void render(Application* app) {
             emuStatsCurrentFps(&app->stats),
             emuStatsRenderFps(&app->stats),
             emuStatsCurrentMhz(&app->stats));
-        fontWrite(&app->font, buf, 8, 8, 0xFFFFFFFF);
+        fontWrite(&app->font, buf, 0, 0, 0xFFFFFF7F); 
     }
-
-    fontWrite(&app->font, "Hello world", 0, 0, 0xffffffff);
-    //fontWrite(&app->font, "Maybe red?", 0,8, 0xff0000ff);
-
     renderTargetTexture(app);
 
     // Swap buffers
