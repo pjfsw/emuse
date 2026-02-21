@@ -4,7 +4,7 @@ project(emuse C)
 # Generate compile_commands.json for VS Code / Clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 11)
 
 # 1. SDL3 Setup
 # Ensure SDL3 is installed on your system (via brew, apt, or vcpkg)
