@@ -28,7 +28,8 @@ typedef struct {
     Vga vga;
     SharedState sharedState;
     Debugger debugger;
-    bool is_stepping; // true = paused, false = running    
+    bool is_stepping; // true = paused, false = running  
+    bool showSpeed;   
 } Application;
 
 bool appInit(Application *app);

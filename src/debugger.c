@@ -20,6 +20,14 @@ void debuggerUpdate(Debugger *debugger) {
     SDL_SetRenderTarget(debugger->renderer, debugger->backdrop);
     SDL_SetRenderDrawColor(debugger->renderer, 0, 0, 0, 191);
     SDL_RenderClear(debugger->renderer);    
+    SDL_SetRenderDrawColor(debugger->renderer, 0,0,0,255);
+    SDL_FRect windowFrame = {
+        .x = 0,
+        .y = 0,
+        .w = debugger->width-1,
+        .h = debugger->height-1
+    };
+    SDL_RenderRect(debugger->renderer, &windowFrame);
 
     const uint32_t valueColor = 0xffffffff;
     const uint32_t labelColor = 0x6f8fffff;
@@ -28,15 +36,15 @@ void debuggerUpdate(Debugger *debugger) {
     CpuState cpuState[maxStates];
     for (int i = 0; i < debugger->cpuStateFunc(debugger->probeUserdata, cpuState, maxStates); i++) {
         int y = i * 8;
-        fontWrite(debugger->font, cpuState[i].label, 0, y, labelColor);
-        fontWrite(debugger->font, cpuState[i].value, 16 * 8, y, valueColor);
+        fontWrite(debugger->font, cpuState[i].label, 8, y, labelColor);
+        fontWrite(debugger->font, cpuState[i].value, 17 * 8, y, valueColor);
     }
     const int maxDis = 8;
     Disassembly disassembly[maxDis];
     for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis); i++) {
         int y = (maxStates + 1 + i) * 8;
-        fontWrite(debugger->font, disassembly[i].address, 0, y, labelColor);
-        fontWrite(debugger->font, disassembly[i].instruction, 8 * 11, y, valueColor);
+        fontWrite(debugger->font, disassembly[i].address, 8, y, labelColor);
+        fontWrite(debugger->font, disassembly[i].instruction, 8 * 12, y, valueColor);
     }
 }
 

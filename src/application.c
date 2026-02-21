@@ -189,8 +189,11 @@ static void handleEvents(Application* app) {
                 app->running = false;
             }
 
-            if (key == SDLK_F12) {
+            if (key == SDLK_F8) {
                 toggleStepping(app);
+            }
+            if (key == SDLK_F9) {
+                app->showSpeed = !app->showSpeed;
             }
             // --- Single Step Execution ---
             if ((key == SDLK_F5) || (key == SDLK_F6) && app->is_stepping) {
@@ -264,23 +267,33 @@ static void render(Application* app) {
         SDL_RenderTexture(app->renderer, debuggerTexture(&app->debugger), NULL, &destRect);
     }
 
-    if (!app->is_stepping) {
+    if (!app->is_stepping && app->showSpeed) {
+        int y = vgaGetHeight(&app->vga)-8;
         emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(&app->vga));
         char buf[64];
+        SDL_SetRenderDrawBlendMode(app->renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(app->renderer, 0,0,0,144);
+        SDL_FRect rect = {
+            .x = 0,
+            .y = y,
+            .w = 40*8,
+            .h = 8
+        };
+        SDL_RenderFillRect(app->renderer, &rect);
         snprintf(buf,
             sizeof(buf),
             "FPS: %.1f (%.1f) | CPU: %.2f MHz",
             emuStatsCurrentFps(&app->stats),
             emuStatsRenderFps(&app->stats),
             emuStatsCurrentMhz(&app->stats));
-        fontWrite(&app->font, buf, 0, 0, 0xFFFFFF7F); 
+        fontWrite(&app->font, buf, 8, y, 0xFFFFFFDF); 
     }
     renderTargetTexture(app);
 
     // Swap buffers
     SDL_RenderPresent(app->renderer);
 
-    SDL_Delay(1);
+    SDL_DelayNS(1000);
 }
 
 void appRun(Application *app) {
