@@ -35,7 +35,7 @@ static int dummyVideoTicker(void *userdata, int ticks) {
             
             // 3. Reset the pixel counter and shift the dummy color slightly
             app->currentPixel = 0;
-            app->dummyColor += 0x00010500; // Shift colors slowly so you can see it animating
+            app->dummyColor += 0x70707070; // Shift colors slowly so you can see it animating
         }
     }
     return 0;
@@ -61,7 +61,6 @@ static bool initAudio(Application *app) {
     return true;
 }
 
-
 static void initVideo(Application *app) {
     app->activeWriteBuffer = app->bufferA;
     app->currentPixel = 0;
@@ -80,7 +79,7 @@ bool appInit(Application *app) {
     app->sampleFreq = 48000;
     app->videoFreq = 25175000;
     
-    app->width = 854;
+    app->width = 640;
     app->height = 480;
     if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS)) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
@@ -216,11 +215,42 @@ static void renderEmulatorOutput(Application *app) {
     if (readyFrame != NULL) {
         // 2. Upload the pixels to our emulator texture
         SDL_UpdateTexture(app->emuTexture, NULL, readyFrame, EMU_WIDTH * sizeof(uint32_t));
+    } else if (app->is_stepping) {
+        // Because the audio thread is locked out, it is 100% safe to read 
+        // the active PPU memory mid-draw!
+        SDL_UpdateTexture(app->emuTexture, NULL, app->activeWriteBuffer, EMU_WIDTH * sizeof(uint32_t));
     }
 
     // --- 3. Draw the emulator texture to the screen ---
     SDL_FRect destRect = {0, 0, EMU_WIDTH, EMU_HEIGHT};
     SDL_RenderTexture(app->renderer, app->emuTexture, NULL, &destRect);
+}
+
+static void renderTargetTexture(Application *app) {
+    SDL_SetRenderTarget(app->renderer, NULL);
+    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
+    SDL_RenderClear(app->renderer);
+
+    // 3. Get the current size of the window/renderer
+    int winW, winH;
+    SDL_GetRenderOutputSize(app->renderer, &winW, &winH);
+
+    // 4. Calculate the scaling factor
+    float scaleX = (float)winW / app->width;
+    float scaleY = (float)winH / app->height;
+
+    // Use the smaller scale to ensure the image fits entirely inside the window
+    float scale = (scaleX < scaleY) ? scaleX : scaleY;
+
+    // 5. Calculate the final dimensions and center position
+    SDL_FRect destRect;
+    destRect.w = app->width * scale;
+    destRect.h = app->height * scale;
+    destRect.x = (winW - destRect.w) / 2.0f;  // Center horizontally
+    destRect.y = (winH - destRect.h) / 2.0f;  // Center vertically
+
+    // 6. Draw the target texture into the calculated bounding box
+    SDL_RenderTexture(app->renderer, app->target, NULL, &destRect);
 }
 
 static void render(Application* app) {
@@ -234,8 +264,7 @@ static void render(Application* app) {
     fontWrite(&app->font, "Hello world", 0, 0, 0xffffffff);
     fontWrite(&app->font, "Maybe red?", 0,8, 0xff0000ff);
 
-    SDL_SetRenderTarget(app->renderer, NULL);
-    SDL_RenderTexture(app->renderer, app->target, NULL, NULL);
+    renderTargetTexture(app);
 
     // Swap buffers
     SDL_RenderPresent(app->renderer);
