@@ -28,6 +28,7 @@ static void tick(Vga *vga) {
         vga->x = 0;
         vga->y++;
         if (vga->y >= V_TOTAL) {
+            vga->frameCount++;
             vga->y = 0;
             // Frame complete
             SDL_SetAtomicPointer((void **)&vga->sharedState->readyFramePtr, (void *)vga->activeWriteBuffer);
@@ -43,6 +44,10 @@ void vgaTicker(void *userdata, int ticks) {
     for (int i = 0; i < ticks; i++) {
         tick(vga);
     }
+}
+
+uint32_t vgaGetFrameCount(Vga *vga) {
+    return vga->frameCount;
 }
 
 int vgaGetWidth(Vga *vga) {

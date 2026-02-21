@@ -6,8 +6,10 @@
 #include "audio.h"
 #include "sharedstate.h"
 #include "vga.h"
+#include "emustats.h"
 
 typedef struct {
+    EmuStats stats;
     Font font;
     SDL_Window *window;
     SDL_Renderer *renderer;

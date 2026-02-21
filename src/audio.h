@@ -23,6 +23,7 @@ typedef struct {
     SampleSource sampleSource;
     void *sampleSourceUserdata;
     SharedState *sharedState;    
+    uint64_t totalCyclesRun;
 } Audio;
 
 bool audioInit(Audio *audio, int cpuFreq, int sampleFreq, int videoFreq, MainTicker mainTicker,

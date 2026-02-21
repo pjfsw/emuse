@@ -9,37 +9,6 @@ static int dummyMainTicker(void *userdata) {
     // Fake executing an instruction that takes 4 cycles
     return 4; 
 }
-/*static int dummyVideoTicker(void *userdata, int ticks) {
-    Application *app = (Application*)userdata;
-    
-    // Total ticks per frame at 60Hz and 25.175MHz is roughly 419,583. 
-    // We only have 320x240 = 76,800 visible pixels. The rest is "V-Blank".
-    const int TOTAL_TICKS_PER_FRAME = app->videoFreq / 60; 
-
-    for (int i = 0; i < ticks; i++) {
-        // If we are in the visible screen area, draw a pixel
-        if (app->currentPixel < (EMU_WIDTH * EMU_HEIGHT)) {
-            app->activeWriteBuffer[app->currentPixel] = app->dummyColor;
-        }
-
-        app->currentPixel++;
-        app->dummyColor += 0x100; // Shift colors slowly so you can see it animating
-
-        // Have we hit the end of the full timing frame (including V-Blank)?
-        if (app->currentPixel >= TOTAL_TICKS_PER_FRAME) {
-            
-            // 1. Hand off the completed buffer to the main thread!
-            SDL_SetAtomicPointer(&app->sharedState.readyFramePtr, app->activeWriteBuffer);
-
-            // 2. Swap the PPU's target to the other buffer
-            app->activeWriteBuffer = (app->activeWriteBuffer == app->bufferA) ? app->bufferB : app->bufferA;
-            
-            // 3. Reset the pixel counter and shift the dummy color slightly
-            app->currentPixel = 0;
-        }
-    }
-    return 0;
-}*/
 
 static float dummySampleSource(void *userdata) {
     // Fake returning an audio sample (silence)
@@ -120,6 +89,7 @@ bool appInit(Application *app) {
         return false;
     }
 
+    emuStatsInit(&app->stats, SDL_GetTicksNS());
 
     app->running = true;
     app->is_fullscreen = false;
@@ -220,7 +190,7 @@ static void renderEmulatorOutput(Application *app) {
     } else if (app->is_stepping) {
         // Because the audio thread is locked out, it is 100% safe to read 
         // the active PPU memory mid-draw!
-        SDL_UpdateTexture(app->emuTexture, NULL, &app->vga.activeWriteBuffer, vgaGetWidth(&app->vga) * sizeof(uint32_t));
+        SDL_UpdateTexture(app->emuTexture, NULL, app->vga.activeWriteBuffer, vgaGetWidth(&app->vga) * sizeof(uint32_t));
     }
 
     // --- 3. Draw the emulator texture to the screen ---
@@ -263,13 +233,27 @@ static void render(Application* app) {
 
     renderEmulatorOutput(app);
 
+    if (!app->is_stepping) {
+        emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(&app->vga));
+        char buf[64];
+        snprintf(buf,
+            sizeof(buf),
+            "FPS: %.1f (%.1f) | CPU: %.2f MHz",
+            emuStatsCurrentFps(&app->stats),
+            emuStatsRenderFps(&app->stats),
+            emuStatsCurrentMhz(&app->stats));
+        fontWrite(&app->font, buf, 8, 8, 0xFFFFFFFF);
+    }
+
     fontWrite(&app->font, "Hello world", 0, 0, 0xffffffff);
-    fontWrite(&app->font, "Maybe red?", 0,8, 0xff0000ff);
+    //fontWrite(&app->font, "Maybe red?", 0,8, 0xff0000ff);
 
     renderTargetTexture(app);
 
     // Swap buffers
     SDL_RenderPresent(app->renderer);
+
+    SDL_Delay(1);
 }
 
 void appRun(Application *app) {

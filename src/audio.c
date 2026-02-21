@@ -21,6 +21,7 @@ static float getNextSample(Audio *audio) {
     while (actualCyclesRun < targetCycles) {
         // StepCPU() executes ONE full instruction and returns how many cycles it took
         int cycles = audio->mainTicker(audio->mainTickerUserdata);
+        audio->totalCyclesRun += cycles; // <-- Track every cycle processed!        
 
         // 4. Catch up the PPU based on exact CPU cycles run
         audio->videoFractionalAcc += (int64_t)cycles * audio->videoFreq;

@@ -14,9 +14,12 @@ typedef struct {
     int x;
     int y;
     SharedState *sharedState;
+    uint32_t frameCount;
 } Vga;
 
 void vgaInit(Vga *vga, SharedState *sharedState);
+
+uint32_t vgaGetFrameCount(Vga *vga);
 
 int vgaGetWidth(Vga *vga);
 
