@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include "font.h"
 #include "audio.h"
+#include "sharedstate.h"
+#include "vga.h"
 
-#define EMU_WIDTH 640
-#define EMU_HEIGHT 480
 typedef struct {
     Font font;
     SDL_Window *window;
@@ -21,15 +21,9 @@ typedef struct {
     int cpuFreq;
     int sampleFreq;
     Audio audio;
+    Vga vga;
     SharedState sharedState;
     bool is_stepping; // true = paused, false = running    
-
-    // --- Emulator Video State ---
-    uint32_t bufferA[EMU_WIDTH * EMU_HEIGHT];
-    uint32_t bufferB[EMU_WIDTH * EMU_HEIGHT];
-    uint32_t *activeWriteBuffer;
-    int currentPixel;
-    uint32_t dummyColor;    
 } Application;
 
 bool appInit(Application *app);

@@ -4,4 +4,4 @@
 typedef int (*MainTicker)(void *userdata);
 
 // Tick the video a number of pixels
-typedef int (*VideoTicker)(void *userdata, int ticks);
+typedef void (*VideoTicker)(void *userdata, int ticks);

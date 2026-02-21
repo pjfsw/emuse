@@ -9,7 +9,7 @@ static int dummyMainTicker(void *userdata) {
     // Fake executing an instruction that takes 4 cycles
     return 4; 
 }
-static int dummyVideoTicker(void *userdata, int ticks) {
+/*static int dummyVideoTicker(void *userdata, int ticks) {
     Application *app = (Application*)userdata;
     
     // Total ticks per frame at 60Hz and 25.175MHz is roughly 419,583. 
@@ -23,6 +23,7 @@ static int dummyVideoTicker(void *userdata, int ticks) {
         }
 
         app->currentPixel++;
+        app->dummyColor += 0x100; // Shift colors slowly so you can see it animating
 
         // Have we hit the end of the full timing frame (including V-Blank)?
         if (app->currentPixel >= TOTAL_TICKS_PER_FRAME) {
@@ -35,11 +36,10 @@ static int dummyVideoTicker(void *userdata, int ticks) {
             
             // 3. Reset the pixel counter and shift the dummy color slightly
             app->currentPixel = 0;
-            app->dummyColor += 0x70707070; // Shift colors slowly so you can see it animating
         }
     }
     return 0;
-}
+}*/
 
 static float dummySampleSource(void *userdata) {
     // Fake returning an audio sample (silence)
@@ -50,7 +50,7 @@ static bool initAudio(Application *app) {
     // Initialize audio system (20MHz CPU, 48kHz audio, 25.175MHz video)
     if (!audioInit(&app->audio, app->cpuFreq, app->sampleFreq, app->videoFreq,
                    dummyMainTicker, app, 
-                   dummyVideoTicker, app, 
+                   vgaTicker, &app->vga, 
                    dummySampleSource, app, 
                    &app->sharedState)) {
         SDL_Log("Failed to initialize audio timing engine.");
@@ -62,14 +62,15 @@ static bool initAudio(Application *app) {
 }
 
 static void initVideo(Application *app) {
-    app->activeWriteBuffer = app->bufferA;
-    app->currentPixel = 0;
-    app->dummyColor = 0xFF0000FF;  // Start with solid Red (RGBA)
+    vgaInit(&app->vga, &app->sharedState);
     SDL_SetAtomicPointer(&app->sharedState.readyFramePtr, NULL);
 
     // Create a streaming texture matching our emulator's internal resolution
-    app->emuTexture =
-        SDL_CreateTexture(app->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, EMU_WIDTH, EMU_HEIGHT);
+    app->emuTexture = SDL_CreateTexture(app->renderer,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        vgaGetWidth(&app->vga),
+        vgaGetHeight(&app->vga));
 }
 
 bool appInit(Application *app) {
@@ -111,13 +112,14 @@ bool appInit(Application *app) {
     // --- Init Emulator Sync State ---
     SDL_SetAtomicInt(&app->sharedState.runRequested, 1);
     SDL_SetAtomicInt(&app->sharedState.audioIsBusy, 0);
-    app->is_stepping = false;    
+    app->is_stepping = false;
+
+    initVideo(app);
 
     if (!initAudio(app)) {
         return false;
     }
 
-    initVideo(app);
 
     app->running = true;
     app->is_fullscreen = false;
@@ -214,15 +216,15 @@ static void renderEmulatorOutput(Application *app) {
 
     if (readyFrame != NULL) {
         // 2. Upload the pixels to our emulator texture
-        SDL_UpdateTexture(app->emuTexture, NULL, readyFrame, EMU_WIDTH * sizeof(uint32_t));
+        SDL_UpdateTexture(app->emuTexture, NULL, readyFrame, vgaGetWidth(&app->vga) * sizeof(uint32_t));
     } else if (app->is_stepping) {
         // Because the audio thread is locked out, it is 100% safe to read 
         // the active PPU memory mid-draw!
-        SDL_UpdateTexture(app->emuTexture, NULL, app->activeWriteBuffer, EMU_WIDTH * sizeof(uint32_t));
+        SDL_UpdateTexture(app->emuTexture, NULL, &app->vga.activeWriteBuffer, vgaGetWidth(&app->vga) * sizeof(uint32_t));
     }
 
     // --- 3. Draw the emulator texture to the screen ---
-    SDL_FRect destRect = {0, 0, EMU_WIDTH, EMU_HEIGHT};
+    SDL_FRect destRect = {0, 0, vgaGetWidth(&app->vga), vgaGetHeight(&app->vga)};
     SDL_RenderTexture(app->renderer, app->emuTexture, NULL, &destRect);
 }
 
