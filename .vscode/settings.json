@@ -1,4 +1,4 @@
 {
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "amiga-assembly.checkErrorOnSave": false
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+  "editor.quickSuggestionsDelay": 1000
 }

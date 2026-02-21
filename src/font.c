@@ -1,17 +1,9 @@
 #include "font.h"
+#include "texture.h"
 
 static const unsigned char packed_font_data[] = {
     #embed "font.bin"
 };
-
-static SDL_Texture *createTexture(SDL_Renderer *renderer, int w, int h) {
-    return SDL_CreateTexture(
-        renderer,
-        SDL_PIXELFORMAT_RGBA8888,
-        /*SDL_TEXTUREACCESS_TARGET*/0,
-        w, h
-    );
-}
 
 void fontInit(Font *font, SDL_Renderer *renderer) {
     font->renderer = renderer;
@@ -26,7 +18,7 @@ void fontInit(Font *font, SDL_Renderer *renderer) {
                 pixels[y * 8 + x] = bit ? fg : bg;
             }
         }        
-        font->font[i] = createTexture(renderer, 8, 8);
+        font->font[i] = textureCreate(renderer, 8, 8);
         SDL_UpdateTexture(font->font[i], NULL, pixels, 8 * sizeof(uint32_t));
     }
 }
