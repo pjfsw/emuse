@@ -39,45 +39,48 @@ void vgaInit(Vga *vga, SharedState *sharedState) {
     for (int i = 0; i < sizeof(vga->vram); i++) {
         vga->vram[i] = rand() & 65535;
     }
-    for (int i = 32; i < 128; i++) {
-        int c = (i % 2)+1;
+    /*for (int i = 0; i < 2048; i++) {
+        int c1 = (i>>8)&3;
+        int c2 = (c1+1)&3;
         for (int y = 0; y < 8; y++) {
             uint16_t data = 0;
             for (int x = 0; x < 8; x++) {
                 data = data << 2;
-                if ((packed_font_data[i*8+y] >> (7-x)) & 1) {
-                    data |= c;
+                if ((packed_font_data[(i&255)*8+y] >> (7-x)) & 1) {
+                    data |= c1;
+                } else {
+                    data |= c2;
                 }
             }
             vga->vram[i*8+y] = data;                        
         }
-    }
+    }*/
     vga->sharedState = sharedState;
     vga->activeWriteBuffer = vga->bufferA;
     vga->dummyColor = 0xFF0000FF;  // Start with solid Red (RGBA)    
 }
 
-
+/*
 static uint32_t pal[4] = {
     0x00000000,
     0xFFFFFFFF,
-    0x77777777,
-    0xFFFFFFFF
-};
+    0x2288EEFF,
+    0x444444FF
+};*/
 
 
 static void renderPixel(Vga *vga) {
-    uint16_t attr = vga->vram[0x6000 + (vga->y >> 3) * (H_PITCH>>3) + (vga->x >> 3)];
-    uint16_t scancode = attr & 0xff;
-    pal[0] = pico8_palette[(attr >> 8) & 0xf];
-    pal[1] = pico8_palette[(attr >> 12) & 0xf];
-    uint16_t fontWord = vga->vram[scancode*8+(vga->y&7)];    
-    
     int currentPixel = vga->y * H_VISIBLE + vga->x;    
-
-    uint16_t shift = 2 * (7-(currentPixel&7));    
-    uint16_t color = (fontWord >> shift) & 3;
-    vga->activeWriteBuffer[currentPixel] = pal[color];
+    int scaledPixel = currentPixel >> 1;
+    uint16_t attr = vga->vram[(vga->y >> 3) * (H_PITCH>>4) + (vga->x >> 4)];
+    uint16_t scancode = attr & 0xff;
+    uint16_t fg = (attr >> 8) & 0xf;
+    uint16_t bg = (attr >> 12) & 0xf;
+    uint16_t fontByte = packed_font_data[scancode*8+(vga->y&7)];    
+    
+    uint16_t shift = (7-(scaledPixel&7));    
+    uint16_t color = (fontByte >> shift) & 1;
+    vga->activeWriteBuffer[currentPixel] = color ? pico8_palette[fg] : pico8_palette[bg];
 }
 
 static void tick(Vga *vga) {
