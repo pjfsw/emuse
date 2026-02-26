@@ -18,7 +18,7 @@ static float dummySampleSource(void *userdata) {
 static bool initAudio(Application *app) {
     // Initialize audio system (20MHz CPU, 48kHz audio, 25.175MHz video)
     if (!audioInit(&app->audio, app->cpuFreq, app->sampleFreq, app->videoFreq,
-                   dummyMainTicker, app, 
+                   app->cpu->mainTicker, app, 
                    vgaTicker, &app->vga, 
                    dummySampleSource, app, 
                    &app->sharedState)) {
@@ -61,9 +61,9 @@ static void initVideo(Application *app) {
         vgaGetHeight(&app->vga));
 }
 
-bool appInit(Application *app) {
+bool appInit(Application *app, Cpu *cpu) {
     memset(app, 0, sizeof(Application));
-
+    app->cpu = cpu;
     app->cpuFreq = 20000000;
     app->sampleFreq = 48000;
     app->videoFreq = 25175000;

@@ -9,8 +9,10 @@
 #include "emustats.h"
 #include "probe.h"
 #include "debugger.h"
+#include "cpu.h"
 
 typedef struct {
+    Cpu *cpu;
     EmuStats stats;
     Font font;
     SDL_Window *window;
@@ -32,7 +34,7 @@ typedef struct {
     bool showSpeed;   
 } Application;
 
-bool appInit(Application *app);
+bool appInit(Application *app, Cpu *cpu);
 void appRun(Application *app);
 void appDestroy(Application *app);
 
