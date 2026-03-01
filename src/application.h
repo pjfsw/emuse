@@ -13,6 +13,11 @@
 
 typedef struct {
     Cpu *cpu;
+    MainTicker mainTicker;
+    void *mainTickerUserdata;
+    int cpuFreq;
+    int videoFreq;
+    int sampleFreq;
     EmuStats stats;
     Font font;
     SDL_Window *window;
@@ -23,9 +28,6 @@ typedef struct {
     bool is_fullscreen;
     int width;
     int height;
-    int videoFreq;
-    int cpuFreq;
-    int sampleFreq;
     Audio audio;
     Vga vga;
     SharedState sharedState;
@@ -34,7 +36,8 @@ typedef struct {
     bool showSpeed;   
 } Application;
 
-bool appInit(Application *app, Cpu *cpu);
+bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, int cpuFreq, int videoFreq,
+    int sampleFreq);
 void appRun(Application *app);
 void appDestroy(Application *app);
 

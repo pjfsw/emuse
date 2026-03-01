@@ -4,12 +4,6 @@
 #include "application.h"
 #include "texture.h"
 
-// --- Dummy Callbacks for Testing ---
-static int dummyMainTicker(void *userdata) {
-    // Fake executing an instruction that takes 4 cycles
-    return 4; 
-}
-
 static float dummySampleSource(void *userdata) {
     // Fake returning an audio sample (silence)
     return 0.0f; 
@@ -18,7 +12,7 @@ static float dummySampleSource(void *userdata) {
 static bool initAudio(Application *app) {
     // Initialize audio system (20MHz CPU, 48kHz audio, 25.175MHz video)
     if (!audioInit(&app->audio, app->cpuFreq, app->sampleFreq, app->videoFreq,
-                   app->cpu->mainTicker, app, 
+                   app->mainTicker, app->mainTickerUserdata, 
                    vgaTicker, &app->vga, 
                    dummySampleSource, app, 
                    &app->sharedState)) {
@@ -28,25 +22,6 @@ static bool initAudio(Application *app) {
     // Start the audio thread pumping!
     SDL_ResumeAudioStreamDevice(app->audio.stream);    
     return true;
-}
-
-static int dummyDisassemblyFunc(void *userdata, Disassembly *disassembly, int maxLines) {
-    if (maxLines > 0) {
-        strncpy(disassembly[0].instruction, "moveq #0,d0", DIS_INSTR_LEN);
-        strncpy(disassembly[0].address,  "$0010 0000", DIS_ADDR_LEN);
-        disassembly[1].current = false;
-        return 1;
-    }
-    return 0;
-}
-
-static int dummyCpuStateFunc(void *userdata, CpuState *cpuState, int maxLines) {
-    if (maxLines > 0) {
-        strcpy(cpuState[0].label, "D0");
-        strcpy(cpuState[0].value, "$12345678");
-        return 1;
-    }
-    return 0;
 }
 
 static void initVideo(Application *app) {
@@ -61,12 +36,15 @@ static void initVideo(Application *app) {
         vgaGetHeight(&app->vga));
 }
 
-bool appInit(Application *app, Cpu *cpu) {
+bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, int cpuFreq, int videoFreq,
+    int sampleFreq) {
     memset(app, 0, sizeof(Application));
     app->cpu = cpu;
-    app->cpuFreq = 20000000;
-    app->sampleFreq = 48000;
-    app->videoFreq = 25175000;
+    app->mainTicker = mainTicker;
+    app->mainTickerUserdata = mainTickerUserdata;
+    app->cpuFreq = cpuFreq;
+    app->videoFreq = videoFreq;
+    app->sampleFreq = sampleFreq;
     
     app->width = 640;
     app->height = 480;
@@ -110,7 +88,7 @@ bool appInit(Application *app, Cpu *cpu) {
 
     emuStatsInit(&app->stats, SDL_GetTicksNS());
 
-    debuggerInit(&app->debugger, dummyDisassemblyFunc, dummyCpuStateFunc, app, app->renderer, &app->font, 
+    debuggerInit(&app->debugger, cpu->disassemblyFunc, cpu->cpuStateFunc, cpu->probeUserdata, app->renderer, &app->font, 
         vgaGetWidth(&app->vga)/2, vgaGetHeight(&app->vga));
 
     app->running = true;

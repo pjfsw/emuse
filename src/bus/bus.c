@@ -6,6 +6,11 @@ void busInit(Bus *bus) {
     memset(bus, 0, sizeof(Bus));
 }
 
+void busAddCpu(Bus *bus, MainTicker cpuTicker, void *cpuTickerUserdata) {
+    bus->cpuTicker = cpuTicker;
+    bus->cpuTickerUserdata = cpuTickerUserdata;
+}
+
 void busAddClockFunc(Bus *bus, ClockFunc clockFunc, void *userdata) {
     bus->clockFunc[bus->clockFuncCount] = clockFunc;
     bus->clockFuncUserdata[bus->clockFuncCount] = userdata;
@@ -24,8 +29,11 @@ void busReset(Bus *bus) {
     }
 }
 
-void busClock(Bus *bus, int clocks) {
+int busClock(void *userdata) {
+    Bus *bus = (Bus*)userdata;
+    int cycles = bus->cpuTicker(bus->cpuTickerUserdata);
     for (int i = 0; i < bus->clockFuncCount; i++) {
-        bus->clockFunc[i]( bus->clockFuncUserdata[i], clocks);
+        bus->clockFunc[i]( bus->clockFuncUserdata[i], cycles);
     }
+    return cycles;
 }

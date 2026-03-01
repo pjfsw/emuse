@@ -2,10 +2,11 @@
 
 #include <stdint.h>
 #include "ticker.h"
+#include "probe.h"
 
 typedef struct {
-    uint64_t cycle;
-    MainTicker mainTicker;
+    DisassemblyFunc disassemblyFunc;
+    CpuStateFunc cpuStateFunc;
+    void *probeUserdata;
+    uint64_t cycle;  
 } Cpu;
-
-void cpu_reset(Cpu *cpu);

@@ -10,4 +10,6 @@ typedef struct {
     uint32_t areg[8];    
 } M68k;
 
-void m68k_init(M68k *m68k);
+void m68kInit(M68k *m68k);
+
+int m68kClock(void *userdata);
