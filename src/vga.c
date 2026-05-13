@@ -6,6 +6,8 @@
 #define H_TOTAL 800
 #define V_VISIBLE 480
 #define V_TOTAL 525
+#define VGA_HDIV 1
+#define VGA_VDIV 1
 
 #include <stdint.h>
 
@@ -71,14 +73,14 @@ static uint32_t pal[4] = {
 
 static void renderPixel(Vga *vga) {
     int currentPixel = vga->y * H_VISIBLE + vga->x;    
-    int scaledPixel = currentPixel >> 1;
-    uint16_t attr = vga->vram[(vga->y >> 3) * (H_PITCH>>4) + (vga->x >> 4)];
+    int scaledY = vga->y >> 1;
+    uint16_t attr = vga->vram[(scaledY >> 3) * (H_PITCH>>4) + (vga->x >> 3)];
     uint16_t scancode = attr & 0xff;
     uint16_t fg = (attr >> 8) & 0xf;
     uint16_t bg = (attr >> 12) & 0xf;
-    uint16_t fontByte = packed_font_data[scancode*8+(vga->y&7)];    
+    uint16_t fontByte = packed_font_data[scancode*8+(scaledY & 7)];    
     
-    uint16_t shift = (7-(scaledPixel&7));    
+    uint16_t shift = (7-(currentPixel&7));    
     uint16_t color = (fontByte >> shift) & 1;
     vga->activeWriteBuffer[currentPixel] = color ? pico8_palette[fg] : pico8_palette[bg];
 }

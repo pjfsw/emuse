@@ -5,9 +5,16 @@
 #include "cpu.h"
 
 typedef struct {
+    uint32_t d[8];
+    uint32_t a[7];    
+    uint32_t *sp;
+    uint32_t ssp;
+    uint32_t usp;
+} Registers;
+
+typedef struct {
     Cpu cpu;
-    uint32_t dreg[8];
-    uint32_t areg[8];    
+    Registers registers;
 } M68k;
 
 void m68kInit(M68k *m68k);

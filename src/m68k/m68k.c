@@ -12,13 +12,33 @@ static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines
     return 0;
 }
 
+static void writeU32(char *dest, uint32_t value) {
+    sprintf(dest, "$%08x", value);
+}
+
 static int getCpuState(void *userdata, CpuState *cpuState, int maxLines) {
-    if (maxLines > 0) {
-        strcpy(cpuState[0].label, "D0");
-        strcpy(cpuState[0].value, "$12345678");
-        return 1;
+    M68k *cpu = (M68k *)userdata;
+
+    int actualLines = 0;
+    for (int i = 0; i < 8; i++) {
+        if (actualLines < maxLines) {
+            cpuState[i].label[0] = 'D';
+            cpuState[i].label[1] = 48+i;
+            cpuState[i].label[2] = 0;
+            writeU32(cpuState[i].value, cpu->registers.d[i]);
+            actualLines++;
+        }
     }
-    return 0;
+    for (int i = 0; i < 7; i++) {
+        if (actualLines < maxLines) {
+            cpuState[i+8].label[0] = 'A';
+            cpuState[i+8].label[1] = 48+i;
+            cpuState[i+8].label[2] = 0;
+            writeU32(cpuState[i+8].value, cpu->registers.a[i]);
+            actualLines++;
+        }
+    }
+    return actualLines;
 }
 
 int m68kClock(void *userdata) {

@@ -32,12 +32,12 @@ void debuggerUpdate(Debugger *debugger) {
     const uint32_t valueColor = 0xffffffff;
     const uint32_t labelColor = 0x6f8fffff;
 
-    const int maxStates = 8;
+    const int maxStates = 16;
     CpuState cpuState[maxStates];
     for (int i = 0; i < debugger->cpuStateFunc(debugger->probeUserdata, cpuState, maxStates); i++) {
         int y = i * 8;
         fontWrite(debugger->font, cpuState[i].label, 8, y, labelColor);
-        fontWrite(debugger->font, cpuState[i].value, 17 * 8, y, valueColor);
+        fontWrite(debugger->font, cpuState[i].value, 4 * 8, y, valueColor);
     }
     const int maxDis = 8;
     Disassembly disassembly[maxDis];
