@@ -32,7 +32,7 @@ void debuggerUpdate(Debugger *debugger) {
     const uint32_t valueColor = 0xffffffff;
     const uint32_t labelColor = 0x6f8fffff;
 
-    const int maxStates = 16;
+    const int maxStates = 18;
     CpuState cpuState[maxStates];
     for (int i = 0; i < debugger->cpuStateFunc(debugger->probeUserdata, cpuState, maxStates); i++) {
         int y = i * 8;
