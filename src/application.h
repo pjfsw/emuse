@@ -10,11 +10,14 @@
 #include "probe.h"
 #include "debugger.h"
 #include "cpu.h"
+#include "reset.h"
 
 typedef struct {
     Cpu *cpu;
     MainTicker mainTicker;
     void *mainTickerUserdata;
+    ResetFunc resetFunc;
+    void *resetUserdata;
     int cpuFreq;
     int videoFreq;
     int sampleFreq;
@@ -36,8 +39,8 @@ typedef struct {
     bool showSpeed;   
 } Application;
 
-bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, int cpuFreq, int videoFreq,
-    int sampleFreq);
+bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
+    void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq);
 void appRun(Application *app);
 void appDestroy(Application *app);
 

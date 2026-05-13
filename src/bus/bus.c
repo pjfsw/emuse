@@ -30,7 +30,8 @@ void busAddReadFunc(Bus *bus, ReadByteFunc readByteFunc, ReadWordFunc readWordFu
     bus->readMappingsCount++;
 }
 
-void busReset(Bus *bus) {
+void busReset(void *userdata) {
+    Bus *bus = (Bus*)userdata;
     for (int i = 0; i < bus->resetFuncCount; i++) {
         bus->resetFunc[i](bus->resetFuncUserdata[i]);
     }
@@ -55,7 +56,9 @@ static inline uint8_t getRandomByte() {
     return 0xaa;
 }
 
-uint8_t busReadByte(Bus *bus, uint32_t address) {
+uint8_t busReadByte(void *userdata, uint32_t address) {
+    Bus *bus = (Bus*)userdata;
+    
     for (int i = 0; i < bus->readMappingsCount; i++) {
         ReadMapping *m = &bus->readMappings[i];
         if ((address >= m->key.start) && (address < m->key.end)) {
@@ -69,7 +72,9 @@ uint8_t busReadByte(Bus *bus, uint32_t address) {
     return getRandomByte();
 }
 
-uint16_t busReadWord(Bus *bus, uint32_t address) {
+uint16_t busReadWord(void *userdata, uint32_t address) {
+    Bus *bus = (Bus*)userdata;
+
     for (int i = 0; i < bus->readMappingsCount; i++) {
         ReadMapping *m = &bus->readMappings[i];
         if ((address >= m->key.start) && (address < m->key.end)) {

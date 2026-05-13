@@ -44,7 +44,7 @@ void debuggerUpdate(Debugger *debugger) {
     for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis); i++) {
         int y = (maxStates + 1 + i) * 8;
         fontWrite(debugger->font, disassembly[i].address, 8, y, labelColor);
-        fontWrite(debugger->font, disassembly[i].instruction, 8 * 12, y, valueColor);
+        fontWrite(debugger->font, disassembly[i].instruction, 16 + strlen(disassembly[i].address) * 8, y, valueColor);
     }
 }
 

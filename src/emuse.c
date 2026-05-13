@@ -47,12 +47,12 @@ int main(int argc, char* argv[]) {
     readArgs(&args, argc, argv);
     Application app = {0};
 
-    M68k cpu;
-    m68kInit(&cpu);
-
     Bus bus;
     busInit(&bus);
+    M68k cpu;
+    m68kInit(&cpu, busReadByte, busReadWord, &bus);
     busAddCpu(&bus, m68kClock, &cpu);
+    busAddResetFunc(&bus, m68kReset, &cpu);
 
     Memory rom;
     uint32_t romSize = 65536;
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
 
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;
-    if (!appInit(&app, &cpu.cpu, busClock, &bus, args.cpuFreq, videoFreq, sampleFreq)) {
+    if (!appInit(&app, &cpu.cpu, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq)) {
         return 1;
     }
     appRun(&app);

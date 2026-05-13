@@ -36,12 +36,14 @@ static void initVideo(Application *app) {
         vgaGetHeight(&app->vga));
 }
 
-bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, int cpuFreq, int videoFreq,
-    int sampleFreq) {
+bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
+    void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq) {
     memset(app, 0, sizeof(Application));
     app->cpu = cpu;
     app->mainTicker = mainTicker;
     app->mainTickerUserdata = mainTickerUserdata;
+    app->resetFunc = resetFunc;
+    app->resetUserdata = resetUserdata;
     app->cpuFreq = cpuFreq;
     app->videoFreq = videoFreq;
     app->sampleFreq = sampleFreq;
@@ -78,7 +80,7 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     // --- Init Emulator Sync State ---
     SDL_SetAtomicInt(&app->sharedState.runRequested, 1);
     SDL_SetAtomicInt(&app->sharedState.audioIsBusy, 0);
-    app->is_stepping = false;
+    app->is_stepping = true;
 
     initVideo(app);
 
@@ -91,8 +93,9 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     debuggerInit(&app->debugger, cpu->disassemblyFunc, cpu->cpuStateFunc, cpu->probeUserdata, app->renderer, &app->font, 
         vgaGetWidth(&app->vga)/2, vgaGetHeight(&app->vga));
 
+    app->resetFunc(app->resetUserdata);
     app->running = true;
-    app->is_fullscreen = false;
+    app->is_fullscreen = false;    
     return true;
 }
 

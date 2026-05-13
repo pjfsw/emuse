@@ -1,13 +1,10 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "ticker.h"
+#include "readwritefunc.h"
+#include "reset.h"
 
-typedef void (*ResetFunc)(void *user_data);
 typedef void (*ClockFunc)(void *user_data, int clocks);
-typedef uint8_t (*ReadByteFunc)(void *user_data, uint32_t address);
-typedef uint16_t (*ReadWordFunc)(void *user_data, uint32_t address);
 
 #define MAX_RESET_FUNC 16
 #define MAX_CLOCK_FUNC 16
@@ -54,14 +51,14 @@ void busAddResetFunc(Bus *bus, ResetFunc resetFunc, void *userdata);
 
 void busAddReadFunc(Bus *bus, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc, ReadWriteMappingKey mappingKey);
 
-void busReset(Bus *bus);
+void busReset(void *userdata);
 
 void busWriteByte(Bus *bus, uint32_t address, uint8_t value);
 
 void busWriteWord(Bus *bus, uint32_t address, uint16_t value);
 
-uint8_t busReadByte(Bus *bus, uint32_t address);
+uint8_t busReadByte(void *userdata, uint32_t address);
 
-uint16_t busReadWord(Bus *bus, uint32_t address);
+uint16_t busReadWord(void *userdata, uint32_t address);
 
 int busClock(void *userdata);
