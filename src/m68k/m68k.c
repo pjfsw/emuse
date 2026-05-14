@@ -1,6 +1,7 @@
 #include <string.h>
-#include "m68k.h"
 #include <stdio.h>
+#include "m68k.h"
+#include "decode.h"
 
 #define SR_T  0x8000
 #define SR_S  0x2000
@@ -23,16 +24,57 @@ static char* writeAddress(char *target, uint32_t address) {
     return target;
 }
 
+static void disassembleEa(char *instruction, EffectiveAddress *ea, InstructionSize size) {
+    char s[100];
+    s[0] = 0;
+    if (ea->mode == AM_DREG) {
+        sprintf(s, "D%d", ea->xn);
+
+    } else if (ea->mode == AM_EXT) {
+        if (ea->xn == AM_EXT_IMMEDIATE) {
+            if (size == IS_BYTE) {
+                sprintf(s, "#$%x", (uint8_t)ea->immediate);
+            } else if (size == IS_WORD) {
+                sprintf(s, "#$%x", (uint16_t)ea->immediate);
+            } else if (size == IS_LONG) {
+                sprintf(s, "#$%x", ea->immediate);
+            }
+        }
+    }
+    strcat(instruction, s);
+}
+
+static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, char *instruction) {
+    DecodedInstruction di;
+    memset(&di, 0, sizeof(DecodedInstruction));
+    writeAddress(address, regs->pc);
+    decode(&di, regs, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata);
+    strcpy(instruction, di.mnemonic);
+    switch (di.size) {
+        case IS_BYTE:
+            strcat(instruction, ".b ");
+            break;
+        case IS_LONG:
+            strcat(instruction, ".l ");
+            break;
+        case IS_WORD:
+            strcat(instruction, ".w ");
+            break;
+    }
+    disassembleEa(instruction, &di.src, di.size);
+    strcat(instruction, ",");
+    disassembleEa(instruction, &di.dst, di.size);
+    // do something
+}
+
 static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines) {
     M68k *cpu = (M68k *)userdata;
 
-    if (maxLines > 0) {
-        strncpy(disassembly[0].instruction, "moveq #0,d0", DIS_INSTR_LEN);
-        writeAddress(disassembly[0].address, cpu->registers.pc);
-        disassembly[1].current = false;
-        return 1;
+    M68kRegisters regs = cpu->registers;
+    for (int i = 0; i < maxLines; i++) {
+        disassemble(cpu, &regs, disassembly[i].address, disassembly[i].instruction);
     }
-    return 0;
+    return maxLines;
 }
 
 static void writeU32(char *dest, uint32_t value) {
@@ -98,8 +140,10 @@ static int getCpuState(void *userdata, CpuState *cpuState, int maxLines) {
 }
 
 int m68kClock(void *userdata) {
-    M68k *cpu = (M68k *)userdata;
-    return 4;
+    M68k *cpu = (M68k *)userdata;    
+    DecodedInstruction di;
+    int cycles = decode(&di, &cpu->registers, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata);
+    return cycles;
 }
 
 void m68kInit(M68k *m68k, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc, void *readWriteUserdata) {

@@ -36,6 +36,31 @@ static void initVideo(Application *app) {
         vgaGetHeight(&app->vga));
 }
 
+static void stoppedMode(Application *app) {
+    app->is_stepping = true;
+    // 1. Request pause
+    SDL_SetAtomicInt(&app->sharedState.runRequested, 0);
+
+    // 2. Spinlock wait for audio thread to acknowledge and back off
+    while (SDL_GetAtomicInt(&app->sharedState.audioIsBusy) == 1) {
+        SDL_Delay(1);
+    }
+    SDL_Log("Emulator PAUSED. Audio thread safely locked out.");
+}
+
+static void runningMode(Application *app) {
+    app->is_stepping = false;
+    // 1. Reset accumulators so the math doesn't freak out and fast-forward!
+    app->audio.audioFractionalAcc = 0;
+    app->audio.cpuCycleDebt = 0;
+    app->audio.videoFractionalAcc = 0;
+
+    // 2. Resume audio-driven execution
+    SDL_SetAtomicInt(&app->sharedState.runRequested, 1);
+    SDL_Log("Emulator RESUMED. Audio thread in control.");
+}
+
+
 bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
     void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq) {
     memset(app, 0, sizeof(Application));
@@ -80,7 +105,6 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     // --- Init Emulator Sync State ---
     SDL_SetAtomicInt(&app->sharedState.runRequested, 1);
     SDL_SetAtomicInt(&app->sharedState.audioIsBusy, 0);
-    app->is_stepping = true;
 
     initVideo(app);
 
@@ -96,6 +120,7 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     app->resetFunc(app->resetUserdata);
     app->running = true;
     app->is_fullscreen = false;    
+    stoppedMode(app);
     return true;
 }
 
@@ -109,27 +134,10 @@ void appDestroy(Application *app) {
 }
 
 static void toggleStepping(Application *app) {
-    // --- The Step Handshake ---
-    app->is_stepping = !app->is_stepping;
-
-    if (app->is_stepping) {
-        // 1. Request pause
-        SDL_SetAtomicInt(&app->sharedState.runRequested, 0);
-
-        // 2. Spinlock wait for audio thread to acknowledge and back off
-        while (SDL_GetAtomicInt(&app->sharedState.audioIsBusy) == 1) {
-            SDL_Delay(1);
-        }
-        SDL_Log("Emulator PAUSED. Audio thread safely locked out.");
+    if (!app->is_stepping) {
+        stoppedMode(app);
     } else {
-        // 1. Reset accumulators so the math doesn't freak out and fast-forward!
-        app->audio.audioFractionalAcc = 0;
-        app->audio.cpuCycleDebt = 0;
-        app->audio.videoFractionalAcc = 0;
-
-        // 2. Resume audio-driven execution
-        SDL_SetAtomicInt(&app->sharedState.runRequested, 1);
-        SDL_Log("Emulator RESUMED. Audio thread in control.");
+        runningMode(app);
     }
 }
 

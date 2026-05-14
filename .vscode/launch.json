@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/emuse",
-            "args": [],
+            "args": ["-r", "./boot.bin"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [],

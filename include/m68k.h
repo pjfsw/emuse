@@ -12,11 +12,11 @@ typedef struct {
     uint32_t usp;
     uint32_t pc;
     uint16_t sr;
-} Registers;
+} M68kRegisters;
 
 typedef struct {
     Cpu cpu;
-    Registers registers;
+    M68kRegisters registers;
     ReadByteFunc readByteFunc;
     ReadWordFunc readWordFunc;
     void *readWriteUserdata;
