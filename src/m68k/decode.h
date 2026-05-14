@@ -29,13 +29,17 @@ typedef enum {
 #define AM_EXT_ABS_LONG 0x01
 #define AM_EXT_IMMEDIATE 0x04
 
-
 typedef enum {
     IS_FIRST=0,
     IS_BYTE,
     IS_LONG,
     IS_WORD
 } InstructionSize;
+
+typedef enum {
+    IF_MOVE,
+    IF_BRANCH
+} InstructionFamily;
 
 typedef struct {
     AddressingMode mode;
@@ -46,14 +50,19 @@ typedef struct {
 
 typedef struct {
     char *mnemonic; 
+    InstructionFamily family;
     InstructionSize size;
     EffectiveAddress src;
     EffectiveAddress dst;
+    int16_t displacement;
+
 } DecodedInstruction;
 
-typedef struct {
-} DecoderConfig;
 
-// Decode and execute instruction. Returns number of cycles or 0 if error
-int decode(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
+typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
     void *readWriteUserdata);
+
+// Decode  instruction. Returns number of cycles or 0 if error
+// The execution function is stored in execFunc
+int decode(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
+    void *readWriteUserdata, ExecFunc *execFunc);

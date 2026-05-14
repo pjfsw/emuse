@@ -8,6 +8,7 @@ static inline void increasePc(M68kRegisters *registers) {
     registers->pc = align24(registers->pc + 2);
 }
 
+
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
 
@@ -38,41 +39,57 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
     return -1;
 }
 
-static int executeMove(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
+static int executeMove(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc,
+    ReadWordFunc readWordFunc, void *readWriteUserdata) {
+    int cycleCount = 0;
+    uint32_t value = 0;
+    if (di->src.mode == AM_EXT) {
+        if (di->src.xn == AM_EXT_IMMEDIATE) {
+            value = di->src.immediate;
+        }
+    } else if (di->src.mode == AM_DREG) {
+        value = registers->d[di->src.xn];
+    }
+    if (di->dst.mode == AM_DREG) {
+        if (di->size == IS_LONG) {
+            registers->d[di->dst.xn] = value;
+        } else if (di->size == IS_WORD) {
+            registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffff0000) | (value & 0xffff);
+        } else if (di->size == IS_BYTE) {
+            registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
+        }
+    }
+    return cycleCount;
+}
+
+int executeBranch(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
     void *readWriteUserdata) {
-        int cycleCount = 0;
-        uint32_t value = 0;
-        if (di->src.mode == AM_EXT) {
-            if (di->src.xn == AM_EXT_IMMEDIATE) {
-                value = di->src.immediate;
-            }
-        } else if (di->src.mode == AM_DREG) {
-            value = registers->d[di->src.xn];
-        }
-        if (di->dst.mode == AM_DREG) {
-            if (di->size == IS_LONG) {
-                registers->d[di->dst.xn] = value;
-            } else if (di->size == IS_WORD) {
-                registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffff0000) | (value & 0xffff);
-            } else if (di->size == IS_BYTE) {
-                registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
-            }
-        }
-        return cycleCount;
+        // TODO condition
+        registers->pc = align24(registers->pc + di->displacement);
+        return 6; // We already counted the opcode fetch = 4 cycles
     }
 
-static char *mn_move = "move";
+static char *mn_move = "MOVE";
 static char *mn_unknown = "??";
+
+static char *mn_condition[] = {
+    "BRA", "BSR", "BHI", "BLS", "BCC", "BCS", "BNE", "BEQ", "BVC", "BVS", "BPL", "BMI", "BGE", "BLT", "BGT", "BLE"};
+
+
 int decode(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
-    void *readWriteUserdata) {
+    void *readWriteUserdata, ExecFunc *execFunc) {
     uint16_t cycles = 0;
     uint16_t opcode = readWordFunc(readWriteUserdata, registers->pc);
     increasePc(registers);
     cycles += 4;    
 
     di->mnemonic = mn_unknown;
+    *execFunc = 0;
+
     uint16_t family = opcode & 0xf000;
     if ((family > 0) && (family < 0x4000)) {    
+        *execFunc = executeMove;
+        di->family = IF_MOVE;
         di->mnemonic = mn_move;
         //  move.x
         uint16_t size = (family >> 12);
@@ -92,13 +109,22 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readBy
             return 0;
         }
         cycles += eaCycles;
-
-        int execCycles = executeMove(di, registers, readByteFunc, readWordFunc, readWriteUserdata);
-        if (execCycles < 0) {
-            return 0;
+        return cycles;
+    } else if (family == 0x6000) { // BRA, BSR, Bxx
+        uint16_t condition = (opcode >> 8) & 15;
+        di->mnemonic = mn_condition[condition];
+        di->family = IF_BRANCH;
+        *execFunc = executeBranch;
+        uint8_t displacement = opcode & 0xff;
+        if (displacement == 0) {
+            di->displacement = readWordFunc(readWriteUserdata, registers->pc);
+            di->size = IS_WORD;
+            increasePc(registers);
+            //cycles += 4; Don't update cycles here because branch is annoying
+        } else {
+            di->displacement = (int8_t)displacement;
+            di->size = IS_BYTE;
         }
-        cycles += eaCycles;
-
     }
     return cycles;
 }

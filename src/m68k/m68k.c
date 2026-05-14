@@ -33,38 +33,59 @@ static void disassembleEa(char *instruction, EffectiveAddress *ea, InstructionSi
     } else if (ea->mode == AM_EXT) {
         if (ea->xn == AM_EXT_IMMEDIATE) {
             if (size == IS_BYTE) {
-                sprintf(s, "#$%x", (uint8_t)ea->immediate);
+                sprintf(s, "#$%X", (uint8_t)ea->immediate);
             } else if (size == IS_WORD) {
-                sprintf(s, "#$%x", (uint16_t)ea->immediate);
+                sprintf(s, "#$%X", (uint16_t)ea->immediate);
             } else if (size == IS_LONG) {
-                sprintf(s, "#$%x", ea->immediate);
+                sprintf(s, "#$%X", ea->immediate);
             }
         }
     }
     strcat(instruction, s);
 }
 
+static void disassembleMove(DecodedInstruction *di, char *instruction) {
+    switch (di->size) {
+        case IS_BYTE:
+            strcat(instruction, ".B ");
+            break;
+        case IS_LONG:
+            strcat(instruction, ".L ");
+            break;
+        case IS_WORD:
+            strcat(instruction, ".W ");
+            break;
+    }
+    disassembleEa(instruction, &di->src, di->size);
+    strcat(instruction, ",");
+    disassembleEa(instruction, &di->dst, di->size);
+}
+
+static void disassembleBranch(DecodedInstruction *di, uint32_t pc, char *instruction) {
+    if (di->size == IS_BYTE) {
+        strcat(instruction, ".S");
+    }
+    char s[100];
+    sprintf(s, " $%06X", pc + (int32_t)di->displacement);
+    strcat(instruction, s);
+}
+
+
 static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, char *instruction) {
     DecodedInstruction di;
     memset(&di, 0, sizeof(DecodedInstruction));
     writeAddress(address, regs->pc);
-    decode(&di, regs, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata);
+    ExecFunc dummyExec;
+    decode(&di, regs, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata, &dummyExec);
     strcpy(instruction, di.mnemonic);
-    switch (di.size) {
-        case IS_BYTE:
-            strcat(instruction, ".b ");
+    switch (di.family) {
+        case IF_MOVE:
+            disassembleMove(&di, instruction);
             break;
-        case IS_LONG:
-            strcat(instruction, ".l ");
-            break;
-        case IS_WORD:
-            strcat(instruction, ".w ");
+        case IF_BRANCH:
+            disassembleBranch(&di, regs->pc, instruction);
             break;
     }
-    disassembleEa(instruction, &di.src, di.size);
-    strcat(instruction, ",");
-    disassembleEa(instruction, &di.dst, di.size);
-    // do something
 }
 
 static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines) {
@@ -78,7 +99,7 @@ static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines
 }
 
 static void writeU32(char *dest, uint32_t value) {
-    sprintf(dest, "$%08x", value);
+    sprintf(dest, "$%08X", value);
 }
 
 static char srFlags[] = "TTSM0III000XNZVC";
@@ -139,10 +160,15 @@ static int getCpuState(void *userdata, CpuState *cpuState, int maxLines) {
     return actualLines;
 }
 
+
 int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
-    int cycles = decode(&di, &cpu->registers, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata);
+    ExecFunc execFunc;
+    int cycles = decode(&di, &cpu->registers, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata, &execFunc);
+    if (execFunc != NULL) {
+        cycles += execFunc(&di, &cpu->registers, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata);
+    }
     return cycles;
 }
 

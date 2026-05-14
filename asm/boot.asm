@@ -11,4 +11,5 @@ Start:
     move.b d2,d4
     move.w #$9999,d2
     move.w d2,d3
-    bra     Start        ; Infinite loop
+    bra.s Start        ; Infinite loop
+    move.w #7,d7
