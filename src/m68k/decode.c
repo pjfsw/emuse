@@ -15,7 +15,7 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
     ea->mode = mode;
     ea->xn = reg;
 
-    if (mode == AM_DREG) {
+    if ((mode == AM_DREG) || (mode == AM_AREG)) {
         return 0;
     } else if (mode == AM_EXT) {
         if (reg == AM_EXT_IMMEDIATE) {
@@ -58,17 +58,25 @@ static int executeMove(DecodedInstruction *di, M68kRegisters *registers, ReadByt
         }
     } else if (di->src.mode == AM_DREG) {
         value = registers->d[di->src.xn];
-    }
-    if (di->dst.mode == AM_DREG) {
+    } else if (di->src.mode == AM_AREG) {
+        value = registers->a[di->src.xn];
+    } 
+    if ((di->dst.mode == AM_DREG)) {
         if (di->size == IS_LONG) {
-            setMoveFlags(registers, value);
+            setMoveFlags(registers, (int32_t)value);
             registers->d[di->dst.xn] = value;
         } else if (di->size == IS_WORD) {
-            setMoveFlags(registers, (int32_t)(int16_t)value);
+            setMoveFlags(registers, (int32_t)(int16_t)(value & 0xffff));
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffff0000) | (value & 0xffff);
         } else if (di->size == IS_BYTE) {
-            setMoveFlags(registers, (int32_t)(int8_t)value);
+            setMoveFlags(registers, (int32_t)(int8_t)(value & 0xff));
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
+        }
+    } else if ((di->dst.mode == AM_AREG)) {
+        if (di->size == IS_LONG) {
+            registers->a[di->dst.xn] = value;
+        } else if (di->size == IS_WORD) {
+            registers->a[di->dst.xn] = (int32_t)(int16_t)value;
         }
     }
     return cycleCount;
@@ -83,7 +91,6 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc
 
 static char *mn_move = "MOVE";
 static char *mn_unknown = "???";
-
 static char *mn_condition[] = {
     "BRA", "BSR", "BHI", "BLS", "BCC", "BCS", "BNE", "BEQ", "BVC", "BVS", "BPL", "BMI", "BGE", "BLT", "BGT", "BLE"};
 

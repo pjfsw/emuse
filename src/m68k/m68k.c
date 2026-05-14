@@ -26,11 +26,24 @@ static void addDisassembly(Instruction *instruction, char *string, InstructionSy
     instruction->count++;
 }
 
+static void addPadding(Instruction *instruction) {
+    int n = 0;
+    for (int i = 0; i < instruction->count; i++) {
+        n += strlen(instruction->parts[i].part);
+    }   
+    char s[100];
+    sprintf(s, "%-*s", 7-n, "");
+    addDisassembly(instruction, s, SYM_SYMBOL);
+}
+
 static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, InstructionSize size) {
     char s[100];
     s[0] = 0;
     if (ea->mode == AM_DREG) {
         sprintf(s, "D%d", ea->xn);
+        addDisassembly(instruction, s, SYM_REGISTER);
+    } else if (ea->mode == AM_AREG) {
+        sprintf(s, "A%d", ea->xn);
         addDisassembly(instruction, s, SYM_REGISTER);
     } else if (ea->mode == AM_EXT) {
         if (ea->xn == AM_EXT_IMMEDIATE) {
@@ -59,6 +72,7 @@ static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
             addDisassembly(instruction, ".W", SYM_MNEMONIC);
             break;
     }
+    addPadding(instruction);
     addDisassembly(instruction, " ", SYM_SYMBOL);
     disassembleEa(instruction, &di->src, di->size);
     addDisassembly(instruction, ",", SYM_SYMBOL);
@@ -69,6 +83,7 @@ static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *
     if (di->size == IS_BYTE) {
         addDisassembly(instruction, ".S", SYM_MNEMONIC);
     }
+    addPadding(instruction);
     char s[100];
     sprintf(s, " $%06X", pc + (int32_t)di->displacement);
     addDisassembly(instruction, s, SYM_CONSTANT);
@@ -80,15 +95,26 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
     memset(&di, 0, sizeof(DecodedInstruction));
     writeAddress(address, regs->pc);
     ExecFunc dummyExec;
+    uint16_t opcode = cpu->readWordFunc(cpu->readWriteUserdata, regs->pc);
     decode(&di, regs, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata, &dummyExec);
     instruction->count = 0;
-    addDisassembly(instruction, di.mnemonic, SYM_MNEMONIC);
+    char s[100];
+    if (di.family == IF_UNKNOWN) {
+        addDisassembly(instruction, di.mnemonic, SYM_UNKNOWN);
+    } else {
+        addDisassembly(instruction, di.mnemonic, SYM_MNEMONIC);
+    }
     switch (di.family) {
         case IF_MOVE:
             disassembleMove(&di, instruction);
             break;
         case IF_BRANCH:
             disassembleBranch(&di, regs->pc, instruction);
+            break;
+        case IF_UNKNOWN:
+            char s[100];
+            sprintf(s, " $%04x", opcode);
+            addDisassembly(instruction, s, SYM_UNKNOWN);
             break;
     }
 }

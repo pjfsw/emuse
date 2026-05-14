@@ -11,6 +11,7 @@ static const uint32_t addressColor = symbolColor;
 static const uint32_t registerColor = mnemonicColor;
 static const uint32_t stateValueColor = 0xCCCCCCFF;
 static const uint32_t stateLabelColor = mnemonicColor;
+static const uint32_t unknownColor = 0x669CD680;
 
 void debuggerInit(Debugger *debugger, DisassemblyFunc disassemblyFunc, CpuStateFunc cpuStateFunc, void *probeUserdata,
     SDL_Renderer *renderer, Font *font, int width, int height) {
@@ -73,10 +74,14 @@ void debuggerUpdate(Debugger *debugger) {
                     break;
                 case SYM_REGISTER:
                     color = registerColor;
+                    break;
+                case SYM_UNKNOWN:
+                    color = unknownColor;
+                    break;
                 default:
                     break;
             }
-            fontWrite(debugger->font, part->part, 16 + x * 8, y, color);
+            fontWrite(debugger->font, part->part, 24 + x * 8, y, color);
             x += strlen(part->part);
         }
     }

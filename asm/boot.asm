@@ -6,6 +6,10 @@
 
     org $00000400        ; Move past the vector table
 Start:
+    move.w #$9234,a0
+    move.l a0,a1
+    move.w #$1234,a0
+    move.w a0,d0
     move.b #$aa,d5
     move.l #$12345678,d2 
     move.b d2,d4
@@ -15,3 +19,5 @@ Start:
     move.w #0,d2
     bra.s Start        ; Infinite loop
     move.w #7,d7
+    move.l #17,a0
+    btst #6,$bfe001

@@ -17,7 +17,8 @@ typedef enum {
     SYM_MNEMONIC,
     SYM_CONSTANT,
     SYM_SYMBOL,
-    SYM_REGISTER
+    SYM_REGISTER,
+    SYM_UNKNOWN
 } InstructionSymbol;
 
 typedef struct {    
