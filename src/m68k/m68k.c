@@ -20,64 +20,73 @@ static bool isSupervisor(M68k *m68k) {
 }
 
 static char* writeAddress(char *target, uint32_t address) {
-    sprintf(target, "$%06x", address & 0xffffff);
+    sprintf(target, "%06x", address & 0xffffff);
     return target;
 }
 
-static void disassembleEa(char *instruction, EffectiveAddress *ea, InstructionSize size) {
+static void addDisassembly(Instruction *instruction, char *string, InstructionSymbol type) {
+    strncpy(instruction->parts[instruction->count].part, string, DIS_INSTR_PART_LEN);
+    instruction->parts[instruction->count].symbol = type;
+    instruction->count++;
+}
+
+static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, InstructionSize size) {
     char s[100];
     s[0] = 0;
     if (ea->mode == AM_DREG) {
         sprintf(s, "D%d", ea->xn);
-
+        addDisassembly(instruction, s, SYM_REGISTER);
     } else if (ea->mode == AM_EXT) {
         if (ea->xn == AM_EXT_IMMEDIATE) {
+            addDisassembly(instruction, "#", SYM_SYMBOL);            
             if (size == IS_BYTE) {
-                sprintf(s, "#$%X", (uint8_t)ea->immediate);
+                sprintf(s, "$%X", (uint8_t)ea->immediate);
             } else if (size == IS_WORD) {
-                sprintf(s, "#$%X", (uint16_t)ea->immediate);
+                sprintf(s, "$%X", (uint16_t)ea->immediate);
             } else if (size == IS_LONG) {
-                sprintf(s, "#$%X", ea->immediate);
+                sprintf(s, "$%X", ea->immediate);
             }
+            addDisassembly(instruction, s, SYM_CONSTANT);            
         }
     }
-    strcat(instruction, s);
 }
 
-static void disassembleMove(DecodedInstruction *di, char *instruction) {
+static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
     switch (di->size) {
         case IS_BYTE:
-            strcat(instruction, ".B ");
+            addDisassembly(instruction, ".B", SYM_MNEMONIC);
             break;
         case IS_LONG:
-            strcat(instruction, ".L ");
+            addDisassembly(instruction, ".L", SYM_MNEMONIC);
             break;
         case IS_WORD:
-            strcat(instruction, ".W ");
+            addDisassembly(instruction, ".W", SYM_MNEMONIC);
             break;
     }
+    addDisassembly(instruction, " ", SYM_SYMBOL);
     disassembleEa(instruction, &di->src, di->size);
-    strcat(instruction, ",");
+    addDisassembly(instruction, ",", SYM_SYMBOL);
     disassembleEa(instruction, &di->dst, di->size);
 }
 
-static void disassembleBranch(DecodedInstruction *di, uint32_t pc, char *instruction) {
+static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *instruction) {
     if (di->size == IS_BYTE) {
-        strcat(instruction, ".S");
+        addDisassembly(instruction, ".S", SYM_MNEMONIC);
     }
     char s[100];
     sprintf(s, " $%06X", pc + (int32_t)di->displacement);
-    strcat(instruction, s);
+    addDisassembly(instruction, s, SYM_CONSTANT);
 }
 
 
-static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, char *instruction) {
+static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instruction *instruction) {
     DecodedInstruction di;
     memset(&di, 0, sizeof(DecodedInstruction));
     writeAddress(address, regs->pc);
     ExecFunc dummyExec;
     decode(&di, regs, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata, &dummyExec);
-    strcpy(instruction, di.mnemonic);
+    instruction->count = 0;
+    addDisassembly(instruction, di.mnemonic, SYM_MNEMONIC);
     switch (di.family) {
         case IF_MOVE:
             disassembleMove(&di, instruction);
@@ -93,7 +102,7 @@ static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines
 
     M68kRegisters regs = cpu->registers;
     for (int i = 0; i < maxLines; i++) {
-        disassemble(cpu, &regs, disassembly[i].address, disassembly[i].instruction);
+        disassemble(cpu, &regs, disassembly[i].address, &disassembly[i].instruction);
     }
     return maxLines;
 }
@@ -106,12 +115,18 @@ static char srFlags[] = "TTSM0III000XNZVC";
 
 static void writeSR(char *dest, M68k *cpu) {
     uint16_t sr = cpu->registers.sr;
+    int n = 0;
     for (int i = 0; i < 16; i++) {
         if (sr & 0x8000) {
-            dest[i] = srFlags[i];
+            dest[n] = srFlags[i];
         } else {
-            dest[i] = '.';
+            dest[n] = '.';
         }
+        if (i == 7) {
+            n++;
+            dest[n] = ' ';
+        }
+        n++;
         sr = sr << 1;
     }
     dest[16] = 0;
@@ -121,41 +136,40 @@ static inline uint32_t *getSP(M68k *cpu) {
     return isSupervisor(cpu) ? &cpu->registers.ssp : &cpu->registers.usp;
 }
 
-static int getCpuState(void *userdata, CpuState *cpuState, int maxLines) {
+static int getCpuState(void *userdata, CpuState *gpRegisters, int maxLines, CpuState *statusRegister) {
     M68k *cpu = (M68k *)userdata;
 
     int actualLines = 0;
     for (int i = 0; i < 8; i++) {
         if (actualLines < maxLines) {
-            cpuState[i].label[0] = 'D';
-            cpuState[i].label[1] = 48+i;
-            cpuState[i].label[2] = 0;
-            writeU32(cpuState[i].value, cpu->registers.d[i]);
+            gpRegisters[i].label[0] = 'D';
+            gpRegisters[i].label[1] = 48+i;
+            gpRegisters[i].label[2] = 0;
+            writeU32(gpRegisters[i].value, cpu->registers.d[i]);
             actualLines++;
         }
     }
     for (int i = 0; i < 7; i++) {
         if (actualLines < maxLines) {
-            cpuState[i+8].label[0] = 'A';
-            cpuState[i+8].label[1] = 48+i;
-            cpuState[i+8].label[2] = 0;
-            writeU32(cpuState[i+8].value, cpu->registers.a[i]);
+            gpRegisters[i+8].label[0] = 'A';
+            gpRegisters[i+8].label[1] = 48+i;
+            gpRegisters[i+8].label[2] = 0;
+            writeU32(gpRegisters[i+8].value, cpu->registers.a[i]);
             actualLines++;
         }
     }
     if (actualLines < maxLines) {
-        cpuState[15].label[0] = 'S';
-        cpuState[15].label[1] = 'P';
-        cpuState[15].label[2] = 0;
-        writeU32(cpuState[15].value, *getSP(cpu));
+        gpRegisters[15].label[0] = 'S';
+        gpRegisters[15].label[1] = 'P';
+        gpRegisters[15].label[2] = 0;
+        writeU32(gpRegisters[15].value, *getSP(cpu));
         actualLines++;
     }
     if (actualLines < maxLines) {
-        cpuState[16].label[0] = 'S';
-        cpuState[16].label[1] = 'R';
-        cpuState[16].label[2] = 0;
-        writeSR(cpuState[16].value, cpu);
-        actualLines++;
+        statusRegister->label[0] = 'S';
+        statusRegister->label[1] = 'R';
+        statusRegister->label[2] = 0;
+        writeSR(statusRegister->value, cpu);
     }
     return actualLines;
 }

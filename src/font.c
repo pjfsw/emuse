@@ -38,11 +38,12 @@ static void fontPutc(Font *font, uint8_t c, int x, int y, uint32_t color) {
     SDL_SetTextureColorMod(t, r, g, b);
     SDL_SetTextureAlphaMod(t, a);  // optional
     SDL_SetTextureBlendMode(t, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(t, SDL_SCALEMODE_PIXELART);
     SDL_FRect dst = {
         .x = x,
         .y = y,
         .w = 8,
-        .h = 8
+        .h = 16
     };
 
     SDL_RenderTexture(font->renderer, t, NULL, &dst);

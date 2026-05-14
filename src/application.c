@@ -115,7 +115,7 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     emuStatsInit(&app->stats, SDL_GetTicksNS());
 
     debuggerInit(&app->debugger, cpu->disassemblyFunc, cpu->cpuStateFunc, cpu->probeUserdata, app->renderer, &app->font, 
-        vgaGetWidth(&app->vga)/2, vgaGetHeight(&app->vga));
+        vgaGetWidth(&app->vga)/2, 2*vgaGetHeight(&app->vga)/2);
 
     app->resetFunc(app->resetUserdata);
     app->running = true;
@@ -232,7 +232,11 @@ static void renderTargetTexture(Application *app) {
     SDL_FRect destRect;
     destRect.w = app->width * scale;
     destRect.h = app->height * scale;
-    destRect.x = (winW - destRect.w) / 2.0f;  // Center horizontally
+    if (app->is_stepping) {
+        destRect.x = winW - destRect.w;
+    } else {
+        destRect.x = (winW - destRect.w) / 2.0f;  // Center horizontally
+    }
     destRect.y = (winH - destRect.h) / 2.0f;  // Center vertically
 
     // 6. Draw the target texture into the calculated bounding box
@@ -251,10 +255,6 @@ static void render(Application* app) {
     SDL_RenderClear(app->renderer);    
 
     renderEmulatorOutput(app);
-    if (showDebug) {
-        SDL_FRect destRect = {0, 0, debuggerWidth(&app->debugger), debuggerHeight(&app->debugger)};
-        SDL_RenderTexture(app->renderer, debuggerTexture(&app->debugger), NULL, &destRect);
-    }
 
     if (!app->is_stepping && app->showSpeed) {
         int y = vgaGetHeight(&app->vga)-10;
@@ -279,6 +279,19 @@ static void render(Application* app) {
     }
     renderTargetTexture(app);
 
+    if (showDebug) {
+        int winW, winH;
+        SDL_GetRenderOutputSize(app->renderer, &winW, &winH);
+
+        // 4. Calculate the scaling factor
+        float scaleX = (float)winW / debuggerWidth(&app->debugger);
+        float scaleY = (float)winH / debuggerHeight(&app->debugger);
+        float scale = (scaleX < scaleY) ? scaleX : scaleY;
+
+        SDL_FRect destRect = {0, 0, scale * debuggerWidth(&app->debugger), scale * debuggerHeight(&app->debugger)};
+        SDL_SetTextureScaleMode(debuggerTexture(&app->debugger), SDL_SCALEMODE_PIXELART);
+        SDL_RenderTexture(app->renderer, debuggerTexture(&app->debugger), NULL, &destRect);
+    }
     // Swap buffers
     SDL_RenderPresent(app->renderer);
 
