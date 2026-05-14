@@ -115,7 +115,7 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     emuStatsInit(&app->stats, SDL_GetTicksNS());
 
     debuggerInit(&app->debugger, cpu->disassemblyFunc, cpu->cpuStateFunc, cpu->probeUserdata, app->renderer, &app->font, 
-        vgaGetWidth(&app->vga)/2, 2*vgaGetHeight(&app->vga)/2);
+        224, 3*vgaGetHeight(&app->vga)/2);
 
     app->resetFunc(app->resetUserdata);
     app->running = true;

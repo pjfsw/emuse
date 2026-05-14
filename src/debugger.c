@@ -26,7 +26,7 @@ void debuggerInit(Debugger *debugger, DisassemblyFunc disassemblyFunc, CpuStateF
 
 static void renderRegister(Debugger *debugger, CpuState *reg, int x, int y) {
     fontWrite(debugger->font, reg->label, x, y, stateLabelColor);
-    fontWrite(debugger->font, reg->value, x+32, y, stateValueColor);
+    fontWrite(debugger->font, reg->value, x+24, y, stateValueColor);
 }
 
 void debuggerUpdate(Debugger *debugger) {
@@ -50,7 +50,7 @@ void debuggerUpdate(Debugger *debugger) {
     CpuState statusRegister;
     for (int i = 0; i < debugger->cpuStateFunc(debugger->probeUserdata, gpRegisters, maxStates, &statusRegister); i++) {
         int y = (i % 8) * rowHeight;
-        int x = xofs + (i / 8) * 20;
+        int x = xofs + (i / 8) * 14;
         renderRegister(debugger, &gpRegisters[i], x*8, y);
     }
     renderRegister(debugger, &statusRegister, xofs*8, 9*rowHeight);

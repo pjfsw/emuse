@@ -14,6 +14,14 @@ typedef struct {
     uint16_t sr;
 } M68kRegisters;
 
+#define SR_FLAGS_S  0x2000
+#define SR_FLAGS_I  0x0700
+#define SR_FLAGS_C  0x0001
+#define SR_FLAGS_V  0x0002
+#define SR_FLAGS_Z  0x0004
+#define SR_FLAGS_N  0x0008
+
+
 typedef struct {
     Cpu cpu;
     M68kRegisters registers;

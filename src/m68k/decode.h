@@ -37,6 +37,7 @@ typedef enum {
 } InstructionSize;
 
 typedef enum {
+    IF_UNKNOWN=0,
     IF_MOVE,
     IF_BRANCH
 } InstructionFamily;

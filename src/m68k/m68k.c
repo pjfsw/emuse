@@ -3,20 +3,16 @@
 #include "m68k.h"
 #include "decode.h"
 
-#define SR_T  0x8000
-#define SR_S  0x2000
-#define SR_I  0x0700
-
 static inline void setUser(M68k *m68k) {
-    m68k->registers.sr = m68k->registers.sr & (0xffff-SR_S);    
+    m68k->registers.sr = m68k->registers.sr & (0xffff-SR_FLAGS_S);    
 }
 
 static inline void setSupervisor(M68k *m68k) {
-    m68k->registers.sr = m68k->registers.sr | SR_S;    
+    m68k->registers.sr = m68k->registers.sr | SR_FLAGS_S;    
 }
 
 static bool isSupervisor(M68k *m68k) {
-    return (m68k->registers.sr & SR_S) != 0;
+    return (m68k->registers.sr & SR_FLAGS_S) != 0;
 }
 
 static char* writeAddress(char *target, uint32_t address) {
