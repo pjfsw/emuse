@@ -2,23 +2,25 @@
 #include "texture.h"
 
 static const unsigned char packed_font_data[] = {
-    #embed "font.bin"
+    //#embed "font.bin"
+    #embed "IBM_VGA_8x16.bin"
 };
 
 void fontInit(Font *font, SDL_Renderer *renderer) {
     font->renderer = renderer;
     uint32_t fg = 0xffffffff;  // white
     uint32_t bg = 0x00000000;  // transparent or black
+    const int height = 16;
     for (int i = 0 ; i < 256; i++) {
-        uint32_t pixels[8 * 8];    // RGBA8888 output        
-        for (int y = 0; y < 8; y++) {
-            uint8_t row = packed_font_data[i*8+y];
-            for (int x = 0; x < 8; x++) {
+        uint32_t pixels[8 * height];    // RGBA8888 output        
+        for (int y = 0; y < height; y++) {
+            uint8_t row = packed_font_data[i*height+y];
+           for (int x = 0; x < 8; x++) {
                 int bit = (row >> (7 - x)) & 1;
                 pixels[y * 8 + x] = bit ? fg : bg;
             }
         }        
-        font->font[i] = textureCreate(renderer, 8, 8);
+        font->font[i] = textureCreate(renderer, 8, height);
         SDL_UpdateTexture(font->font[i], NULL, pixels, 8 * sizeof(uint32_t));
     }
 }

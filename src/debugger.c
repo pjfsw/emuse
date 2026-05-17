@@ -12,6 +12,7 @@ static const uint32_t registerColor = mnemonicColor;
 static const uint32_t stateValueColor = 0xCCCCCCFF;
 static const uint32_t stateLabelColor = mnemonicColor;
 static const uint32_t unknownColor = 0x669CD680;
+static const uint32_t activeLineColor =  0xD4D4D433;
 
 void debuggerInit(Debugger *debugger, DisassemblyFunc disassemblyFunc, CpuStateFunc cpuStateFunc, void *probeUserdata,
     SDL_Renderer *renderer, Font *font, int width, int height) {
@@ -57,9 +58,10 @@ void debuggerUpdate(Debugger *debugger) {
     renderRegister(debugger, &statusRegister, xofs*8, 9*rowHeight);
 
     const int maxDis = 16;
+    const int disassemblyOffset = 11;
     Disassembly disassembly[maxDis];
     for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis); i++) {
-        int y = (10 + 1 + i) * rowHeight;
+        int y = (disassemblyOffset + i) * rowHeight;
         fontWrite(debugger->font, disassembly[i].address, 8, y, addressColor);
         int x = strlen(disassembly[i].address);
         for (int j = 0; j < disassembly[i].instruction.count; j++) {
@@ -83,8 +85,23 @@ void debuggerUpdate(Debugger *debugger) {
             }
             fontWrite(debugger->font, part->part, 24 + x * 8, y, color);
             x += strlen(part->part);
-        }
+        }        
     }
+    const int currentLine = 0 ; // TODO make dynamic
+    SDL_SetRenderDrawColor(debugger->renderer,
+        (uint8_t)(activeLineColor >> 24),
+        (uint8_t)(activeLineColor >> 16),
+        (uint8_t)(activeLineColor >> 8),
+        (uint8_t)activeLineColor);
+    SDL_FRect activeLineRect = {
+        .x = 0,
+        .y = (disassemblyOffset+currentLine) * 16,
+        .w = 320,
+        .h = 16 
+    };
+    SDL_SetRenderDrawBlendMode(debugger->renderer, SDL_BLENDMODE_BLEND);    
+    SDL_RenderFillRect(debugger->renderer, &activeLineRect);
+
 }
 
 SDL_Texture *debuggerTexture(Debugger *debugger) {
