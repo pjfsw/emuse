@@ -21,6 +21,7 @@ Start:
     bra Foo
     move.w #$21,d0
     move.l #$1000022,d0
+Foo:    
     move.w #$31,d0    
     move.l #$1000032,d0
     move.w #$01,d0
@@ -31,7 +32,6 @@ Start:
     move.l #$1000022,d0
     move.w #$31,d0    
     move.l #$1000032,d0
-Foo:    
     move.w #$01,d0
     move.l #$1000002,d0
     move.w #$11,d0

@@ -57,8 +57,8 @@ void debuggerUpdate(Debugger *debugger) {
     }
     renderRegister(debugger, &statusRegister, xofs*8, 9*rowHeight);
 
-    const int maxDis = 16;
     const int disassemblyOffset = 11;
+    const int maxDis = (debuggerHeight(debugger)/16)-disassemblyOffset-1;
     Disassembly disassembly[maxDis];
     int currentLine = 0;  // TODO make dynamic
     for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis, &currentLine); i++) {

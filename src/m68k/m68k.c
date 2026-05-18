@@ -137,7 +137,7 @@ static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines
         }
     }    
     if ((firstLine >= 0) && (*currentLine >= 0)) {
-        const int pad = 3;
+        const int pad = 2;
         if ((*currentLine-firstLine) >= (maxLines-pad)) {
             int n = maxLines-pad-(*currentLine-firstLine);
             if (n < 1) {

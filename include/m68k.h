@@ -22,7 +22,7 @@ typedef struct {
 #define SR_FLAGS_N  0x0008
 
 
-#define DISASSEMBLY_CACHE_SIZE 40 
+#define DISASSEMBLY_CACHE_SIZE 64 
 
 typedef struct {
     uint32_t address;
