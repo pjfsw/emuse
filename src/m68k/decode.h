@@ -55,7 +55,7 @@ typedef struct {
     InstructionSize size;
     EffectiveAddress src;
     EffectiveAddress dst;
-    int16_t displacement;
+    int32_t displacement;
 
 } DecodedInstruction;
 

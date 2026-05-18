@@ -60,7 +60,8 @@ void debuggerUpdate(Debugger *debugger) {
     const int maxDis = 16;
     const int disassemblyOffset = 11;
     Disassembly disassembly[maxDis];
-    for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis); i++) {
+    int currentLine = 0;  // TODO make dynamic
+    for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis, &currentLine); i++) {
         int y = (disassemblyOffset + i) * rowHeight;
         fontWrite(debugger->font, disassembly[i].address, 8, y, addressColor);
         int x = strlen(disassembly[i].address);
@@ -87,7 +88,6 @@ void debuggerUpdate(Debugger *debugger) {
             x += strlen(part->part);
         }        
     }
-    const int currentLine = 0 ; // TODO make dynamic
     SDL_SetRenderDrawColor(debugger->renderer,
         (uint8_t)(activeLineColor >> 24),
         (uint8_t)(activeLineColor >> 16),

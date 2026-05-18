@@ -1,4 +1,5 @@
 #include "decode.h"
+#include <stdio.h>
 
 static inline uint32_t align24(uint32_t address) {
     return address & 0xffffff;
@@ -85,6 +86,10 @@ static int executeMove(DecodedInstruction *di, M68kRegisters *registers, ReadByt
 int executeBranch(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
     void *readWriteUserdata) {
         // TODO condition
+        /*printf("Current pc %06x, displacement %04x, new pc %06x\n",
+            registers->pc,
+            di->displacement,
+            registers->pc+di->displacement);*/
         registers->pc = align24(registers->pc + di->displacement);
         return 6; // We already counted the opcode fetch = 4 cycles
     }
@@ -136,7 +141,8 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readBy
         *execFunc = executeBranch;
         uint8_t displacement = opcode & 0xff;
         if (displacement == 0) {
-            di->displacement = readWordFunc(readWriteUserdata, registers->pc);
+            di->displacement = (int32_t)(int16_t)readWordFunc(readWriteUserdata, registers->pc)-2; 
+            // !! Displacement is taken from the PC after the opcode word not after the extension word
             di->size = IS_WORD;
             increasePc(registers);
             //cycles += 4; Don't update cycles here because branch is annoying

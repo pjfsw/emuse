@@ -119,12 +119,51 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
     }
 }
 
-static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines) {
+static int getDisassembly(void *userdata, Disassembly *disassembly, int maxLines, int *currentLine) {
     M68k *cpu = (M68k *)userdata;
 
     M68kRegisters regs = cpu->registers;
+    DisassemblyCache *cache = cpu->disassemblyCache;
+    int firstLine = -1;
+    *currentLine = -1;
+    uint32_t lastDisassemblyAddress = 0;
+    for (int i = 0; i < DISASSEMBLY_CACHE_SIZE; i++) {
+        lastDisassemblyAddress = cache[i].address;
+        if (cache[i].address == cpu->firstDisassemblyAddress) {
+            firstLine = i;
+        }
+        if (cache[i].address == regs.pc) {
+            *currentLine = i;
+        }
+    }    
+    if ((firstLine >= 0) && (*currentLine >= 0)) {
+        const int pad = 3;
+        if ((*currentLine-firstLine) >= (maxLines-pad)) {
+            int n = maxLines-pad-(*currentLine-firstLine);
+            if (n < 1) {
+                n = 1;
+            }
+            firstLine += n;
+            //printf("Change first line %02d=$%04x\n", firstLine, cache[firstLine].address);
+            cpu->firstDisassemblyAddress = cache[firstLine].address;
+            *currentLine -= n;
+        }
+        regs.pc = cpu->firstDisassemblyAddress;
+    } else {
+        // Default, just reset everything
+        firstLine = 0;  
+        *currentLine = 0;              
+        cpu->firstDisassemblyAddress = regs.pc;
+    }
+    // Just disassemble everything again because of self modifying code
+    for (int i = 0; i < DISASSEMBLY_CACHE_SIZE; i++) {
+        cache[i].address = regs.pc;
+        disassemble(cpu, &regs, cache[i].disassembly.address, &cache[i].disassembly.instruction);
+    }
+
+    //printf("First line %d, Current Line %d, First Address %06x\n", firstLine, *currentLine, cache[0].address);
     for (int i = 0; i < maxLines; i++) {
-        disassemble(cpu, &regs, disassembly[i].address, &disassembly[i].instruction);
+        memcpy(&disassembly[i], &cache[i + firstLine].disassembly, sizeof(Disassembly));
     }
     return maxLines;
 }

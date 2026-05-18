@@ -22,12 +22,21 @@ typedef struct {
 #define SR_FLAGS_N  0x0008
 
 
+#define DISASSEMBLY_CACHE_SIZE 40 
+
+typedef struct {
+    uint32_t address;
+    Disassembly disassembly;
+} DisassemblyCache;
+
 typedef struct {
     Cpu cpu;
     M68kRegisters registers;
     ReadByteFunc readByteFunc;
     ReadWordFunc readWordFunc;
     void *readWriteUserdata;
+    DisassemblyCache disassemblyCache[DISASSEMBLY_CACHE_SIZE];
+    uint32_t firstDisassemblyAddress;
 } M68k;
 
 void m68kInit(M68k *m68k, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc, void *readWriteUserdata);
