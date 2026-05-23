@@ -53,7 +53,7 @@ static void setFlag(M68kRegisters *registers, uint16_t flag, uint16_t value) {
     registers->sr = (registers->sr & (0xffff-flag)) | (value * flag);
 }
 
-static void setMoveFlags(M68kRegisters *registers, int32_t value) {
+static void setNZ(M68kRegisters *registers, int32_t value) {
     setFlag(registers, SR_FLAGS_N, value < 0);
     setFlag(registers, SR_FLAGS_Z, value == 0);
 }
@@ -63,60 +63,91 @@ static int executeLea(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     return 0;
 }
 
-static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    int cycleCount = 0;
-    uint32_t value = 0;
-    if (di->src.mode == AM_EXT) {
-        if (di->src.xn == AM_EXT_IMMEDIATE) {
-            value = di->src.immediate;
-        } else if (di->src.xn == AM_EXT_ABS_LONG) {
+static int readSource(
+    DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea, RwFunc *rwFunc, void *readWriteUserdata, uint32_t *value) {
+    uint32_t cycleCount = 0;
+    if (ea->mode == AM_EXT) {
+        if (ea->xn == AM_EXT_IMMEDIATE) {
+            *value = ea->immediate;
+        } else if (ea->xn == AM_EXT_ABS_LONG) {
             if (di->size == IS_LONG) {
-                value = (uint32_t)rwFunc->rw(readWriteUserdata, di->src.address) << 16;
-                value |= (uint32_t)rwFunc->rw(readWriteUserdata, di->src.address + 2);
-                cycleCount += 8;
+                *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address) << 16;
+                *value |= (uint32_t)rwFunc->rw(readWriteUserdata, ea->address + 2);
+                cycleCount = 8;
             } else {
-                value = rwFunc->rw(readWriteUserdata, di->src.address);
-                cycleCount += 4;
+                *value = rwFunc->rw(readWriteUserdata, ea->address);
+                cycleCount = 4;
             }
         }
-    } else if (di->src.mode == AM_DREG) {
-        value = registers->d[di->src.xn];
-    } else if (di->src.mode == AM_AREG) {
-        value = registers->a[di->src.xn];
+    } else if (ea->mode == AM_DREG) {
+        *value = registers->d[ea->xn];
+    } else if (ea->mode == AM_AREG) {
+        *value = registers->a[ea->xn];
     }
+    return cycleCount;
+}
+
+static int writeDest(
+    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
+    uint32_t cycleCount = 0;
+
     if ((di->dst.mode == AM_DREG)) {
         if (di->size == IS_LONG) {
-            setMoveFlags(registers, (int32_t)value);
+            setNZ(registers, (int32_t)value);
             registers->d[di->dst.xn] = value;
         } else if (di->size == IS_WORD) {
-            setMoveFlags(registers, (int32_t)(int16_t)(value & 0xffff));
+            setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffff0000) | (value & 0xffff);
         } else if (di->size == IS_BYTE) {
-            setMoveFlags(registers, (int32_t)(int8_t)(value & 0xff));
+            setNZ(registers, (int32_t)(int8_t)(value & 0xff));
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
         }
-    } else if (di->dst.mode == AM_AREG) {
+    }
+    else if (di->dst.mode == AM_AREG) {
         if (di->size == IS_LONG) {
             registers->a[di->dst.xn] = value;
         } else if (di->size == IS_WORD) {
             registers->a[di->dst.xn] = (int32_t)(int16_t)value;
         }
-    } else if (di->dst.mode == AM_ADDRESS) {
+    }
+    else if (di->dst.mode == AM_ADDRESS) {
         printf("Store %x in $%06x\n", value, di->dst.address);
         cycleCount += 4;
-        if (di->size == IS_BYTE) {   
-            setMoveFlags(registers, (int32_t)(int8_t)(value & 0xff));
-            rwFunc->wb(readWriteUserdata, di->dst.address, value);            
+        if (di->size == IS_BYTE) {
+            setNZ(registers, (int32_t)(int8_t)(value & 0xff));
+            rwFunc->wb(readWriteUserdata, di->dst.address, value);
         } else if (di->size == IS_WORD) {
-            setMoveFlags(registers, (int32_t)(int16_t)(value & 0xffff));
-            rwFunc->ww(readWriteUserdata, di->dst.address , value);                        
+            setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
+            rwFunc->ww(readWriteUserdata, di->dst.address, value);
         } else if (di->size == IS_LONG) {
-            setMoveFlags(registers, (int32_t)value);
+            setNZ(registers, (int32_t)value);
             rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
-            rwFunc->ww(readWriteUserdata, di->dst.address+2, (uint16_t)value);
+            rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
             cycleCount += 4;
         }
     }
+    return cycleCount;
+}
+
+static uint32_t aluAdd(uint32_t a, uint32_t b) {
+    return a + b;
+}
+
+static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t src;
+    uint32_t dst;
+    int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &src);
+    cycleCount += readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &dst);
+    dst = di->aluFunc(src,dst);
+    cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, dst);
+    return cycleCount;
+}
+
+static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t value;
+    int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &value);
+    // todo clear C,V and leave X unchanged
+    cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, value);
     return cycleCount;
 }
 
@@ -149,6 +180,7 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
     return cycles;  // We already counted the opcode fetch = 4 cycles
 }
 
+static char *mn_add = "ADD";
 static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
 static char *mn_move = "MOVE";
@@ -175,6 +207,13 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         di->mnemonic = mn_move;
         //  move.x
         uint16_t size = (family >> 12);
+        if (size == 1) {
+            size = IS_BYTE;
+        } else if (size == 3) {
+            size = IS_WORD;
+        } else if (size == 2) {
+            size = IS_LONG;
+        }
         di->size = size;
         uint16_t srcMode = (opcode >> 3) & 7;
         uint16_t srcReg = opcode & 7;
@@ -192,6 +231,36 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         }
         cycles += eaCycles;
         return cycles;
+    } else if (family == 0xd000) { // ADD
+        di->family = IF_MOVE;
+        di->mnemonic = mn_add;
+        *execFunc = executeAlu;
+        di->aluFunc = aluAdd;
+        uint16_t mode = (opcode >> 3) & 7;
+        uint16_t srcReg = opcode & 7;
+        uint16_t opMode = (opcode >> 6) & 7;
+        uint16_t dstReg = (opcode >> 9) & 7;  
+        if (((opMode == 4) || (opMode == 5) || (opMode == 6)) && ((mode == 0) || (mode == 1))) { // ADDX
+        } else { // Normal ADD            
+            // Byte = 00, Word = 01, Long = 10
+            uint16_t size = opMode & 3;
+            di->size = size;
+            EffectiveAddress ea;
+            int eaCycles = getEffectiveAddress(registers, mode, srcReg, size, &ea, readWordFunc, readWriteUserdata);
+            EffectiveAddress dr = {
+                .mode = AM_DREG,
+                .xn = dstReg
+            };            
+            uint16_t direction = opMode >> 2;
+            if (!direction) { // Dn + EA => Dn
+                di->src = ea;
+                di->dst = dr;
+            } else {         // EA + Dn => EA
+                di->src = dr;
+                di->dst = ea;                
+            }
+
+        }
     } else if (family == 0x7000) { // MOVEQ
         *execFunc = executeMove;
         di->family = IF_MOVE;
@@ -207,7 +276,6 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         }
         cycles += eaCycles;
         return cycles;
-
     } else if ((opcode & 0xf1c0) == 0x41c0) { // LEA
         *execFunc = executeLea;
         di->family = IF_LEA;

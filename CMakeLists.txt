@@ -6,6 +6,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_C_STANDARD 11)
 
+add_compile_options(
+    -Werror=return-type
+)
+
 # 1. SDL3 Setup
 # Ensure SDL3 is installed on your system (via brew, apt, or vcpkg)
 find_package(SDL3 REQUIRED)

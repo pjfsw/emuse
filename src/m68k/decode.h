@@ -30,10 +30,9 @@ typedef enum {
 #define AM_EXT_IMMEDIATE 0x04
 
 typedef enum {
-    IS_FIRST=0,
-    IS_BYTE,
+    IS_BYTE=0,
+    IS_WORD,
     IS_LONG,
-    IS_WORD
 } InstructionSize;
 
 typedef enum {
@@ -51,6 +50,8 @@ typedef struct {
     uint32_t immediate;
 } EffectiveAddress;
 
+typedef uint32_t (*AluFunc)(uint32_t src, uint32_t dst);
+
 typedef struct {
     char *mnemonic; 
     InstructionFamily family;
@@ -59,6 +60,7 @@ typedef struct {
     EffectiveAddress dst;
     int32_t displacement;
     uint16_t condition;
+    AluFunc aluFunc;
 } DecodedInstruction;
 
 typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
