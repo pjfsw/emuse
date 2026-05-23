@@ -16,7 +16,7 @@ static bool isSupervisor(M68k *m68k) {
 }
 
 static char* writeAddress(char *target, uint32_t address) {
-    sprintf(target, "%06x", address & 0xffffff);
+    sprintf(target, "%06X", address & 0xffffff);
     return target;
 }
 
@@ -45,6 +45,9 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
     } else if (ea->mode == AM_AREG) {
         sprintf(s, "A%d", ea->xn);
         addDisassembly(instruction, s, SYM_REGISTER);
+    } else if (ea->mode == AM_ADDRESS) {
+        sprintf(s, "(A%d)", ea->xn);
+        addDisassembly(instruction, s, SYM_REGISTER);
     } else if (ea->mode == AM_EXT) {
         if (ea->xn == AM_EXT_IMMEDIATE) {
             addDisassembly(instruction, "#", SYM_SYMBOL);            
@@ -56,8 +59,19 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
                 sprintf(s, "$%X", ea->immediate);
             }
             addDisassembly(instruction, s, SYM_CONSTANT);            
+        } else if (ea->xn == AM_EXT_ABS_LONG) {
+            sprintf(s, "$%X", ea->address);
+            addDisassembly(instruction, s, SYM_CONSTANT);            
         }
     }
+}
+
+static void disassembleLea(DecodedInstruction *di, Instruction *instruction) {
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    disassembleEa(instruction, &di->src, di->size);
+    addDisassembly(instruction, ",", SYM_SYMBOL);
+    disassembleEa(instruction, &di->dst, di->size);
 }
 
 static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
@@ -95,8 +109,8 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
     memset(&di, 0, sizeof(DecodedInstruction));
     writeAddress(address, regs->pc);
     ExecFunc dummyExec;
-    uint16_t opcode = cpu->readWordFunc(cpu->readWriteUserdata, regs->pc);
-    decode(&di, regs, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata, &dummyExec);
+    uint16_t opcode = cpu->rwFunc.rw(cpu->readWriteUserdata, regs->pc);
+    decode(&di, regs, &cpu->rwFunc, cpu->readWriteUserdata, &dummyExec);
     instruction->count = 0;
     char s[100];
     if (di.family == IF_UNKNOWN) {
@@ -107,6 +121,9 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
     switch (di.family) {
         case IF_MOVE:
             disassembleMove(&di, instruction);
+            break;
+        case IF_LEA:
+            disassembleLea(&di,instruction);
             break;
         case IF_BRANCH:
             disassembleBranch(&di, regs->pc, instruction);
@@ -240,25 +257,24 @@ int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
     ExecFunc execFunc;
-    int cycles = decode(&di, &cpu->registers, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata, &execFunc);
+    int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata, &execFunc);
     if (execFunc != NULL) {
-        cycles += execFunc(&di, &cpu->registers, cpu->readByteFunc, cpu->readWordFunc, cpu->readWriteUserdata);
+        cycles += execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
     }
     return cycles;
 }
 
-void m68kInit(M68k *m68k, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc, void *readWriteUserdata) {
+void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata) {
     memset(m68k, 0, sizeof(M68k));
     m68k->cpu.cpuStateFunc = getCpuState;
     m68k->cpu.disassemblyFunc = getDisassembly;
     m68k->cpu.probeUserdata = m68k;
-    m68k->readByteFunc = readByteFunc;
-    m68k->readWordFunc = readWordFunc;
+    m68k->rwFunc = rwFunc;
     m68k->readWriteUserdata = readWriteUserdata;
 }
 
 static uint16_t readWord(M68k *m68k, uint32_t address) {
-    return m68k->readWordFunc(m68k->readWriteUserdata, address);
+    return m68k->rwFunc.rw(m68k->readWriteUserdata, address);
 }
 
 static uint32_t readLong(M68k *m68k, uint32_t address) {

@@ -39,7 +39,8 @@ typedef enum {
 typedef enum {
     IF_UNKNOWN=0,
     IF_MOVE,
-    IF_BRANCH
+    IF_BRANCH,
+    IF_LEA
 } InstructionFamily;
 
 typedef struct {
@@ -59,11 +60,8 @@ typedef struct {
 
 } DecodedInstruction;
 
-
-typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
-    void *readWriteUserdata);
+typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
 
 // Decode  instruction. Returns number of cycles or 0 if error
 // The execution function is stored in execFunc
-int decode(DecodedInstruction *di, M68kRegisters *registers, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc,
-    void *readWriteUserdata, ExecFunc *execFunc);
+int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, ExecFunc *execFunc);

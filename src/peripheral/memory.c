@@ -1,5 +1,6 @@
 #include "memory.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 void memoryInit(Memory *memory, uint32_t size) {
     int n = 1;
@@ -26,7 +27,9 @@ void memoryWriteWord(void *userdata, uint32_t address, uint16_t word) {
     Memory *memory = (Memory*)userdata;
     address = (address & memory->mask) & 0xfffffffe;
     memory->data[address] = (word >> 8);
-    memory->data[address+1] = (word & 0xff);
+    printf("write to memory %06x=%02x\n", address, memory->data[address]);    
+    memory->data[address+1] = (word & 0xff);    
+    printf("write to memory %06x=%02x\n", address, memory->data[address+1]);    
 }
 
 uint8_t memoryReadByte(void *userdata, uint32_t address) {

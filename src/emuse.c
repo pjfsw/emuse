@@ -14,7 +14,7 @@ typedef struct {
 
 void readArgs(Args *args, int argc, char *argv[]) {
     memset(args, 0, sizeof(Args));
-    args->cpuFreq = 12000000;
+    args->cpuFreq = 10000000;
 
     int c;
     while ((c = getopt(argc, argv, "z:r:")) != -1) {
@@ -50,12 +50,19 @@ int main(int argc, char* argv[]) {
     Bus bus;
     busInit(&bus);
     M68k cpu;
-    m68kInit(&cpu, busReadByte, busReadWord, &bus);
+    RwFunc rwFunc = {
+        .rb = busReadByte,
+        .rw = busReadWord,
+        .wb = busWriteByte,
+        .ww = busWriteWord
+    };
+
+    m68kInit(&cpu, rwFunc, &bus);
     busAddCpu(&bus, m68kClock, &cpu);
     busAddResetFunc(&bus, m68kReset, &cpu);
 
     Memory rom;
-    uint32_t romSize = 65536;
+    uint32_t romSize = 0x10000;
     memoryInit(&rom, romSize);
     if (args.romFile[0] == 0) {
         fprintf(stderr, "Error no ROM file specified! ( Use -r <rom path> )\n");
@@ -70,15 +77,25 @@ int main(int argc, char* argv[]) {
     }
     ReadWriteMappingKey mappingKey;
     
-    mappingKey.start = 0;
-    mappingKey.end = 0x200000;
+    mappingKey.start = 0x000000;
+    mappingKey.end =   0x010000;
     mappingKey.userdata = &rom;
     busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
-    
-    mappingKey.start = 0xe00000;
+   
+    mappingKey.start = 0xf00000;
     mappingKey.end = 0x1000000;
     mappingKey.userdata = &rom;
     busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
+
+    Memory ram;
+    uint32_t ramSize = 1048576;
+    memoryInit(&ram, ramSize);
+
+    mappingKey.start = 0x010000;
+    mappingKey.end =   0x100000;
+    mappingKey.userdata = &ram;
+    busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
+    busAddWriteFunc(&bus, memoryWriteByte, memoryWriteWord, mappingKey);
 
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;

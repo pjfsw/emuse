@@ -25,6 +25,12 @@ typedef struct {
 } ReadMapping;
 
 typedef struct {
+    ReadWriteMappingKey key;
+    WriteByteFunc writeByteFunc;
+    WriteWordFunc writeWordFunc;
+} WriteMapping;
+
+typedef struct {
     MainTicker cpuTicker;
     void *cpuTickerUserdata;
     
@@ -38,6 +44,9 @@ typedef struct {
     
     ReadMapping readMappings[MAX_READWRITE_FUNC];
     int readMappingsCount;
+
+    WriteMapping writeMappings[MAX_READWRITE_FUNC];
+    int writeMappingsCount;
 } Bus;
 
 
@@ -51,11 +60,13 @@ void busAddResetFunc(Bus *bus, ResetFunc resetFunc, void *userdata);
 
 void busAddReadFunc(Bus *bus, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc, ReadWriteMappingKey mappingKey);
 
+void busAddWriteFunc(Bus *bus, WriteByteFunc writeByteFunc, WriteWordFunc writeWordFunc, ReadWriteMappingKey mappingKey);
+
 void busReset(void *userdata);
 
-void busWriteByte(Bus *bus, uint32_t address, uint8_t value);
+void busWriteByte(void *userdata, uint32_t address, uint8_t value);
 
-void busWriteWord(Bus *bus, uint32_t address, uint16_t value);
+void busWriteWord(void *userdata, uint32_t address, uint16_t value);
 
 uint8_t busReadByte(void *userdata, uint32_t address);
 

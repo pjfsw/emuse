@@ -32,14 +32,13 @@ typedef struct {
 typedef struct {
     Cpu cpu;
     M68kRegisters registers;
-    ReadByteFunc readByteFunc;
-    ReadWordFunc readWordFunc;
+    RwFunc rwFunc;
     void *readWriteUserdata;
     DisassemblyCache disassemblyCache[DISASSEMBLY_CACHE_SIZE];
     uint32_t firstDisassemblyAddress;
 } M68k;
 
-void m68kInit(M68k *m68k, ReadByteFunc readByteFunc, ReadWordFunc readWordFunc, void *readWriteUserdata);
+void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata);
 
 int m68kClock(void *userdata);
 
