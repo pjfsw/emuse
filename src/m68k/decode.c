@@ -152,6 +152,7 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
 static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
 static char *mn_move = "MOVE";
+static char *mn_moveq = "MOVEQ";
 static char *mn_unknown = "???";
 static char *mn_condition[] = {
     "BRA", "BSR", "BHI", "BLS", "BCC", "BCS", "BNE", "BEQ", "BVC", "BVS", "BPL", "BMI", "BGE", "BLT", "BGT", "BLE"};
@@ -191,6 +192,22 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         }
         cycles += eaCycles;
         return cycles;
+    } else if (family == 0x7000) { // MOVEQ
+        *execFunc = executeMove;
+        di->family = IF_MOVE;
+        di->mnemonic = mn_moveq;
+        uint16_t dstReg = (opcode >> 9) & 7;                
+        di->size = IS_LONG;
+        di->src.mode = AM_EXT;
+        di->src.xn = AM_EXT_IMMEDIATE;
+        di->src.immediate = (int32_t)(int8_t)(opcode);
+        int eaCycles = getEffectiveAddress(registers, AM_DREG , dstReg, IS_LONG, &di->dst, readWordFunc, readWriteUserdata);
+        if (eaCycles < 0) {
+            return 0;
+        }
+        cycles += eaCycles;
+        return cycles;
+
     } else if ((opcode & 0xf1c0) == 0x41c0) { // LEA
         *execFunc = executeLea;
         di->family = IF_LEA;
