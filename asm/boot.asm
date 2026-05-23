@@ -8,10 +8,8 @@ RAM_SIZE equ $100000
 
     org $f00400        ; Move past the vector table
 Start:   
-    lea $11000,a0
-    move.l #$12345678,d0
-    move.l d0,(a0)
-    move.l $11000,d1
-    bra MMCStartTransfer
+    bsr MMCStartTransfer
+loop:
+    bra loop
     
     include mmc.asm

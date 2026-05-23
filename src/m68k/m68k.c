@@ -103,7 +103,6 @@ static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *
     addDisassembly(instruction, s, SYM_CONSTANT);
 }
 
-
 static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instruction *instruction) {
     DecodedInstruction di;
     memset(&di, 0, sizeof(DecodedInstruction));

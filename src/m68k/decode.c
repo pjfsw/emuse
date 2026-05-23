@@ -120,16 +120,36 @@ static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc 
     return cycleCount;
 }
 
+int executeRts(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t address = (uint32_t)rwFunc->rw(readWriteUserdata, registers->a[7]) << 16;
+    address |= (uint32_t)rwFunc->rw(readWriteUserdata, registers->a[7]+2);
+    registers->a[7] += 4;
+    registers->pc = address;
+    return 12;    
+}
+
 int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    int cycles = 6;
+    bool shouldBranch = true;
+    if (di->condition == 1) {
+        uint32_t address = registers->pc;
+        registers->a[7] -= 4;
+        rwFunc->ww(readWriteUserdata, registers->a[7], (uint16_t)(address >> 16));
+        rwFunc->ww(readWriteUserdata, registers->a[7]+2, (uint16_t)address); 
+        cycles += 8;
+    }
     // TODO condition
     /*printf("Current pc %06x, displacement %04x, new pc %06x\n",
             registers->pc,
             di->displacement,
             registers->pc+di->displacement);*/
-    registers->pc = align24(registers->pc + di->displacement);
-    return 6;  // We already counted the opcode fetch = 4 cycles
+    if (shouldBranch) {
+        registers->pc = align24(registers->pc + di->displacement);
+    }
+    return cycles;  // We already counted the opcode fetch = 4 cycles
 }
 
+static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
 static char *mn_move = "MOVE";
 static char *mn_unknown = "???";
@@ -188,7 +208,8 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
 
     } else if (family == 0x6000) { // BRA, BSR, Bxx
         uint16_t condition = (opcode >> 8) & 15;
-        di->mnemonic = mn_condition[condition];
+        di->condition = condition;
+        di->mnemonic = mn_condition[condition];        
         di->family = IF_BRANCH;
         *execFunc = executeBranch;
         uint8_t displacement = opcode & 0xff;
@@ -202,6 +223,10 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             di->displacement = (int8_t)displacement;
             di->size = IS_BYTE;
         }
-    } 
+    } else if (opcode == 0x4e75) {
+        di->mnemonic = mn_rts;
+        di->family = IF_IMPLIED;
+        *execFunc = executeRts;
+    }
     return cycles;
 }

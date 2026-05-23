@@ -40,6 +40,7 @@ typedef enum {
     IF_UNKNOWN=0,
     IF_MOVE,
     IF_BRANCH,
+    IF_IMPLIED,
     IF_LEA
 } InstructionFamily;
 
@@ -57,7 +58,7 @@ typedef struct {
     EffectiveAddress src;
     EffectiveAddress dst;
     int32_t displacement;
-
+    uint16_t condition;
 } DecodedInstruction;
 
 typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
