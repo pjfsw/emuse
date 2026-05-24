@@ -53,6 +53,10 @@ static void setFlag(M68kRegisters *registers, uint16_t flag, uint16_t value) {
     registers->sr = (registers->sr & (0xffff-flag)) | (value * flag);
 }
 
+static bool getFlag(M68kRegisters *registers, uint16_t flag) {
+    return (registers->sr & flag) != 0;
+}
+
 static void setNZ(M68kRegisters *registers, int32_t value) {
     setFlag(registers, SR_FLAGS_N, value < 0);
     setFlag(registers, SR_FLAGS_Z, value == 0);
@@ -133,6 +137,23 @@ static int writeDest(
     return cycleCount;
 }
 
+static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t result = (uint64_t)((uint64_t)a - (uint64_t)b);    
+    uint64_t realResult;
+    if (size == IS_BYTE) {
+        realResult = (uint8_t)result;
+    } else if (size == IS_WORD) {
+        realResult = (uint16_t)result;
+    } else {
+        realResult = (uint32_t)result;
+    }
+    bool carry = (uint64_t)result != (uint64_t)realResult;
+    setFlag(regs, SR_FLAGS_C, carry);
+    setFlag(regs, SR_FLAGS_X, carry);
+    //printf("%lx %lx %d %x\n", result, realResult, carry, regs->sr);
+    return (uint32_t)result;
+}
+
 static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
     uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
     uint64_t realResult;
@@ -188,7 +209,11 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
         rwFunc->ww(readWriteUserdata, registers->a[7], (uint16_t)(address >> 16));
         rwFunc->ww(readWriteUserdata, registers->a[7]+2, (uint16_t)address); 
         cycles += 8;
-    }
+    } else if (di->condition == 4) { // BCC
+        shouldBranch = !getFlag(registers, SR_FLAGS_C);
+    } else if (di->condition == 5) { // BCS
+        shouldBranch = getFlag(registers, SR_FLAGS_C);
+    } 
     // TODO condition
     /*printf("Current pc %06x, displacement %04x, new pc %06x\n",
             registers->pc,
@@ -196,11 +221,15 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
             registers->pc+di->displacement);*/
     if (shouldBranch) {
         registers->pc = align24(registers->pc + di->displacement);
+    } else {
+        return 4;
     }
     return cycles;  // We already counted the opcode fetch = 4 cycles
 }
 
 static char *mn_add = "ADD";
+static char *mn_addq = "ADDQ";
+static char *mn_subq = "SUBQ";
 static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
 static char *mn_move = "MOVE";
@@ -261,6 +290,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         uint16_t opMode = (opcode >> 6) & 7;
         uint16_t dstReg = (opcode >> 9) & 7;  
         if (((opMode == 4) || (opMode == 5) || (opMode == 6)) && ((mode == 0) || (mode == 1))) { // ADDX
+            // TODO
         } else { // Normal ADD            
             // Byte = 00, Word = 01, Long = 10
             uint16_t size = opMode & 3;
@@ -278,8 +308,32 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             } else {         // EA + Dn => EA
                 di->src = dr;
                 di->dst = ea;                
+            }            
+            cycles += eaCycles;
+        }
+    } else if (family == 0x5000) { 
+        uint16_t size = (opcode >> 6) & 3;
+        uint16_t dstMode = (opcode >> 3) & 7;
+        uint16_t dstReg = opcode & 7;
+        if (size == 3) { // Scc, DBcc
+        } else { // ADDQ/SUBQ
+            uint16_t isSub = (opcode >> 8) & 1;
+            uint16_t data = ((opcode >> 9) & 7) + 1;   
+            int eaCycles = getEffectiveAddress(registers, dstMode, dstReg, size, &di->dst, readWordFunc, readWriteUserdata);
+            di->src.immediate = (uint32_t)data;
+            di->src.mode = AM_EXT;
+            di->src.xn = AM_EXT_IMMEDIATE;
+            di->size = size;
+            di->family = IF_MOVE;
+            *execFunc = executeAlu;
+            if (isSub) {
+                di->mnemonic = mn_subq;
+                di->aluFunc = aluSub;
+            } else {
+                di->mnemonic = mn_addq;
+                di->aluFunc = aluAdd;
             }
-
+            cycles += eaCycles;
         }
     } else if (family == 0x7000) { // MOVEQ
         *execFunc = executeMove;

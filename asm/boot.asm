@@ -9,7 +9,7 @@ RAM_SIZE equ $100000
     org $f00400        ; Move past the vector table
 Start:   
     bsr MMCStartTransfer
-    move.b #$aa,d0
+    move.b #$55,d0
     bsr MMCSendByte
 loop:
     bra loop
