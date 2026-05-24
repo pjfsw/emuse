@@ -50,7 +50,7 @@ typedef struct {
     uint32_t immediate;
 } EffectiveAddress;
 
-typedef uint32_t (*AluFunc)(uint32_t src, uint32_t dst);
+typedef uint32_t (*AluFunc)(uint32_t src, uint32_t dst, uint16_t size, M68kRegisters *regs);
 
 typedef struct {
     char *mnemonic; 

@@ -206,7 +206,7 @@ static void writeSR(char *dest, M68k *cpu) {
         n++;
         sr = sr << 1;
     }
-    dest[16] = 0;
+    dest[17] = 0;
 }
 
 static inline uint32_t *getSP(M68k *cpu) {

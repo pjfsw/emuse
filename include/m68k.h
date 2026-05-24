@@ -20,7 +20,7 @@ typedef struct {
 #define SR_FLAGS_V  0x0002
 #define SR_FLAGS_Z  0x0004
 #define SR_FLAGS_N  0x0008
-
+#define SR_FLAGS_X  0x0010
 
 #define DISASSEMBLY_CACHE_SIZE 64 
 

@@ -87,6 +87,10 @@ static int readSource(
     return cycleCount;
 }
 
+static inline bool isTargetAddressRegister(DecodedInstruction *di) {
+    return di->dst.mode == AM_AREG;
+}
+
 static int writeDest(
     DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
     uint32_t cycleCount = 0;
@@ -103,7 +107,7 @@ static int writeDest(
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
         }
     }
-    else if (di->dst.mode == AM_AREG) {
+    else if (isTargetAddressRegister(di)) {
         if (di->size == IS_LONG) {
             registers->a[di->dst.xn] = value;
         } else if (di->size == IS_WORD) {
@@ -129,8 +133,21 @@ static int writeDest(
     return cycleCount;
 }
 
-static uint32_t aluAdd(uint32_t a, uint32_t b) {
-    return a + b;
+static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
+    uint64_t realResult;
+    if (size == IS_BYTE) {
+        realResult = (uint8_t)result;
+    } else if (size == IS_WORD) {
+        realResult = (uint16_t)result;
+    } else {
+        realResult = (uint32_t)result;
+    }
+    bool carry = (uint64_t)result != (uint64_t)realResult;
+    setFlag(regs, SR_FLAGS_C, carry);
+    setFlag(regs, SR_FLAGS_X, carry);
+    //printf("%lx %lx %d %x\n", result, realResult, carry, regs->sr);
+    return (uint32_t)result;
 }
 
 static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
@@ -138,7 +155,7 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     uint32_t dst;
     int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &src);
     cycleCount += readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &dst);
-    dst = di->aluFunc(src,dst);
+    dst = di->aluFunc(src,dst, di->size, registers);
     cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, dst);
     return cycleCount;
 }
@@ -146,7 +163,10 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
 static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
     int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &value);
-    // todo clear C,V and leave X unchanged
+    if (!isTargetAddressRegister(di)) {
+        setFlag(registers, SR_FLAGS_C, 0);
+        setFlag(registers, SR_FLAGS_V, 0);
+    }
     cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, value);
     return cycleCount;
 }
