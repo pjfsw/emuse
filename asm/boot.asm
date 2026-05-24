@@ -11,6 +11,7 @@ Start:
     bsr MMCStartTransfer
     move.b #$55,d0
     bsr MMCSendByte
+    bsr MMCEndTransfer
 loop:
     bra loop
     

@@ -213,7 +213,12 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
         shouldBranch = !getFlag(registers, SR_FLAGS_C);
     } else if (di->condition == 5) { // BCS
         shouldBranch = getFlag(registers, SR_FLAGS_C);
-    } 
+    } else if (di->condition == 6) { // BNE
+        shouldBranch = !getFlag(registers, SR_FLAGS_Z);
+    } else if (di->condition == 7) { // BEQ
+        shouldBranch = getFlag(registers, SR_FLAGS_Z);
+    }
+
     // TODO condition
     /*printf("Current pc %06x, displacement %04x, new pc %06x\n",
             registers->pc,
@@ -318,7 +323,10 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         if (size == 3) { // Scc, DBcc
         } else { // ADDQ/SUBQ
             uint16_t isSub = (opcode >> 8) & 1;
-            uint16_t data = ((opcode >> 9) & 7) + 1;   
+            uint16_t data = ((opcode >> 9) & 7);   
+            if (data == 0) {
+                data = 8;
+            }
             int eaCycles = getEffectiveAddress(registers, dstMode, dstReg, size, &di->dst, readWordFunc, readWriteUserdata);
             di->src.immediate = (uint32_t)data;
             di->src.mode = AM_EXT;
