@@ -89,7 +89,7 @@ MMCSendByte:
 ; A1 must contain MMC_MISO
 ; D1-D3 will be destroyed
 ;____________________________________________________________
-mmcReadByte:
+MMCReadByte:
     MmcReadBit
     MmcReadBit
     MmcReadBit

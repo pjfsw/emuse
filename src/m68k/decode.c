@@ -87,6 +87,19 @@ static int readSource(
         *value = registers->d[ea->xn];
     } else if (ea->mode == AM_AREG) {
         *value = registers->a[ea->xn];
+    } else if (ea->mode == AM_ADDRESS) {
+        printf("Read $%06x\n", di->src.address);
+        cycleCount += 4;
+        if (di->size == IS_BYTE) {
+            *value = (uint32_t)rwFunc->rb(readWriteUserdata, di->src.address);
+        } else if (di->size == IS_WORD) {
+            *value = (uint32_t)rwFunc->rw(readWriteUserdata, di->src.address);
+        } else if (di->size == IS_LONG) {
+            *value = (uint32_t)rwFunc->rw(readWriteUserdata, di->dst.address) << 16;
+            *value |= (uint32_t)rwFunc->rw(readWriteUserdata, di->dst.address + 2);
+            cycleCount += 4;
+        }
+
     }
     return cycleCount;
 }
@@ -154,8 +167,7 @@ static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *reg
     return (uint32_t)result;
 }
 
-static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
-    uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
+static void setAddFlags(uint64_t result, uint16_t size, M68kRegisters *regs) {
     uint64_t realResult;
     if (size == IS_BYTE) {
         realResult = (uint8_t)result;
@@ -168,6 +180,18 @@ static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *reg
     setFlag(regs, SR_FLAGS_C, carry);
     setFlag(regs, SR_FLAGS_X, carry);
     //printf("%lx %lx %d %x\n", result, realResult, carry, regs->sr);
+}
+
+static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
+    setAddFlags(result, size, regs);
+    return (uint32_t)result;
+}
+
+static uint32_t aluAddx(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t x = getFlag(regs, SR_FLAGS_X) ? 1 : 0;
+    uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b + x);    
+    setAddFlags(result, size, regs);
     return (uint32_t)result;
 }
 
@@ -233,6 +257,7 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
 }
 
 static char *mn_add = "ADD";
+static char *mn_addx = "ADDX";
 static char *mn_addq = "ADDQ";
 static char *mn_subq = "SUBQ";
 static char *mn_rts = "RTS";
@@ -295,7 +320,19 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         uint16_t opMode = (opcode >> 6) & 7;
         uint16_t dstReg = (opcode >> 9) & 7;  
         if (((opMode == 4) || (opMode == 5) || (opMode == 6)) && ((mode == 0) || (mode == 1))) { // ADDX
-            // TODO
+            uint16_t size = opMode & 3;
+            di->size = size;
+            di->mnemonic = mn_addx;            
+            di->aluFunc = aluAddx;
+            int eaCycles = 0;
+            if (mode == 0) { // Dn,Dn
+                di->src.mode = AM_DREG;
+                di->src.xn = srcReg;
+                di->dst.mode = AM_DREG;
+                di->dst.xn = dstReg;
+            } else { // ( -(An),-(An)
+            }            
+            cycles += eaCycles;
         } else { // Normal ADD            
             // Byte = 00, Word = 01, Long = 10
             uint16_t size = opMode & 3;
