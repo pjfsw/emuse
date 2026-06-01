@@ -42,8 +42,8 @@ def expand_addr_match(field_name: str, value_text: str) -> str:
 
     terms = []
 
-    for i, pin in enumerate(reversed(pins)):
-        bit = (value >> i) & 1
+    for i, pin in enumerate(pins):
+        bit = (value >> (len(pins) - 1 - i)) & 1
         terms.append(pin if bit else f"/{pin}")
 
     return " * ".join(terms)
