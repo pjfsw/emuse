@@ -9,6 +9,10 @@
     org $f00400        ; Move past the vector table
 Start:   
     move.b #OVR_OFF,OVR
+    lea $a0000,a5
+    move.w #$1234,-4(a5)
+    move.w 4(a5),d0
+    move.w $9fffc,d1
     bsr MMCStartTransfer
     ;bsr MMCSendByte
     bsr MMCReadByte

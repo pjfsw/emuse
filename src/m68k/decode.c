@@ -21,6 +21,11 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
     } else if (mode == AM_ADDRESS) { // (a0)
         ea->address = registers->a[reg];
         return 0;        
+    } else if (mode == AM_ADDR_DISP) { // disp(a0)
+        ea->displacement = (int16_t)readWordFunc(readWriteUserdata, registers->pc);
+        increasePc(registers);
+        ea->address = (int32_t)ea->displacement + registers->a[reg];
+        return 4;
     } else if (mode == AM_EXT) {
         if (reg == AM_EXT_IMMEDIATE) {
             // Immediate
@@ -93,7 +98,7 @@ static int readSource(
     } else if (ea->mode == AM_AREG) {
         *value = registers->a[ea->xn];
         cycleCount = 0;
-    } else if (ea->mode == AM_ADDRESS) {
+    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP)) {
         printf("Read $%06x\n", di->src.address);
         cycleCount = 4;
         if (di->size == IS_BYTE) {
@@ -116,9 +121,10 @@ static inline bool isTargetAddressRegister(DecodedInstruction *di) {
 
 static int writeDest(
     DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
-    uint32_t cycleCount = 0;
+    uint32_t cycleCount = -1;
 
     if ((di->dst.mode == AM_DREG)) {
+        cycleCount = 0;
         if (di->size == IS_LONG) {
             setNZ(registers, (int32_t)value);
             registers->d[di->dst.xn] = value;
@@ -131,15 +137,16 @@ static int writeDest(
         }
     }
     else if (isTargetAddressRegister(di)) {
+        cycleCount = 0;
         if (di->size == IS_LONG) {
             registers->a[di->dst.xn] = value;
         } else if (di->size == IS_WORD) {
             registers->a[di->dst.xn] = (int32_t)(int16_t)value;
         }
     }
-    else if (di->dst.mode == AM_ADDRESS) {
+    else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS)) {
         printf("Store %x in $%06x\n", value, di->dst.address);
-        cycleCount += 4;
+        cycleCount = 4;
         if (di->size == IS_BYTE) {
             setNZ(registers, (int32_t)(int8_t)(value & 0xff));
             rwFunc->wb(readWriteUserdata, di->dst.address, value);
@@ -152,7 +159,7 @@ static int writeDest(
             rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
             cycleCount += 4;
         }
-    } else if (di->dst.mode == AM_EXT) {
+    } else if (di->dst.mode == AM_EXT) {                
         if (di->dst.xn == AM_EXT_ABS_LONG) {
             if (di->size == IS_LONG) {
                 rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
@@ -222,9 +229,17 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     if (cycleCount < 0) {
         return -1;
     }
-    cycleCount += readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &dst);
+    int destCycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &dst);
+    if (destCycleCount < 0) {
+        return -1;
+    }
+    cycleCount += destCycleCount;
     dst = di->aluFunc(src,dst, di->size, registers);
-    cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, dst);
+    int writeCycleCount = writeDest(di, registers, rwFunc, readWriteUserdata, dst);
+    if (writeCycleCount < 0) {
+        return -1;        
+    }
+    cycleCount += writeCycleCount;
     return cycleCount;
 }
 
