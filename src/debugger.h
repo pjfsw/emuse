@@ -12,10 +12,13 @@ typedef struct {
     Font *font;
     int width;
     int height;
+    bool showMemory;
 } Debugger;
 
 void debuggerInit(Debugger *debugger, DisassemblyFunc disassemblyFunc, CpuStateFunc cpuStateFunc, void *probeUserdata,
     SDL_Renderer *renderer, Font *font, int width, int height);
+
+void debuggerSetShowMemory(Debugger *debugger, bool showMemory);
 
 void debuggerUpdate(Debugger *debugger);
 

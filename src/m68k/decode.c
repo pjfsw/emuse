@@ -145,7 +145,7 @@ static int writeDest(
         }
     }
     else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS)) {
-        printf("Store %x in $%06x\n", value, di->dst.address);
+        //printf("Store %x in $%06x\n", value, di->dst.address);
         cycleCount = 4;
         if (di->size == IS_BYTE) {
             setNZ(registers, (int32_t)(int8_t)(value & 0xff));

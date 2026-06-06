@@ -4,6 +4,9 @@
   "files.associations": {
     "emustats.h": "c",
     "m68k.h": "c",
-    "decode.h": "c"
+    "decode.h": "c",
+    "cpu.h": "c",
+    "bus.h": "c",
+    "booleanfunc.h": "c"
   }
 }

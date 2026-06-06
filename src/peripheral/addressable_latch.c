@@ -21,7 +21,7 @@ static void writeByte(AddrLatch *latch, uint8_t offset, uint8_t byte) {
 
 void addrLatchWriteByte(void *userdata, uint32_t address, uint8_t byte) {
     AddrLatch *latch = (AddrLatch*)userdata;
-    printf("Write byte %06x = %02x\n", address, byte);
+    //printf("Write byte %06x = %02x\n", address, byte);
 
     // Write on only odd addresses
     if (!(address & 1)) {

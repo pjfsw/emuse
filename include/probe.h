@@ -42,4 +42,3 @@ typedef struct {
 typedef int (*DisassemblyFunc)(void *userdata, Disassembly *disassembly, int maxLines, int *currentLine);
 
 typedef int (*CpuStateFunc)(void *userdata, CpuState *gpRegisters, int maxLines, CpuState *statusRegister);
-

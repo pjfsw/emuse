@@ -31,36 +31,26 @@ static void renderRegister(Debugger *debugger, CpuState *reg, int x, int y) {
     fontWrite(debugger->font, reg->value, x+24, y, stateValueColor);
 }
 
-void debuggerUpdate(Debugger *debugger) {
-    SDL_SetRenderTarget(debugger->renderer, debugger->backdrop);
-    SDL_SetRenderDrawColor(debugger->renderer, 0, 0, 0, 191);
-    SDL_RenderClear(debugger->renderer);    
-    SDL_SetRenderDrawColor(debugger->renderer, 0,0,0,255);
-    SDL_FRect windowFrame = {
-        .x = 0,
-        .y = 0,
-        .w = debugger->width-1,
-        .h = debugger->height-1
-    };
-    SDL_RenderRect(debugger->renderer, &windowFrame);
+static const int rowHeight = 16;
 
-
-    const int rowHeight = 16;
+static void renderRegisters(Debugger *debugger, int yOffset) {
     const int maxStates = 200;
     const int xofs = 1;
     CpuState gpRegisters[maxStates];
     CpuState statusRegister;
     for (int i = 0; i < debugger->cpuStateFunc(debugger->probeUserdata, gpRegisters, maxStates, &statusRegister); i++) {
-        int y = (i % 8) * rowHeight;
+        int y = (yOffset + (i % 8)) * rowHeight;
         int x = xofs + (i / 8) * 14;
         renderRegister(debugger, &gpRegisters[i], x*8, y);
     }
-    renderRegister(debugger, &statusRegister, xofs*8, 9*rowHeight);
+    renderRegister(debugger, &statusRegister, xofs*8, (yOffset+9)*rowHeight);
+}
 
-    const int disassemblyOffset = 11;
-    const int maxDis = (debuggerHeight(debugger)/16)-disassemblyOffset-1;
+static void renderDisassembly(Debugger *debugger, int yOffset, int maxDis) {
+    int disassemblyOffset = yOffset;
+
     Disassembly disassembly[maxDis];
-    int currentLine = 0;  // TODO make dynamic
+    int currentLine = 0;  
     for (int i = 0; i < debugger->disassemblyFunc(debugger->probeUserdata, disassembly, maxDis, &currentLine); i++) {
         int y = (disassemblyOffset + i) * rowHeight;
         fontWrite(debugger->font, disassembly[i].address, 8, y, addressColor);
@@ -101,7 +91,40 @@ void debuggerUpdate(Debugger *debugger) {
     };
     SDL_SetRenderDrawBlendMode(debugger->renderer, SDL_BLENDMODE_BLEND);    
     SDL_RenderFillRect(debugger->renderer, &activeLineRect);
+}
 
+static void renderMemory(Debugger *debugger, int yOffset) {
+    int y = yOffset * rowHeight;
+    fontWrite(debugger->font, "MEMORY", 0, y, addressColor);
+}
+
+void debuggerUpdate(Debugger *debugger) {
+    SDL_SetRenderTarget(debugger->renderer, debugger->backdrop);
+    SDL_SetRenderDrawColor(debugger->renderer, 0, 0, 0, 191);
+    SDL_RenderClear(debugger->renderer);    
+    SDL_SetRenderDrawColor(debugger->renderer, 0,0,0,255);
+    SDL_FRect windowFrame = {
+        .x = 0,
+        .y = 0,
+        .w = debugger->width-1,
+        .h = debugger->height-1
+    };
+    SDL_RenderRect(debugger->renderer, &windowFrame);
+    renderRegisters(debugger, 0);
+    const int disassemblyOffset = 11;
+    int maxDis = (debuggerHeight(debugger)/16)-disassemblyOffset-1;
+    if (debugger->showMemory) {
+        maxDis = maxDis - 10;
+    }
+    renderDisassembly(debugger, disassemblyOffset, maxDis);
+
+    if (debugger->showMemory) {
+        renderMemory(debugger, disassemblyOffset + maxDis + 1);        
+    }
+}
+
+void debuggerSetShowMemory(Debugger *debugger, bool showMemory) {
+    debugger->showMemory = showMemory;
 }
 
 SDL_Texture *debuggerTexture(Debugger *debugger) {

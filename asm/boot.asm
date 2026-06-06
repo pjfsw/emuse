@@ -1,4 +1,4 @@
-    include "hardware.inc"
+    include "hardware.i"
 
 ; boot.asm - Minimal 68k Header
     org $f00000
@@ -8,11 +8,15 @@
 
     org $f00400        ; Move past the vector table
 Start:   
-    move.b #OVR_OFF,OVR
-    lea $a0000,a5
-    move.w #$1234,-4(a5)
-    move.w 4(a5),d0
-    move.w $9fffc,d1
+    lea OREG,a5
+    
+    move.b #OVR_OFF,OVR(a5) ; Enable RAM     
+blink:
+    move.b #3,SPI_CS(a5)    ; Turn on LED
+    bsr delay
+    move.b #0,SPI_CS(a5)    ; Turn off LED
+    bsr delay
+    bra blink
     bsr MMCStartTransfer
     ;bsr MMCSendByte
     bsr MMCReadByte
@@ -20,4 +24,11 @@ Start:
 loop:
     bra loop
     
+delay:
+    move.l #$fff80000,d7
+loop\@:
+    addq.l #1,d7
+    bne loop\@
+    rts
+
     include mmc.asm

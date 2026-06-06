@@ -32,7 +32,7 @@ static float getNextSample(Audio *audio) {
     while (!audio->crashed && (actualCyclesRun < targetCycles)) {
         // StepCPU() executes ONE full instruction and returns how many cycles it took
         int cycles = audio->mainTicker(audio->mainTickerUserdata);
-        if (cycles <= 0) {
+        if (cycles < 0) {
             audio->crashed = true;
             return 0;
         }

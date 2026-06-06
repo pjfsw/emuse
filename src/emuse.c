@@ -15,7 +15,7 @@ typedef struct {
 
 void readArgs(Args *args, int argc, char *argv[]) {
     memset(args, 0, sizeof(Args));
-    args->cpuFreq = 10000000;
+    args->cpuFreq = 12000000;
 
     int c;
     while ((c = getopt(argc, argv, "z:r:")) != -1) {
@@ -45,6 +45,7 @@ size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
 
 static const uint32_t AREG_BASE = 0xd00000;
 static const uint32_t OVR_ADDRESS = AREG_BASE + 9;
+static const uint32_t SPI_CS_ADDRESS = AREG_BASE + 13;
 static const uint16_t OVR_BIT_VALUE = 2;
 
 static bool isRomOverlay(void *userdata) {
@@ -54,6 +55,11 @@ static bool isRomOverlay(void *userdata) {
 
 static bool isNotRomOverlay(void *userdata) {
     return !isRomOverlay(userdata);
+}
+
+static bool isLedActive(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return addrLatchGetValue(latch, SPI_CS_ADDRESS) != 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -128,7 +134,7 @@ int main(int argc, char* argv[]) {
 
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;
-    if (!appInit(&app, &cpu.cpu, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq)) {
+    if (!appInit(&app, &cpu.cpu, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg)) {
         return 1;
     }
     appRun(&app);
