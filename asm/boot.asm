@@ -1,4 +1,4 @@
-RAM_SIZE equ $100000
+    include "hardware.inc"
 
 ; boot.asm - Minimal 68k Header
     org $f00000
@@ -8,6 +8,10 @@ RAM_SIZE equ $100000
 
     org $f00400        ; Move past the vector table
 Start:   
+    move.b #OVR_OFF,OVR
+    lea $10000,a0
+    move.b #1,(a0)
+    move.w #1,4(a0)
     bsr MMCStartTransfer
     ;bsr MMCSendByte
     bsr MMCReadByte

@@ -36,6 +36,7 @@ typedef struct {
     void *readWriteUserdata;
     DisassemblyCache disassemblyCache[DISASSEMBLY_CACHE_SIZE];
     uint32_t firstDisassemblyAddress;
+    bool resetState;
 } M68k;
 
 void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata);

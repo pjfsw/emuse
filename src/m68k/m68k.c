@@ -63,6 +63,9 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
             sprintf(s, "$%X", ea->address);
             addDisassembly(instruction, s, SYM_CONSTANT);            
         }
+    } else {
+        sprintf(s, "{MODE=%x Xn=%x}", ea->mode, ea->xn);
+        addDisassembly(instruction, s, SYM_UNKNOWN);
     }
 }
 
@@ -251,6 +254,19 @@ static int getCpuState(void *userdata, CpuState *gpRegisters, int maxLines, CpuS
     return actualLines;
 }
 
+static uint16_t readWord(M68k *m68k, uint32_t address) {
+    return m68k->rwFunc.rw(m68k->readWriteUserdata, address);
+}
+
+static uint32_t readLong(M68k *m68k, uint32_t address) {
+    return (((uint32_t)readWord(m68k, address)) << 16) | (uint32_t)readWord(m68k, address + 2);
+}
+
+static void postReset(M68k *m68k) {
+    m68k->registers.ssp = readLong(m68k, 0);
+    m68k->registers.pc = readLong(m68k, 4);
+    setSupervisor(m68k);
+}
 
 int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
@@ -258,6 +274,11 @@ int m68kClock(void *userdata) {
     ExecFunc execFunc;
     if (cpu->cpu.crashed) {
         return -1;
+    }
+    if (cpu->resetState) {
+        postReset(cpu);
+        cpu->resetState = false;
+        return 0;
     }
     int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata, &execFunc);
     if (cycles <= 0) {
@@ -274,6 +295,7 @@ int m68kClock(void *userdata) {
         printf("### CPU crash at execution step\n");
         return -1;
     }
+    cycles += execCycles;
     return cycles;
 }
 
@@ -286,18 +308,9 @@ void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata) {
     m68k->readWriteUserdata = readWriteUserdata;
 }
 
-static uint16_t readWord(M68k *m68k, uint32_t address) {
-    return m68k->rwFunc.rw(m68k->readWriteUserdata, address);
-}
-
-static uint32_t readLong(M68k *m68k, uint32_t address) {
-    return (((uint32_t)readWord(m68k, address)) << 16) | (uint32_t)readWord(m68k, address + 2);
-}
-
 void m68kReset(void *userdata) {
     M68k *m68k = (M68k*)userdata;
     m68k->cpu.crashed = false;
-    m68k->registers.ssp = readLong(m68k, 0);
-    m68k->registers.pc = readLong(m68k, 4);
-    setSupervisor(m68k);
+    m68k->resetState = true;
+    m68k->registers.pc = 0;
 }

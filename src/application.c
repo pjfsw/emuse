@@ -271,7 +271,7 @@ static void renderFps(Application *app) {
 }
 
 static void renderCrashed(Application *app) {
-    fontWrite(&app->font, "EMULATION FAILURE, PRESS [F12] TO RESET", 0, app->height/2,0xff0000ff);
+    fontWrite(&app->font, "UNIMPLEMENTED INSTRUCTION, PRESS [F12] TO RESET", 0, app->height/2,0xff0000ff);
 }
 
 
