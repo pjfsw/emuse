@@ -1,0 +1,30 @@
+UART_BASE equ $b00000
+; DLAB=0
+UART_RBR equ $01 
+UART_THR equ $01
+UART_IER equ $03
+UART_IIR equ $05
+UART_FCR equ $05
+UART_LCR equ $07
+UART_MCR equ $09
+UART_LSR equ $0b
+UART_MSR equ $0d
+UART_SCR equ $0f
+; DLAB=1
+UART_DLL equ 1
+UART_DLM equ 3
+
+FCR_FIFO_ENABLE     equ $01
+FCR_RX_FIFO_RESET   equ $02
+FCR_TX_FIFO_RESET   equ $04
+FCR_FIFO_TRIGGER_01 equ $00
+FCR_FIFO_TRIGGER_04 equ $40
+FCR_FIFO_TRIGGER_08 equ $80
+FCR_FIFO_TRIGGER_14 equ $c0
+
+MCR_DTR     equ $01
+MCR_RTS     equ $02
+MCR_AFE     equ $20
+
+IER_ERBI    equ $01
+IER_ETBEI   equ $02

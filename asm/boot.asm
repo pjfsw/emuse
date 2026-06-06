@@ -8,17 +8,10 @@
 
     org $f00400        ; Move past the vector table
 Start:   
-    lea OREG,a5
-    
-    move.b #OVR_OFF,OVR(a5) ; Enable RAM     
-blink:
-    move.b #3,SPI_CS(a5)    ; Turn on LED
-    bsr delay
-    move.b #0,SPI_CS(a5)    ; Turn off LED
-    bsr delay
-    bra blink
+    move.b #OVR_OFF,OVR_REG
+    bsr UARTInit
     bsr MMCStartTransfer
-    ;bsr MMCSendByte
+    bsr MMCSendByte
     bsr MMCReadByte
     bsr MMCEndTransfer
 loop:
@@ -32,3 +25,4 @@ loop\@:
     rts
 
     include mmc.asm
+    include uart.asm

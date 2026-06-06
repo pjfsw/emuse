@@ -7,6 +7,7 @@
 #include "bus.h"
 #include "memory.h"
 #include "addressable_latch.h"
+#include "uart.h"
 
 typedef struct {
     uint32_t cpuFreq;
@@ -43,6 +44,7 @@ size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
     return bytesRead;
 }
 
+static const uint32_t UART_BASE = 0xb00000;
 static const uint32_t AREG_BASE = 0xd00000;
 static const uint32_t OVR_ADDRESS = AREG_BASE + 9;
 static const uint32_t SPI_CS_ADDRESS = AREG_BASE + 13;
@@ -97,6 +99,21 @@ int main(int argc, char* argv[]) {
     }
     ReadWriteMappingKey mappingKey;
     memset(&mappingKey, 0, sizeof(ReadWriteMappingKey));
+
+    const uint32_t uartFreq = 1843200;
+    Uart *uart = uartCreate(args.cpuFreq, uartFreq);
+    if (uart == NULL) {
+        fprintf(stderr, "Failed to initialize UART\n");
+        return 1;
+    }
+
+    mappingKey.start = UART_BASE;
+    mappingKey.end = UART_BASE + 0x100000;
+    mappingKey.userdata = uart;
+    busAddResetFunc(&bus, uartReset, uart);
+    busAddClockFunc(&bus, uartClock, uart);
+    busAddWriteFunc(&bus, uartWriteByte, uartWriteWord, mappingKey);
+    busAddReadFunc(&bus, uartReadByte, uartReadWord, mappingKey);
 
     AddrLatch outReg;
     addrLatchInit(&outReg, 2);

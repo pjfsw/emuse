@@ -1,6 +1,8 @@
-MMC_CS_REG equ $e00000
-MMC_MOSI_CLOCK equ $e00002
-MMC_MISO equ $e00004
+    include "hardware.i"
+
+MMC_CS_REG equ (OREG+SPI_CS)
+MMC_MOSI_CLOCK equ (OREG+SPI_MOSI_CLK)
+MMC_MISO equ IREG
 MMC_CLK_BIT equ (1<<0)
 MMC_MOSI_BIT equ (1<<1)
 
@@ -49,7 +51,7 @@ bit_is_zero\@:
 ;____________________________________________________________
 MMCStartTransfer:
     lea MMC_CS_REG,a0       ; Chip select
-    move.b #0,(a0)          ; Enable chip select
+    move.b #SPI_CS_MMC,(a0)          ; Enable chip select
     lea MMC_MOSI_CLOCK,a0  
     lea MMC_MISO,a1
     rts
@@ -61,7 +63,7 @@ MMCStartTransfer:
 ;____________________________________________________________
 MMCEndTransfer:
     lea MMC_CS_REG,a0       ; Chip select
-    move.b #1,(a0)          ; Disable chip select
+    move.b #SPI_CS_OFF,(a0) ; Disable chip select
     rts
 
 
