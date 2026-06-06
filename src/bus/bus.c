@@ -1,6 +1,8 @@
 #include "bus.h"
 
 #include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 void busInit(Bus *bus) {
     memset(bus, 0, sizeof(Bus));
@@ -54,17 +56,24 @@ int busClock(void *userdata) {
     return cycles;
 }
 
+static bool checkAddress(ReadWriteMappingKey *key, uint32_t address) {
+    if ((address >= key->start) && (address < key->end)) {
+        return (key->conditionFunc != NULL) ? key->conditionFunc(key->conditionFuncUserdata) : true;
+    }
+    return false;
+}
+
 void busWriteByte(void *userdata, uint32_t address, uint8_t value) {
     Bus *bus = (Bus*)userdata;
 
     for (int i = 0; i < bus->writeMappingsCount; i++) {
         WriteMapping *m = &bus->writeMappings[i];
-        if ((address >= m->key.start) && (address < m->key.end)) {
+        if (checkAddress(&m->key, address)) {
             if (m->writeByteFunc != NULL) {
                 m->writeByteFunc(m->key.userdata, address, value);
                 return;
-            } 
-        } 
+            }
+        }
     }
 }
 
@@ -73,12 +82,12 @@ void busWriteWord(void *userdata, uint32_t address, uint16_t value) {
 
     for (int i = 0; i < bus->writeMappingsCount; i++) {
         WriteMapping *m = &bus->writeMappings[i];
-        if ((address >= m->key.start) && (address < m->key.end)) {
+        if (checkAddress(&m->key, address)) {
             if (m->writeWordFunc != NULL) {
                 m->writeWordFunc(m->key.userdata, address, value);
                 return;
-            } 
-        } 
+            }
+        }
     }
 }
 
@@ -91,13 +100,13 @@ uint8_t busReadByte(void *userdata, uint32_t address) {
    
     for (int i = 0; i < bus->readMappingsCount; i++) {
         ReadMapping *m = &bus->readMappings[i];
-        if ((address >= m->key.start) && (address < m->key.end)) {
+        if (checkAddress(&m->key, address)) {
             if (m->readByteFunc != NULL) {
                 return m->readByteFunc(m->key.userdata, address);
             } else {
                 return getRandomByte();
             }
-        } 
+        }
     }
     return getRandomByte();
 }
@@ -107,13 +116,13 @@ uint16_t busReadWord(void *userdata, uint32_t address) {
 
     for (int i = 0; i < bus->readMappingsCount; i++) {
         ReadMapping *m = &bus->readMappings[i];
-        if ((address >= m->key.start) && (address < m->key.end)) {
+        if (checkAddress(&m->key, address)) {
             if (m->readWordFunc != NULL) {
                 return m->readWordFunc(m->key.userdata, address);
             } else {
                 return getRandomByte();
             }
-        } 
+        }
     }
     return getRandomByte();
 }

@@ -69,10 +69,11 @@ static int executeLea(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
 
 static int readSource(
     DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea, RwFunc *rwFunc, void *readWriteUserdata, uint32_t *value) {
-    uint32_t cycleCount = 0;
+    int cycleCount = -1;
     if (ea->mode == AM_EXT) {
         if (ea->xn == AM_EXT_IMMEDIATE) {
             *value = ea->immediate;
+            cycleCount = 0;
         } else if (ea->xn == AM_EXT_ABS_LONG) {
             if (di->size == IS_LONG) {
                 *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address) << 16;
@@ -85,11 +86,13 @@ static int readSource(
         }
     } else if (ea->mode == AM_DREG) {
         *value = registers->d[ea->xn];
+        cycleCount = 0;
     } else if (ea->mode == AM_AREG) {
         *value = registers->a[ea->xn];
+        cycleCount = 0;
     } else if (ea->mode == AM_ADDRESS) {
         printf("Read $%06x\n", di->src.address);
-        cycleCount += 4;
+        cycleCount = 4;
         if (di->size == IS_BYTE) {
             *value = (uint32_t)rwFunc->rb(readWriteUserdata, di->src.address);
         } else if (di->size == IS_WORD) {
@@ -146,6 +149,20 @@ static int writeDest(
             rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
             cycleCount += 4;
         }
+    } else if (di->dst.mode == AM_EXT) {
+        if (di->dst.xn == AM_EXT_ABS_LONG) {
+            if (di->size == IS_LONG) {
+                rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
+                rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
+                cycleCount = 8;
+            } else if (di->size == IS_WORD) {
+                rwFunc->ww(readWriteUserdata, di->dst.address, (uint16_t)value);
+                cycleCount = 4;
+            } else {
+                rwFunc->wb(readWriteUserdata, di->dst.address, (uint8_t)value);
+                cycleCount = 4;
+            }
+        }
     }
     return cycleCount;
 }
@@ -199,6 +216,9 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     uint32_t src;
     uint32_t dst;
     int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &src);
+    if (cycleCount < 0) {
+        return -1;
+    }
     cycleCount += readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &dst);
     dst = di->aluFunc(src,dst, di->size, registers);
     cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, dst);
@@ -208,6 +228,9 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
 static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
     int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &value);
+    if (cycleCount < 0) {
+        return -1;
+    }
     if (!isTargetAddressRegister(di)) {
         setFlag(registers, SR_FLAGS_C, 0);
         setFlag(registers, SR_FLAGS_V, 0);
@@ -243,11 +266,6 @@ int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
         shouldBranch = getFlag(registers, SR_FLAGS_Z);
     }
 
-    // TODO condition
-    /*printf("Current pc %06x, displacement %04x, new pc %06x\n",
-            registers->pc,
-            di->displacement,
-            registers->pc+di->displacement);*/
     if (shouldBranch) {
         registers->pc = align24(registers->pc + di->displacement);
     } else {

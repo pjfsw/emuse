@@ -4,7 +4,11 @@
 #include "readwritefunc.h"
 #include "reset.h"
 
+#include <stdbool.h>
+
 typedef void (*ClockFunc)(void *user_data, int clocks);
+
+typedef bool (*BooleanFunc)(void *user_data);
 
 #define MAX_RESET_FUNC 16
 #define MAX_CLOCK_FUNC 16
@@ -16,6 +20,8 @@ typedef struct {
     /** End address, exclusive */
     uint32_t end;
     void *userdata;
+    BooleanFunc conditionFunc;
+    void *conditionFuncUserdata;
 } ReadWriteMappingKey;
 
 typedef struct {

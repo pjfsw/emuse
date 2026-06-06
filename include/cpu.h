@@ -9,4 +9,5 @@ typedef struct {
     CpuStateFunc cpuStateFunc;
     void *probeUserdata;
     uint64_t cycle;  
+    bool crashed;
 } Cpu;

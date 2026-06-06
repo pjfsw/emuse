@@ -24,6 +24,7 @@ typedef struct {
     void *sampleSourceUserdata;
     SharedState *sharedState;    
     uint64_t totalCyclesRun;
+    bool crashed;
 } Audio;
 
 bool audioInit(Audio *audio, int cpuFreq, int sampleFreq, int videoFreq, MainTicker mainTicker,
@@ -31,3 +32,5 @@ bool audioInit(Audio *audio, int cpuFreq, int sampleFreq, int videoFreq, MainTic
     void *sampleSourceUserdata, SharedState *sharedState);
 
 void audioDestroy(Audio *audio);
+
+void audioReset(Audio *audio);

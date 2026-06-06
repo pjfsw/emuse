@@ -256,9 +256,23 @@ int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
     ExecFunc execFunc;
+    if (cpu->cpu.crashed) {
+        return -1;
+    }
     int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata, &execFunc);
-    if (execFunc != NULL) {
-        cycles += execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
+    if (cycles <= 0) {
+        cpu->cpu.crashed = true;
+        printf("### CPU crash at decode step\n");
+        return - 1;
+    }
+    int execCycles = -1;
+    if (execFunc != NULL) {        
+        execCycles = execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
+    }
+    if (execCycles < 0) {
+        cpu->cpu.crashed = true;
+        printf("### CPU crash at execution step\n");
+        return -1;
     }
     return cycles;
 }
@@ -282,6 +296,7 @@ static uint32_t readLong(M68k *m68k, uint32_t address) {
 
 void m68kReset(void *userdata) {
     M68k *m68k = (M68k*)userdata;
+    m68k->cpu.crashed = false;
     m68k->registers.ssp = readLong(m68k, 0);
     m68k->registers.pc = readLong(m68k, 4);
     setSupervisor(m68k);

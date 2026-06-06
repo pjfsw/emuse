@@ -60,6 +60,10 @@ static void runningMode(Application *app) {
     SDL_Log("Emulator RESUMED. Audio thread in control.");
 }
 
+static void reset(Application *app) {
+    app->resetFunc(app->resetUserdata);
+    audioReset(&app->audio);
+}
 
 bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
     void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq) {
@@ -117,7 +121,7 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     debuggerInit(&app->debugger, cpu->disassemblyFunc, cpu->cpuStateFunc, cpu->probeUserdata, app->renderer, &app->font, 
         320, 3*vgaGetHeight(&app->vga)/2);
 
-    app->resetFunc(app->resetUserdata);
+    reset(app);
     app->running = true;
     app->is_fullscreen = false;    
     stoppedMode(app);
@@ -136,7 +140,7 @@ void appDestroy(Application *app) {
 static void toggleStepping(Application *app) {
     if (!app->is_stepping) {
         stoppedMode(app);
-    } else {
+    } else if (!app->cpu->crashed) {
         runningMode(app);
     }
 }
@@ -144,6 +148,9 @@ static void toggleStepping(Application *app) {
 static void singleStep(Application *app) {
     // Because audioIsBusy == 0, we have 100% exclusive access to the system.
     int cycles = app->audio.mainTicker(app->audio.mainTickerUserdata);
+    if (cycles <= 0) {
+        return;
+    }
 
     // Catch up the video manually for this single instruction
     app->audio.videoFractionalAcc += (int64_t)cycles * app->audio.videoFreq;
@@ -157,7 +164,7 @@ static void singleStep(Application *app) {
     SDL_Log("Single-stepped %d CPU cycles. Video ticked %d times.", cycles, videoTicks);
 }
 
-static void handleEvents(Application* app) {
+static void handleEvents(Application* app) {    
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT) {
@@ -187,6 +194,9 @@ static void handleEvents(Application* app) {
             // --- Single Step Execution ---
             if ((key == SDLK_F5) || (key == SDLK_F6) && app->is_stepping) {
                 singleStep(app);
+            }
+            if (key == SDLK_F12) {
+                reset(app);
             }
         }
     }
@@ -243,6 +253,28 @@ static void renderTargetTexture(Application *app) {
     SDL_RenderTexture(app->renderer, app->target, NULL, &destRect);
 }
 
+static void renderFps(Application *app) {
+    int y = vgaGetHeight(&app->vga) - 10;
+    emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(&app->vga));
+    char buf[80];
+    SDL_SetRenderDrawBlendMode(app->renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 160);
+    SDL_FRect rect = {.x = 0, .y = y, .w = vgaGetWidth(&app->vga), .h = 10};
+    SDL_RenderFillRect(app->renderer, &rect);
+    snprintf(buf,
+        sizeof(buf),
+        "[F8] Debugger | [F11] Fullscreen | FPS: %2.1f (%7.1f) | CPU: %.2f MHz",
+        emuStatsCurrentFps(&app->stats),
+        emuStatsRenderFps(&app->stats),
+        emuStatsCurrentMhz(&app->stats));
+    fontWrite(&app->font, buf, 2, y + 1, 0xFFFFFFDF);
+}
+
+static void renderCrashed(Application *app) {
+    fontWrite(&app->font, "EMULATION FAILURE, PRESS [F12] TO RESET", 0, app->height/2,0xff0000ff);
+}
+
+
 static void render(Application* app) {
     bool showDebug = app->is_stepping;
     if (showDebug) {
@@ -257,25 +289,10 @@ static void render(Application* app) {
     renderEmulatorOutput(app);
 
     if (!app->is_stepping && app->showSpeed) {
-        int y = vgaGetHeight(&app->vga)-10;
-        emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(&app->vga));
-        char buf[80];
-        SDL_SetRenderDrawBlendMode(app->renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(app->renderer, 0,0,0,160);
-        SDL_FRect rect = {
-            .x = 0,
-            .y = y,
-            .w = vgaGetWidth(&app->vga),
-            .h = 10
-        };
-        SDL_RenderFillRect(app->renderer, &rect);
-        snprintf(buf,
-            sizeof(buf),
-            "[F8] Debugger | [F11] Fullscreen | FPS: %2.1f (%7.1f) | CPU: %.2f MHz",
-            emuStatsCurrentFps(&app->stats),
-            emuStatsRenderFps(&app->stats),
-            emuStatsCurrentMhz(&app->stats));
-        fontWrite(&app->font, buf, 2, y+1, 0xFFFFFFDF); 
+        renderFps(app);
+    }
+    if (app->cpu->crashed) {
+        renderCrashed(app);
     }
     renderTargetTexture(app);
 
@@ -291,7 +308,7 @@ static void render(Application* app) {
         SDL_FRect destRect = {0, 0, scale * debuggerWidth(&app->debugger), scale * debuggerHeight(&app->debugger)};
         SDL_SetTextureScaleMode(debuggerTexture(&app->debugger), SDL_SCALEMODE_PIXELART);
         SDL_RenderTexture(app->renderer, debuggerTexture(&app->debugger), NULL, &destRect);
-    }
+    }    
     // Swap buffers
     SDL_RenderPresent(app->renderer);
 
@@ -300,7 +317,10 @@ static void render(Application* app) {
 
 void appRun(Application *app) {
     while (app->running) {
-        handleEvents(app);
+        if (app->cpu->crashed && !app->is_stepping) {
+            stoppedMode(app);
+        }
+        handleEvents(app);        
         
         // This is where you will eventually call your 68k execution step
         

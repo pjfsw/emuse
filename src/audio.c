@@ -4,7 +4,18 @@
 #include <stdio.h>
 #include "audio.h"
 
+void audioReset(Audio *audio) {
+    audio->audioFractionalAcc = 0;
+    audio->videoFractionalAcc = 0;
+    audio->totalCyclesRun = 0;
+    audio->cpuCycleDebt = 0; 
+    audio->crashed = false;
+}
+
 static float getNextSample(Audio *audio) {
+    if (audio->crashed) {
+        return 0;
+    }
     // 1. Calculate exact CPU cycles needed for THIS sample
     int cyclesForSample = audio->baseCycles;
     audio->audioFractionalAcc += audio->remainder;
@@ -18,9 +29,13 @@ static float getNextSample(Audio *audio) {
     int actualCyclesRun = 0;
 
     // 3. Run CPU instructions until we meet or exceed the target
-    while (actualCyclesRun < targetCycles) {
+    while (!audio->crashed && (actualCyclesRun < targetCycles)) {
         // StepCPU() executes ONE full instruction and returns how many cycles it took
         int cycles = audio->mainTicker(audio->mainTickerUserdata);
+        if (cycles <= 0) {
+            audio->crashed = true;
+            return 0;
+        }
         audio->totalCyclesRun += cycles; // <-- Track every cycle processed!        
 
         // 4. Catch up the PPU based on exact CPU cycles run
