@@ -79,8 +79,11 @@ static int readSource(
                 *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address) << 16;
                 *value |= (uint32_t)rwFunc->rw(readWriteUserdata, ea->address + 2);
                 cycleCount = 8;
-            } else {
+            } else if (di->size == IS_WORD) {
                 *value = rwFunc->rw(readWriteUserdata, ea->address);
+                cycleCount = 4;
+            } else {
+                *value = rwFunc->rb(readWriteUserdata, ea->address);
                 cycleCount = 4;
             }
         }
