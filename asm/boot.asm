@@ -9,6 +9,10 @@
     org $f00400        ; Move past the vector table
 Start:   
     move.b #OVR_OFF,OVR_REG
+    ;lea $40000,a0
+    ;move.b #1,(a0)
+    ;btst.b #0,(a0)
+    ;btst.b #1,(a0)
     bsr UARTInit
     bsr writeWelcomeMessage
     bsr MMCStartTransfer
