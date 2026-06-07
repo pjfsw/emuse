@@ -9,7 +9,6 @@ static inline void increasePc(M68kRegisters *registers) {
     registers->pc = align24(registers->pc + 2);
 }
 
-
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
 
@@ -18,7 +17,7 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
 
     if ((mode == AM_DREG) || (mode == AM_AREG)) { // d0, a0
         return 0;
-    } else if (mode == AM_ADDRESS) { // (a0)
+    } else if ((mode == AM_ADDRESS) || (mode == AM_ADDRESS_POST_INC)) { // (a0) or (a0)+
         ea->address = registers->a[reg];
         return 0;        
     } else if (mode == AM_ADDR_DISP) { // disp(a0)
@@ -72,6 +71,32 @@ static int executeLea(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     return 0;
 }
 
+static void preDecrement(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea) {
+    if (ea->mode != AM_ADDRESS_PRE_DEC) {
+        return;
+    }
+}
+
+static void postIncrement(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea) {
+    if (ea->mode != AM_ADDRESS_POST_INC) {
+        return;
+    }
+    int size = 0;
+    if (di->size == IS_LONG) {
+        size = 4;
+    } else if (di->size == IS_WORD) {
+        size = 2;
+    } else {
+        if (ea->xn == 7) {
+            // Stack special case
+            size = 2;
+        } else {
+            size = 1;
+        }
+    }
+    registers->a[ea->xn] = align24(registers->a[ea->xn] + size);
+}
+
 static int readSource(
     DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea, RwFunc *rwFunc, void *readWriteUserdata, uint32_t *value) {
     int cycleCount = -1;
@@ -98,8 +123,9 @@ static int readSource(
     } else if (ea->mode == AM_AREG) {
         *value = registers->a[ea->xn];
         cycleCount = 0;
-    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP)) {
-        printf("Read $%06x\n", di->src.address);
+    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP) || (ea->mode == AM_ADDRESS_POST_INC)) {
+        preDecrement(di, registers, ea);
+//        printf("Read $%06x\n", di->src.address);
         cycleCount = 4;
         if (di->size == IS_BYTE) {
             *value = (uint32_t)rwFunc->rb(readWriteUserdata, di->src.address);
@@ -110,6 +136,7 @@ static int readSource(
             *value |= (uint32_t)rwFunc->rw(readWriteUserdata, di->dst.address + 2);
             cycleCount += 4;
         }
+        postIncrement(di, registers, ea);
 
     }
     return cycleCount;
@@ -144,8 +171,9 @@ static int writeDest(
             registers->a[di->dst.xn] = (int32_t)(int16_t)value;
         }
     }
-    else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS)) {
+    else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS) || (di->dst.mode == AM_ADDRESS_POST_INC)) {
         //printf("Store %x in $%06x\n", value, di->dst.address);
+        preDecrement(di, registers, &di->dst);
         cycleCount = 4;
         if (di->size == IS_BYTE) {
             setNZ(registers, (int32_t)(int8_t)(value & 0xff));
@@ -159,6 +187,7 @@ static int writeDest(
             rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
             cycleCount += 4;
         }
+        postIncrement(di, registers, &di->dst);
     } else if (di->dst.mode == AM_EXT) {                
         if (di->dst.xn == AM_EXT_ABS_LONG) {
             if (di->size == IS_LONG) {

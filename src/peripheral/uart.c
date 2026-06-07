@@ -24,7 +24,7 @@ struct Uart {
     uint32_t uartClockSpeed;
     uint16_t divisor;
     uint32_t baudRate;
-    PtsHandler pts;   
+    PtsHandler *pts;   
     uint8_t ier;
     uint8_t lcr;
     uint8_t dll;
@@ -39,7 +39,7 @@ Uart *uartCreate(uint32_t cpuClockSpeed, uint32_t uartClockSpeed) {
     Uart *uart = calloc(1, sizeof(Uart));
     uart->cpuClockSpeed = cpuClockSpeed;
     uart->uartClockSpeed = uartClockSpeed;
-    if (!ptsHandlerInit(&uart->pts)) {
+    if (NULL == (uart->pts = ptsHandlerCreate())) {
         free(uart);
         return NULL;
     }    
@@ -76,6 +76,13 @@ static void writeDlab(Uart *uart, uint8_t offset, uint8_t byte) {
 
 static void setFcr(Uart *uart, uint8_t byte) {
     uart->fifo_enabled = byte & 1;
+    if (byte & 0x02) {
+        //fifoClear(uart->rx_fifo);
+    }
+    if (byte & 0x04) {
+        //fifoClear(uart->tx_fifo);
+    }
+
     switch (byte >> 6) {
         case 0:
             uart->fifo_trigger = 1;
@@ -93,6 +100,14 @@ static void setFcr(Uart *uart, uint8_t byte) {
     printf("Set fifo enabled: %d, Fifo trigger = %d\n", uart->fifo_enabled, uart->fifo_trigger);
 }
 
+static bool isTxFifoFull(Uart *uart) {
+    return false;
+}
+
+static void writeFifo(Uart *uart, uint8_t byte) {
+    ptsWriteByte(uart->pts, byte);
+}
+
 static void writeByte(Uart *uart, uint8_t offset, uint8_t byte) {
     offset = offset & (uartMaxAddress - 1);
     if ((offset < 2) && (true == uart->dlab)) {
@@ -100,6 +115,11 @@ static void writeByte(Uart *uart, uint8_t offset, uint8_t byte) {
         return;
     }
     if (offset == THR) {
+        if (isTxFifoFull(uart)) {
+            printf("Discarding write that occurred when TX FIFO full\n");
+        } else {
+            writeFifo(uart, byte);
+        }            
         // transmit 
     } else if (offset == IER) {
         uart->ier = byte;

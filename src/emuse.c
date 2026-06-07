@@ -1,7 +1,7 @@
+#include <errno.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <unistd.h>
 #include "application.h"
 #include "m68k.h"
 #include "bus.h"

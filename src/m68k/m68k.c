@@ -53,6 +53,9 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
         addDisassembly(instruction, s, SYM_CONSTANT);        
         sprintf(s, "(A%d)", ea->xn);
         addDisassembly(instruction, s, SYM_REGISTER);
+    } else if (ea->mode == AM_ADDRESS_POST_INC) {
+        sprintf(s, "(A%d)+", ea->xn);
+        addDisassembly(instruction, s, SYM_REGISTER);
     } else if (ea->mode == AM_EXT) {
         if (ea->xn == AM_EXT_IMMEDIATE) {
             addDisassembly(instruction, "#", SYM_SYMBOL);            

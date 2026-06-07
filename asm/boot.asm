@@ -10,19 +10,25 @@
 Start:   
     move.b #OVR_OFF,OVR_REG
     bsr UARTInit
+    bsr writeWelcomeMessage
     bsr MMCStartTransfer
     bsr MMCSendByte
     bsr MMCReadByte
     bsr MMCEndTransfer
 loop:
     bra loop
-    
-delay:
-    move.l #$fff80000,d7
-loop\@:
-    addq.l #1,d7
-    bne loop\@
-    rts
+
+writeWelcomeMessage:
+    lea (welcomeMsg\@).l,a1
+nextChar\@:
+    move.b (a1)+,d0
+    beq.s done\@
+    bsr UARTPutChar
+done\@:
+    rts    
+welcomeMsg\@:
+    dc.b "Hello world!", 13,10,0
+    even
 
     include mmc.asm
     include uart.asm

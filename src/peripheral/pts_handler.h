@@ -1,9 +1,14 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
-typedef struct {
-} PtsHandler;
+typedef struct PtsHandler PtsHandler; 
 
-bool ptsHandlerInit(PtsHandler *pts);
+PtsHandler *ptsHandlerCreate();
 
+void ptsWriteByte(PtsHandler *pts, uint8_t data);
+
+bool ptsIsByteAvailable(PtsHandler *pts);
+
+uint8_t ptsReadByte(PtsHandler *pts);

@@ -13,3 +13,16 @@ UARTInit:
     move.b #MCR_AFE|MCR_DTR|MCR_RTS,UART_MCR(a5); Enable Auto-CTS/RTS and assert DTR     
     ; move.b #IER_ERBI,UART_IER(a5)     ; Enable receiver interrupt
     rts
+
+;____________________________________________________________
+;
+; Write byte in D0
+; A0 will be destroyed
+;____________________________________________________________
+UARTPutChar:
+    lea UART_BASE,a0
+wait\@:
+    btst.b #5,UART_LSR(a0)   ; TX FIFO has room?
+    beq.s wait\@
+    move.b d0,UART_THR(a0)
+    rts
