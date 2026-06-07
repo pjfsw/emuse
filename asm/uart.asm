@@ -21,8 +21,18 @@ UARTInit:
 ;____________________________________________________________
 UARTPutChar:
     lea UART_BASE,a0
-wait\@:
+PutChar_Wait:
     btst.b #5,UART_LSR(a0)   ; TX FIFO has room?
-    beq.s wait\@
+    beq.s PutChar_Wait
     move.b d0,UART_THR(a0)
+    rts   
+
+UARTReadCharBlocking:
+    lea UART_BASE,a0
+ReadChar_Wait:
+    btst.b #0,UART_LSR(a0)    ; RX FIFO has data?
+    beq.s ReadChar_Wait
+    move.b UART_RBR(a0),d0
     rts
+
+    

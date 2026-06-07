@@ -11,4 +11,4 @@ void ptsWriteByte(PtsHandler *pts, uint8_t data);
 
 bool ptsIsByteAvailable(PtsHandler *pts);
 
-uint8_t ptsReadByte(PtsHandler *pts);
+bool ptsReadByte(PtsHandler *pts, uint8_t *byte);

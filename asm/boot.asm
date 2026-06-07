@@ -14,16 +14,25 @@ Start:
     ;btst.b #0,(a0)
     ;btst.b #1,(a0)
     bsr UARTInit
-    bsr writeWelcomeMessage
+    lea (welcomeMsg\@).l,a1
+    bsr writeMessage
+    bsr waitKey
+    lea (anotherMsg\@).l,a1
+    bsr writeMessage
     bsr MMCStartTransfer
     bsr MMCSendByte
     bsr MMCReadByte
     bsr MMCEndTransfer
 loop:
     bra loop
+welcomeMsg\@:
+    dc.b "Hello world from 68000! Press space!",13,10,0
+    even
+anotherMsg\@:
+    dc.b "You pressed a key, splendid!",13,10,0
+    even
 
-writeWelcomeMessage:
-    lea (welcomeMsg\@).l,a1
+writeMessage:
 nextChar\@:
     move.b (a1)+,d0
     beq.s done\@
@@ -31,9 +40,10 @@ nextChar\@:
     bra.s nextChar\@
 done\@:
     rts    
-welcomeMsg\@:
-    dc.b "Hello world from 68000!", 13,10,0
-    even
+
+waitKey:
+    bsr UARTReadCharBlocking
+    rts        
 
     include mmc.asm
     include uart.asm

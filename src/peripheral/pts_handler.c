@@ -58,8 +58,10 @@ static void *read_thread(void *user_data) {
                 reader->write_ptr++;
             } 
         } else {
-            fprintf(stderr, "Buffer not available (read %d, write %d), dropping bytes\n", reader->read_ptr,
-             reader->write_ptr);
+            fprintf(stderr,
+                "Buffer not available (read %d, write %d), dropping bytes\n",
+                reader->read_ptr,
+                reader->write_ptr);
         }
         nanosleep(&delay, NULL);
     }
@@ -110,9 +112,19 @@ void ptsWriteByte(PtsHandler *pts, uint8_t data) {
 }
 
 bool ptsIsByteAvailable(PtsHandler *pts) {
+    uint8_t diff = pts->reader.write_ptr - pts->reader.read_ptr;
+    if (diff > 0) {
+        return true;
+    }
     return false;
 }
 
-uint8_t ptsReadByte(PtsHandler *pts) {
-    return 0;
+bool ptsReadByte(PtsHandler *pts, uint8_t *byte) {    
+    if (ptsIsByteAvailable(pts)) {
+        Reader *reader = &pts->reader;
+        uint8_t byte = pts->reader.buffer[pts->reader.read_ptr];
+        reader->read_ptr++;
+        return true;
+    }
+    return false;
 }

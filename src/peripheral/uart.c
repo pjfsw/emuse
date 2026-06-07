@@ -18,6 +18,7 @@ static const int MSR = 6;
 static const int SCR = 7;
 static const int DLL = 0;
 static const int DLM = 1;
+static const int LSR_DR = 0x01;
 static const int LSR_THRE = 0x20;
 static const int LSR_TEMT = 0x40;
 
@@ -49,6 +50,7 @@ struct Uart {
     Fifo rfifo;
     Fifo tfifo;
     int32_t sendTimer;
+    int32_t recvTimer;
 };
 
 Uart *uartCreate(uint32_t cpuClockSpeed, uint32_t uartClockSpeed) {
@@ -92,6 +94,14 @@ static void writeDlab(Uart *uart, uint8_t offset, uint8_t byte) {
     }
 }
 
+static bool fifoIsFull(Fifo *fifo) {
+    return fifo->count == UART_FIFO_SIZE;
+}
+
+static bool fifoIsEmpty(Fifo *fifo) {
+    return fifo->count = 0;
+}
+
 static void fifoClear(Fifo *fifo) {
     fifo->rptr = 0;
     fifo->wptr = 0;
@@ -99,7 +109,7 @@ static void fifoClear(Fifo *fifo) {
 }
 
 static bool fifoWrite(Fifo *fifo, uint8_t byte) {
-    if (fifo->count == UART_FIFO_SIZE) {
+    if (fifoIsFull(fifo)) {
         return false;
     }
     fifo->data[fifo->wptr] = byte;
@@ -109,7 +119,7 @@ static bool fifoWrite(Fifo *fifo, uint8_t byte) {
 }
 
 static bool fifoRead(Fifo *fifo, uint8_t *byte) {
-    if (fifo->count == 0) {
+    if (fifoIsEmpty(fifo)) {
         return false;
     }
     *byte = fifo->data[fifo->rptr];
@@ -144,11 +154,10 @@ static void setFcr(Uart *uart, uint8_t byte) {
     printf("Set fifo enabled: %d, Fifo trigger = %d\n", uart->fifo_enabled, uart->fifo_trigger);
 }
 
-static void sendByte(Uart *uart, uint8_t byte) {
+static void transmitByte(Uart *uart, uint8_t byte) {
     if (!fifoWrite(&uart->tfifo, byte)) {
         printf("Transmit discard\n");
     }
-    //ptsWriteByte(uart->pts, byte);
 }
 
 static void writeByte(Uart *uart, uint8_t offset, uint8_t byte) {
@@ -159,7 +168,7 @@ static void writeByte(Uart *uart, uint8_t offset, uint8_t byte) {
     }
     if (offset == THR) {
         // transmit 
-        sendByte(uart, byte);
+        transmitByte(uart, byte);
     } else if (offset == IER) {
         uart->ier = byte;
         printf("IER = %02x\n", byte);
@@ -186,9 +195,21 @@ void uartWriteWord(void *userdata, uint32_t address, uint16_t word) {
     writeByte(uart, address>>1, (uint8_t)word);
 }
 
+static uint8_t receiveByte(Uart *uart) {
+    if (!fifoIsEmpty(&uart->rfifo)) {
+        uint8_t value;
+        if (fifoRead(&uart->rfifo, &value)) {
+            return value;
+        }
+    }
+    return 0;
+}
+
 uint8_t readByte(Uart *uart, uint8_t offset) {
     offset = offset & (uartMaxAddress - 1);
-    if (offset = LSR) {
+    if (offset == RBR) {
+        return receiveByte(uart);
+    } else if (offset == LSR) {
         return uart->lsr;
     }
     return 0x00;
@@ -217,7 +238,7 @@ void uartReset(void *userdata) {
 }
 
 static void handleTxFifo(Uart *uart, int clocks) {
-    if (uart->tfifo.count == 0) {
+    if (fifoIsEmpty(&uart->tfifo)) {
         uart->sendTimer = 0;
         return;
     }
@@ -227,27 +248,47 @@ static void handleTxFifo(Uart *uart, int clocks) {
         uart->sendTimer -= clocks;
         if (uart->sendTimer <= 0) {
             uint8_t byte;
-            if (!fifoRead(&uart->tfifo, &byte)) {
-                printf("This is not supposed to happen\n");
-            } else {
+            if (fifoRead(&uart->tfifo, &byte)) {
                 ptsWriteByte(uart->pts, byte);
+            } else {
+                printf("TX BUG! This is not supposed to happen\n");
             }
         }
     }
 }
 
 static void handleRxFifo(Uart *uart, int clocks) {
+    if (fifoIsFull(&uart->rfifo) || !ptsIsByteAvailable(uart->pts)) {
+        uart->recvTimer = 0;
+        return;
+    }
+    if ((uart->recvTimer <= 0)) {
+        uart->recvTimer += uart->ticksPerCharacter;
+    } else {
+        uart->recvTimer -= clocks;
+        if (uart->recvTimer <= 0) {
+            uint8_t byte;
+            if (ptsReadByte(uart->pts, &byte)) {
+                fifoWrite(&uart->rfifo, byte);
+            } else {
+                printf("RX BUG! This is not supposed to happen\n");
+            }
+        }
+    }        
 }
 
 static void handleStatusRegisters(Uart *uart) {
-    uart->lsr &= ~(LSR_TEMT | LSR_THRE);
+    uart->lsr &= ~(LSR_TEMT | LSR_THRE | LSR_DR);
     
-    if (uart->tfifo.count < UART_FIFO_SIZE) {
+    if (!fifoIsFull(&uart->tfifo)) {
         uart->lsr |= LSR_THRE;
         // TODO not entirely accurate, should immediately poll fifo to a "shift register" and time that
     }
-    if (uart->tfifo.count == 0) {
+    if (fifoIsEmpty(&uart->tfifo)) {
         uart->lsr |= LSR_TEMT;
+    }
+    if (!fifoIsEmpty(&uart->rfifo)) {
+        uart->lsr |= LSR_DR;
     }
 }
 
