@@ -28,10 +28,11 @@ nextChar\@:
     move.b (a1)+,d0
     beq.s done\@
     bsr UARTPutChar
+    bra.s nextChar\@
 done\@:
     rts    
 welcomeMsg\@:
-    dc.b "Hello world!", 13,10,0
+    dc.b "Hello world from 68000!", 13,10,0
     even
 
     include mmc.asm
