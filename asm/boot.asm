@@ -17,7 +17,17 @@ Start:
     bsr ConClr
     lea (welcomeMsg).l,a1
     bsr ConPuts
-    bsr StartMonitor
+.1
+    bsr ConGetblocking
+    cmp.b #'U',d0
+    beq Uploader
+    cmp.b #'M',d0
+    beq Monitor
+    cmp.b #13,d0
+    beq Loader
+    bra .1
+
+
     ;bsr MMCStartTransfer
     ;bsr MMCSendByte
     ;bsr MMCReadByte
@@ -25,10 +35,14 @@ Start:
 loop:
     bra loop
 welcomeMsg:
-    dc.b "JOFMODORE SE",13,10
-    dc.b "Copyright (C)2025 Johan Fransson",13,10,13,10,0
+    dc.b "JOFMODORE 68K BIOS V1.00",13,10
+    dc.b "Copyright (C) 2026 Johan Fransson",13,10
+    dc.b "All rights reserved.",13,10,13,10
+    dc.b "[U]pload S-records  [M]onitor or  [Enter] boot from media: ",0
     even
 
+    include loader.asm
+    include uploader.asm
     include monitor.asm
     include mmc.asm
     include console.asm
