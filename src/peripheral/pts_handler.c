@@ -95,7 +95,7 @@ PtsHandler *ptsHandlerCreate() {
     int fds = open(ptsname(reader->fdm), O_RDWR);
     close(fds);
 
-    int rc = pthread_create(&reader->read_thread, NULL, read_thread, &reader);
+    int rc = pthread_create(&reader->read_thread, NULL, read_thread, reader);
     if (rc == -1) {
         printf("Unable to create thread, %d", rc);
         free(pts);
@@ -122,7 +122,7 @@ bool ptsIsByteAvailable(PtsHandler *pts) {
 bool ptsReadByte(PtsHandler *pts, uint8_t *byte) {    
     if (ptsIsByteAvailable(pts)) {
         Reader *reader = &pts->reader;
-        uint8_t byte = pts->reader.buffer[pts->reader.read_ptr];
+        *byte = pts->reader.buffer[pts->reader.read_ptr];
         reader->read_ptr++;
         return true;
     }

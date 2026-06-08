@@ -99,7 +99,7 @@ static bool fifoIsFull(Fifo *fifo) {
 }
 
 static bool fifoIsEmpty(Fifo *fifo) {
-    return fifo->count = 0;
+    return fifo->count == 0;
 }
 
 static void fifoClear(Fifo *fifo) {
