@@ -13,4 +13,6 @@ SPI_CS_EXT  equ 2
 SPI_CS_ROM  equ 3
 IREG        equ $e00001
 
+SYSTEM_BSS_BASE equ $0F8000 ; Allocate 32 KB of variables and stack to the system
+
     include "uart.i"

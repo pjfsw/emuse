@@ -13,12 +13,11 @@ Start:
     ;move.b #1,(a0)
     ;btst.b #0,(a0)
     ;btst.b #1,(a0)
-    bsr UARTInit
+    bsr ConOpen    
+    bsr ConClr
     lea (welcomeMsg).l,a1
-    bsr writeMessage
-    bsr waitKey
-    lea (anotherMsg).l,a1
-    bsr writeMessage    
+    bsr ConPuts
+    bsr StartMonitor
     ;bsr MMCStartTransfer
     ;bsr MMCSendByte
     ;bsr MMCReadByte
@@ -26,24 +25,10 @@ Start:
 loop:
     bra loop
 welcomeMsg:
-    dc.b "Hello world from 68000! Press space!",13,10,0
-    even
-anotherMsg:
-    dc.b "You pressed a key, splendid!",13,10,0
+    dc.b "JOFMODORE SE",13,10
+    dc.b "Copyright (C)2025 Johan Fransson",13,10,13,10,0
     even
 
-writeMessage:
-writeMessage_nextChar:
-    move.b (a1)+,d0
-    beq.s writeMessage_done
-    bsr UARTPutChar
-    bra.s writeMessage_nextChar
-writeMessage_done:
-    rts    
-
-waitKey:
-    bsr UARTReadCharBlocking
-    rts        
-
+    include monitor.asm
     include mmc.asm
-    include uart.asm
+    include console.asm

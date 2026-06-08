@@ -27,11 +27,16 @@ PutChar_Wait:
     move.b d0,UART_THR(a0)
     rts   
 
+;____________________________________________________________
+;
+; Read character in D0
+; A0 will be destroyed
+;____________________________________________________________
 UARTReadCharBlocking:
     lea UART_BASE,a0
-ReadChar_Wait:
+.1:
     btst.b #0,UART_LSR(a0)    ; RX FIFO has data?
-    beq.s ReadChar_Wait
+    beq.s .1
     move.b UART_RBR(a0),d0
     rts
 
