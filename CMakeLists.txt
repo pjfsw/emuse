@@ -11,6 +11,7 @@ add_compile_definitions(_XOPEN_SOURCE=600)
 add_compile_options(
     -Wunused-value
     -Werror=return-type
+    -Werror
 )
 
 # 1. SDL3 Setup
@@ -25,7 +26,7 @@ set(ASM_BIN "${CMAKE_CURRENT_BINARY_DIR}/boot.bin")
 
 add_custom_command(
     OUTPUT ${ASM_BIN}
-    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -spaces ${ASM_SRC} -o ${ASM_BIN}
+    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces ${ASM_SRC} -o ${ASM_BIN}
     DEPENDS ${ASM_SRC}
     COMMENT "Assembling 68k boot code with vasm"
 )

@@ -48,6 +48,11 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
             ea->address |= (uint32_t)readWordFunc(readWriteUserdata, registers->pc);
             increasePc(registers);
             return 8;
+        } else if (reg == AM_EXT_PC_DISP) {
+            int16_t displacement = (int16_t)readWordFunc(readWriteUserdata, registers->pc);
+            ea->address = registers->pc + (int32_t)displacement;
+            increasePc(registers);
+            return 4;
         }
     }
     return -1;
@@ -207,18 +212,28 @@ static int writeDest(
 }
 
 static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
-    uint64_t result = (uint64_t)((uint64_t)a - (uint64_t)b);    
+    uint64_t result = (uint64_t)((uint64_t)b - (uint64_t)a);    
     uint64_t realResult;
+    uint32_t signMask;
     if (size == IS_BYTE) {
         realResult = (uint8_t)result;
+        signMask = 0x80;
     } else if (size == IS_WORD) {
         realResult = (uint16_t)result;
+        signMask = 0x8000;
     } else {
         realResult = (uint32_t)result;
+        signMask = 0x80000000;
     }
     bool carry = (uint64_t)result != (uint64_t)realResult;
     setFlag(regs, SR_FLAGS_C, carry);
     setFlag(regs, SR_FLAGS_X, carry);
+    setFlag(regs, SR_FLAGS_Z, realResult == 0);
+    setFlag(regs, SR_FLAGS_N, (realResult & signMask) != 0);
+    bool signA = (a & signMask) != 0;
+    bool signB = (b & signMask) != 0;
+    bool signR = (realResult & signMask) != 0;    
+    setFlag(regs, SR_FLAGS_V, (signB != signA) && (signR != signB));
     //printf("%lx %lx %d %x\n", result, realResult, carry, regs->sr);
     return (uint32_t)result;
 }
@@ -269,6 +284,22 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
         return -1;        
     }
     cycleCount += writeCycleCount;
+    return cycleCount;
+}
+
+static int executeCmp(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t src;
+    uint32_t dst;
+    int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &src);
+    if (cycleCount < 0) {
+        return -1;
+    }
+    int destCycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &dst);
+    if (destCycleCount < 0) {
+        return -1;
+    }
+    cycleCount += destCycleCount;
+    dst = di->aluFunc(src,dst, di->size, registers);
     return cycleCount;
 }
 
@@ -336,6 +367,7 @@ static int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFun
 static char *mn_add = "ADD";
 static char *mn_addx = "ADDX";
 static char *mn_addq = "ADDQ";
+static char *mn_cmp = "CMP";
 static char *mn_subq = "SUBQ";
 static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
@@ -412,6 +444,34 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         }
         cycles += eaCycles;
         return cycles;
+    } else if (family == 0xb000) {
+        di->family = IF_MOVE;
+        *execFunc = executeCmp;
+        uint16_t mode = (opcode >> 3) & 7;
+        uint16_t srcReg = opcode & 7;
+        uint16_t opMode = (opcode >> 6) & 7;
+        uint16_t dstReg = (opcode >> 9) & 7;  
+        if ((opMode == 0) || (opMode == 1) || (opMode == 2)) {
+            // CMP.x
+            di->mnemonic = mn_cmp;
+            uint16_t size = opMode & 3;
+            di->size = size;
+            EffectiveAddress ea;
+            int eaCycles = getEffectiveAddress(registers, mode, srcReg, size, &di->src, readWordFunc, readWriteUserdata);
+            if (eaCycles < 0) {
+                return 0;
+            }
+            di->dst.mode = AM_DREG;
+            di->dst.xn = dstReg;
+            di->aluFunc = aluSub;
+            cycles += eaCycles;
+            if (di->size == IS_LONG) {
+                cycles += 2;
+            }
+        } else {
+            return 0;
+        }
+
     } else if (family == 0xd000) { // ADD
         di->family = IF_MOVE;
         di->mnemonic = mn_add;
@@ -433,6 +493,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
                 di->dst.mode = AM_DREG;
                 di->dst.xn = dstReg;
             } else { // ( -(An),-(An)
+                return 0; // TODO
             }            
             cycles += eaCycles;
         } else { // Normal ADD            
@@ -453,6 +514,9 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
                 di->src = dr;
                 di->dst = ea;                
             }            
+            if (di->size == IS_LONG) {
+                cycles += 2;
+            }
             cycles += eaCycles;
         }
     } else if (family == 0x5000) { 

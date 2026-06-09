@@ -15,18 +15,24 @@ Start:
     ;btst.b #1,(a0)
     bsr ConOpen    
     bsr ConClr
-    lea (welcomeMsg).l,a1
+    lea welcomeMsg(pc),a1
     bsr ConPuts
+    
+    inline
 .1
     bsr ConGetblocking
     cmp.b #'U',d0
     beq Uploader
+    cmp.b #'u',d0
+    beq Uploader
     cmp.b #'M',d0
     beq Monitor
+    cmp.b #'m',d0
+    beq Monitor
     cmp.b #13,d0
-    beq Loader
+    beq BootLoader
     bra .1
-
+    einline
 
     ;bsr MMCStartTransfer
     ;bsr MMCSendByte
@@ -38,10 +44,10 @@ welcomeMsg:
     dc.b "JOFMODORE 68K BIOS V1.00",13,10
     dc.b "Copyright (C) 2026 Johan Fransson",13,10
     dc.b "All rights reserved.",13,10,13,10
-    dc.b "[U]pload S-records  [M]onitor or  [Enter] boot from media: ",0
+    dc.b "[U]pload S-records  [M]onitor or  [Enter] boot from disk: ",0
     even
 
-    include loader.asm
+    include bootloader.asm
     include uploader.asm
     include monitor.asm
     include mmc.asm

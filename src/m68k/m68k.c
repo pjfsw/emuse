@@ -70,6 +70,10 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
         } else if (ea->xn == AM_EXT_ABS_LONG) {
             sprintf(s, "$%X", ea->address);
             addDisassembly(instruction, s, SYM_CONSTANT);            
+        } else if (ea->xn == AM_EXT_PC_DISP) {
+            sprintf(s, "$%X", ea->address);
+            addDisassembly(instruction, s, SYM_CONSTANT);
+            addDisassembly(instruction, "(PC)", SYM_SYMBOL);
         }
     } else {
         sprintf(s, "{MODE=%x Xn=%x}", ea->mode, ea->xn);
