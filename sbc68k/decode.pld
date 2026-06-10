@@ -1,43 +1,19 @@
 GAL22V10
 AddrDecd
 
-CLK   NC   NC   A20   A21 A22 A23 LDS    AS       UDS   RWB     GND
-OVR   UART IREG RAMLO ROM OE  WR  AREGWR TIMERACK RAMHI EXTPORT VCC
+CLK NC NC A20 A21 A22 A23 LDS AS UDS RWB GND
+OVR UART IREG RAMLO ROM OE WR AREG TIMERACK RAMHI EXTPORT VCC
 
-/OE  = /AS * RWB
-/WR  = /AS * /RWB
-
-/ROM = RWB * A23 * A22
-
-
-/IO0 = A15 * A14 * /A13 * A12 
-     * /A11 * /A10 * /A9 * /A8
-/IO1 = A15 * A14 * /A13 * A12 
-     * /A11 * /A10 * /A9 * A8
-/IO2 = A15 * A14 * /A13 * A12 
-     * /A11 * /A10 * A9 * /A8
-/BANK = A15 * A14 * /A13 * A12
-      * /A11 * /A10 * A9 * A8 
-      * PHI2 * /RWB
-
-/RAM = /A15
-     + /A14
-     +  RWB * A13 * A12 * HIRAM 
-     + /RWB * A13 * A12 
-     + A15 * A14 * /A13 * A12 * /A11 * /A10 * A9 * A8
-
-/VRAM = A15 * A14 * /A13 * /A12
-
-/ROM = RWB * A15 * A14 * /A13 * A12 * /A11 * A10
-     + RWB * A15 * A14 * /A13 * A12 * A11
-     + RWB * A15 * A14 * A13 * /A12
-     + RWB * A15 * A14 * A13 * A12 * /HIRAM
-
-DESCRIPTION
-
-Lo-RAM = $0000-$BFFF
-VRAM   = $C000-$CFFF
-IO     = $D000-$D3FF
-ROM    = $D400-$EFFF
-Hi-RAM = $F000-$FFFF
-
+/OE = /AS * RWB
+/WR = /AS * /RWB
+/ROM = RWB * /OVR * /A23 * /A22 * /A21 * /A20
+     + RWB * A23 * A22 * A21 * A20
+/RAMLO = /AS * OVR * /A23 * /A22 * /A21 * /A20 * /LDS
+       + /AS * /RWB * /A23 * /A22 * /A21 * /A20 * /LDS
+/RAMHI = /AS * OVR * /A23 * /A22 * /A21 * /A20 * /UDS
+       + /AS * /RWB * /A23 * /A22 * /A21 * /A20 * /UDS
+/TIMERACK = A23 * /A22 * A21 * /A20 * /AS
+/UART = A23 * /A22 * A21 * A20 * /AS * /LDS
+EXTPORT = A23 * A22 * /A21 * /A20 * /AS * /RWB * /LDS
+/AREG = A23 * A22 * /A21 * A20 * /AS * /RWB * /LDS
+/IREG = A23 * A22 * A21 * /A20 * /AS * RWB * /LDS

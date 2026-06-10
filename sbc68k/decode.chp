@@ -1,0 +1,29 @@
+
+
+                                GAL22V10
+
+                          -------\___/-------
+                      CLK |  1           24 | VCC
+                          |                 |
+                       NC |  2           23 | EXTPORT
+                          |                 |
+                       NC |  3           22 | RAMHI
+                          |                 |
+                      A20 |  4           21 | TIMERACK
+                          |                 |
+                      A21 |  5           20 | AREG
+                          |                 |
+                      A22 |  6           19 | WR
+                          |                 |
+                      A23 |  7           18 | OE
+                          |                 |
+                      LDS |  8           17 | ROM
+                          |                 |
+                       AS |  9           16 | RAMLO
+                          |                 |
+                      UDS | 10           15 | IREG
+                          |                 |
+                      RWB | 11           14 | UART
+                          |                 |
+                      GND | 12           13 | OVR
+                          -------------------

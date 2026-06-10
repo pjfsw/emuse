@@ -95,6 +95,10 @@ def main():
         macro = field_name.upper()
         add_macro(macro, expand_macros(value,macros))
 
+    print("GAL22V10")
+    print("AddrDecd")
+    print()
+
     print_pins(1,12)
     print_pins(13,24)
     print("")

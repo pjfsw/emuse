@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | NC       | Input
+   3   | NC       | Input
+   4   | A20      | Input
+   5   | A21      | Input
+   6   | A22      | Input
+   7   | A23      | Input
+   8   | LDS      | Input
+   9   | AS       | Input
+  10   | UDS      | Input
+  11   | RWB      | Input
+  12   | GND      | GND
+  13   | OVR      | Input
+  14   | UART     | Output
+  15   | IREG     | Output
+  16   | RAMLO    | Output
+  17   | ROM      | Output
+  18   | OE       | Output
+  19   | WR       | Output
+  20   | AREG     | Output
+  21   | TIMERACK | Output
+  22   | RAMHI    | Output
+  23   | EXTPORT  | Output
+  24   | VCC      | VCC
+
