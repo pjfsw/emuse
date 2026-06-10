@@ -34,6 +34,24 @@ add_custom_command(
 # Create a target for the binary so it builds automatically
 add_custom_target(generate_boot_code DEPENDS ${ASM_BIN})
 
+set(ROM_BIN ${CMAKE_BINARY_DIR}/boot.bin)
+set(ROM_ODD ${CMAKE_BINARY_DIR}/boot_odd.bin)
+set(ROM_EVEN ${CMAKE_BINARY_DIR}/boot_even.bin)
+
+add_custom_command(
+    OUTPUT ${ROM_EVEN} ${ROM_ODD}
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/split_rom.py
+            ${ROM_BIN}
+            ${ROM_EVEN}
+            ${ROM_ODD}
+    DEPENDS ${ROM_BIN}
+    COMMENT "Splitting ROM into HI/LO images"
+)
+
+add_custom_target(split_rom ALL
+    DEPENDS ${ROM_EVEN} ${ROM_ODD}
+)
+
 # 3. Executable Setup
 file(GLOB_RECURSE SOURCES "src/*.c")
 
