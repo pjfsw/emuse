@@ -32,6 +32,8 @@ ConPuts:
 .1:
     rts    
 
+ConIsDataAvailable:
+    bra UARTIsDataAvailable
 ;____________________________________________________________
 ;
 ; Read character from console and store (byte) in D0

@@ -227,7 +227,7 @@ static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *reg
     }
     bool carry = (uint64_t)result != (uint64_t)realResult;
     setFlag(regs, SR_FLAGS_C, carry);
-    setFlag(regs, SR_FLAGS_X, carry);
+    setFlag(regs, SR_FLAGS_X, carry); // SHOULD NOT BE SET BY CMP
     setFlag(regs, SR_FLAGS_Z, realResult == 0);
     setFlag(regs, SR_FLAGS_N, (realResult & signMask) != 0);
     bool signA = (a & signMask) != 0;
@@ -299,7 +299,9 @@ static int executeCmp(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
         return -1;
     }
     cycleCount += destCycleCount;
+    bool saveX = getFlag(registers, SR_FLAGS_X); // Ugly hack since X is unaffected by CMP
     dst = di->aluFunc(src,dst, di->size, registers);
+    setFlag(registers, SR_FLAGS_X, saveX);
     return cycleCount;
 }
 
@@ -368,6 +370,7 @@ static char *mn_add = "ADD";
 static char *mn_addx = "ADDX";
 static char *mn_addq = "ADDQ";
 static char *mn_cmp = "CMP";
+static char *mn_cmpa = "CMPA";
 static char *mn_subq = "SUBQ";
 static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
@@ -451,12 +454,11 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         uint16_t srcReg = opcode & 7;
         uint16_t opMode = (opcode >> 6) & 7;
         uint16_t dstReg = (opcode >> 9) & 7;  
-        if ((opMode == 0) || (opMode == 1) || (opMode == 2)) {
+        if (opMode <= 2) {
             // CMP.x
             di->mnemonic = mn_cmp;
             uint16_t size = opMode & 3;
             di->size = size;
-            EffectiveAddress ea;
             int eaCycles = getEffectiveAddress(registers, mode, srcReg, size, &di->src, readWordFunc, readWriteUserdata);
             if (eaCycles < 0) {
                 return 0;
@@ -468,8 +470,27 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             if (di->size == IS_LONG) {
                 cycles += 2;
             }
+        } else if ((opMode == 3) || (opMode == 7)) {
+            // CMPA
+            di->mnemonic = mn_cmpa;
+            if (opMode == 3) {
+                di->size = IS_WORD;
+            } else {
+                di->size = IS_LONG;
+            }
+            int eaCycles = getEffectiveAddress(registers, mode, srcReg, di->size, &di->src, readWordFunc, readWriteUserdata);
+            if (eaCycles < 0) {
+                return 0;
+            }
+            di->dst.mode = AM_AREG;
+            di->dst.xn = dstReg;
+            di->aluFunc = aluSub;
+            cycles += 2;
+            cycles += eaCycles;
         } else {
+            // CMPM
             return 0;
+            
         }
 
     } else if (family == 0xd000) { // ADD

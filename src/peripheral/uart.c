@@ -24,6 +24,7 @@ static const int LSR_TEMT = 0x40;
 
 #define UART_FIFO_SIZE 16
 #define UART_FIFO_SIZE_MASK (UART_FIFO_SIZE-1)
+
 typedef struct {
     uint8_t data[UART_FIFO_SIZE];
     uint8_t wptr;
@@ -38,6 +39,10 @@ struct Uart {
     uint32_t baudRate;
     uint32_t ticksPerCharacter;
     PtsHandler *pts;   
+    Fifo rfifo;
+    Fifo tfifo;
+    int32_t sendTimer;
+    int32_t recvTimer;
     uint8_t ier;
     uint8_t lcr;
     uint8_t dll;
@@ -45,12 +50,9 @@ struct Uart {
     uint8_t iir;
     uint8_t dlab;
     uint8_t lsr;
+    uint8_t scratch;
     uint8_t fifo_enabled;
     uint8_t fifo_trigger;
-    Fifo rfifo;
-    Fifo tfifo;
-    int32_t sendTimer;
-    int32_t recvTimer;
 };
 
 Uart *uartCreate(uint32_t cpuClockSpeed, uint32_t uartClockSpeed) {
@@ -160,7 +162,7 @@ static void transmitByte(Uart *uart, uint8_t byte) {
     }
 }
 
-static void writeByte(Uart *uart, uint8_t offset, uint8_t byte) {
+static void writeByteToUart(Uart *uart, uint8_t offset, uint8_t byte) {
     offset = offset & (uartMaxAddress - 1);
     if ((offset < 2) && (true == uart->dlab)) {
         writeDlab(uart, offset, byte);
@@ -178,6 +180,9 @@ static void writeByte(Uart *uart, uint8_t offset, uint8_t byte) {
         printf("LCR = %02x\n", byte);
     } else if (offset == FCR) {
         setFcr(uart, byte);
+    } else if (offset == SCR) {
+        printf("Write scratch\n");
+        uart->scratch = byte;
     }
 }
 
@@ -186,13 +191,13 @@ void uartWriteByte(void *userdata, uint32_t address, uint8_t byte) {
     if (!(address & 1)) {
         return; 
     }
-    writeByte(uart, address>>1, byte);
+    writeByteToUart(uart, address>>1, byte);
 }
 
 void uartWriteWord(void *userdata, uint32_t address, uint16_t word) {
     Uart *uart = (Uart*)userdata;
 
-    writeByte(uart, address>>1, (uint8_t)word);
+    writeByteToUart(uart, address>>1, (uint8_t)word);
 }
 
 static uint8_t receiveByte(Uart *uart) {
@@ -205,12 +210,15 @@ static uint8_t receiveByte(Uart *uart) {
     return 0;
 }
 
-uint8_t readByte(Uart *uart, uint8_t offset) {
+static uint8_t readByteFromUart(Uart *uart, uint8_t offset) {
     offset = offset & (uartMaxAddress - 1);
     if (offset == RBR) {
         return receiveByte(uart);
     } else if (offset == LSR) {
         return uart->lsr;
+    } else if (offset == SCR) {
+        printf("Read scratch\n");
+        return uart->scratch;
     }
     return 0x00;
 }
@@ -220,12 +228,12 @@ uint8_t uartReadByte(void *userdata, uint32_t address) {
         return 0xaa; 
     }
     Uart *uart = (Uart*)userdata;    
-    return readByte(uart, address>>1);
+    return readByteFromUart(uart, address>>1);
 }
 
 uint16_t uartReadWord(void *userdata, uint32_t address) {
     Uart *uart = (Uart*)userdata;
-    return readByte(uart,address>>1);
+    return readByteFromUart(uart,address>>1);
 }
 
 void uartReset(void *userdata) {

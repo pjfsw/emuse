@@ -88,9 +88,15 @@ PtsHandler *ptsHandlerCreate() {
 
     strncpy(pts->pts_name, ptsname(reader->fdm), PTS_NAME_MAX_LENGTH);
     printf("Serial interface available at pseudo terminal %s\n", pts->pts_name);
-    unlink("/tmp/emuse");
-    symlink(pts->pts_name, "/tmp/emuse-uart");
-    printf("Symlink /tmp/emuse-uart -> %s created\n", pts->pts_name);
+    const char *symlinkName = "/tmp/emuse-uart";
+    if (unlink(symlinkName) < 0) {
+        perror("Failed to remove symlink");
+    }    
+    if (symlink(pts->pts_name, symlinkName) < 0) {
+        perror("Failed to create symlink");
+    } else {
+        printf("Symlink %s -> %s created\n",symlinkName, pts->pts_name);
+    }
 
     grantpt(reader->fdm);
     unlockpt(reader->fdm);
