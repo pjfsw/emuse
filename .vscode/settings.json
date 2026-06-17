@@ -8,6 +8,7 @@
     "cpu.h": "c",
     "bus.h": "c",
     "booleanfunc.h": "c",
-    "pthread.h": "c"
+    "pthread.h": "c",
+    "readwritefunc.h": "c"
   }
 }

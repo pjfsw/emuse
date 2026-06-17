@@ -53,8 +53,12 @@ typedef struct {
 
 typedef uint32_t (*AluFunc)(uint32_t src, uint32_t dst, uint16_t size, M68kRegisters *regs);
 
-typedef struct {
+typedef struct DecodedInstruction DecodedInstruction;
+typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
+
+struct DecodedInstruction {
     char *mnemonic; 
+    uint16_t opcode;
     InstructionFamily family;
     InstructionSize size;
     EffectiveAddress src;
@@ -62,10 +66,27 @@ typedef struct {
     int32_t displacement;
     uint16_t condition;
     AluFunc aluFunc;
-} DecodedInstruction;
+    ExecFunc execFunc;
+};
 
-typedef int (*ExecFunc)(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
+
+typedef int (*DecodeFunc)(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
 
 // Decode  instruction. Returns number of cycles or 0 if error
 // The execution function is stored in execFunc
-int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, ExecFunc *execFunc);
+int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
+
+uint32_t align24(uint32_t address);
+
+int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
+    EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata);
+
+void increasePc(M68kRegisters *registers);
+
+bool isTargetAddressRegister(DecodedInstruction *di);
+
+void setFlag(M68kRegisters *registers, uint16_t flag, uint16_t value);
+
+bool getFlag(M68kRegisters *registers, uint16_t flag);
+
+void setNZ(M68kRegisters *registers, int32_t value);

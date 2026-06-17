@@ -1,13 +1,7 @@
 #include "decode.h"
+#include "sourcedest.h"
+#include "move.h"
 #include <stdio.h>
-
-static inline uint32_t align24(uint32_t address) {
-    return address & 0xffffff;
-}
-
-static inline void increasePc(M68kRegisters *registers) {
-    registers->pc = align24(registers->pc + 2);
-}
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
@@ -58,15 +52,15 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
     return -1;
 }
 
-static void setFlag(M68kRegisters *registers, uint16_t flag, uint16_t value) {
+void setFlag(M68kRegisters *registers, uint16_t flag, uint16_t value) {
     registers->sr = (registers->sr & (0xffff-flag)) | (value * flag);
 }
 
-static bool getFlag(M68kRegisters *registers, uint16_t flag) {
+bool getFlag(M68kRegisters *registers, uint16_t flag) {
     return (registers->sr & flag) != 0;
 }
 
-static void setNZ(M68kRegisters *registers, int32_t value) {
+void setNZ(M68kRegisters *registers, int32_t value) {
     setFlag(registers, SR_FLAGS_N, value < 0);
     setFlag(registers, SR_FLAGS_Z, value == 0);
 }
@@ -74,141 +68,6 @@ static void setNZ(M68kRegisters *registers, int32_t value) {
 static int executeLea(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     registers->a[di->dst.xn] = di->src.address;
     return 0;
-}
-
-static void preDecrement(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea) {
-    if (ea->mode != AM_ADDRESS_PRE_DEC) {
-        return;
-    }
-}
-
-static void postIncrement(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea) {
-    if (ea->mode != AM_ADDRESS_POST_INC) {
-        return;
-    }
-    int size = 0;
-    if (di->size == IS_LONG) {
-        size = 4;
-    } else if (di->size == IS_WORD) {
-        size = 2;
-    } else {
-        if (ea->xn == 7) {
-            // Stack special case
-            size = 2;
-        } else {
-            size = 1;
-        }
-    }
-    registers->a[ea->xn] = align24(registers->a[ea->xn] + size);
-}
-
-static int readSource(
-    DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea, RwFunc *rwFunc, void *readWriteUserdata, uint32_t *value) {
-    int cycleCount = -1;
-    if (ea->mode == AM_EXT) {
-        if (ea->xn == AM_EXT_IMMEDIATE) {
-            *value = ea->immediate;
-            cycleCount = 0;
-        } else if (ea->xn == AM_EXT_ABS_LONG) {
-            if (di->size == IS_LONG) {
-                *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address) << 16;
-                *value |= (uint32_t)rwFunc->rw(readWriteUserdata, ea->address + 2);
-                cycleCount = 8;
-            } else if (di->size == IS_WORD) {
-                *value = rwFunc->rw(readWriteUserdata, ea->address);
-                cycleCount = 4;
-            } else {
-                *value = rwFunc->rb(readWriteUserdata, ea->address);
-                cycleCount = 4;
-            }
-        }
-    } else if (ea->mode == AM_DREG) {
-        *value = registers->d[ea->xn];
-        cycleCount = 0;
-    } else if (ea->mode == AM_AREG) {
-        *value = registers->a[ea->xn];
-        cycleCount = 0;
-    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP) || (ea->mode == AM_ADDRESS_POST_INC)) {
-        preDecrement(di, registers, ea);
-//        printf("Read $%06x\n", di->src.address);
-        cycleCount = 4;
-        if (di->size == IS_BYTE) {
-            *value = (uint32_t)rwFunc->rb(readWriteUserdata, ea->address);
-        } else if (di->size == IS_WORD) {
-            *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address);
-        } else if (di->size == IS_LONG) {
-            *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address) << 16;
-            *value |= (uint32_t)rwFunc->rw(readWriteUserdata, ea->address + 2);
-            cycleCount += 4;
-        }
-        postIncrement(di, registers, ea);
-
-    }
-    return cycleCount;
-}
-
-static inline bool isTargetAddressRegister(DecodedInstruction *di) {
-    return di->dst.mode == AM_AREG;
-}
-
-static int writeDest(
-    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
-    uint32_t cycleCount = -1;
-
-    if ((di->dst.mode == AM_DREG)) {
-        cycleCount = 0;
-        if (di->size == IS_LONG) {
-            setNZ(registers, (int32_t)value);
-            registers->d[di->dst.xn] = value;
-        } else if (di->size == IS_WORD) {
-            setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
-            registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffff0000) | (value & 0xffff);
-        } else if (di->size == IS_BYTE) {
-            setNZ(registers, (int32_t)(int8_t)(value & 0xff));
-            registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
-        }
-    }
-    else if (isTargetAddressRegister(di)) {
-        cycleCount = 0;
-        if (di->size == IS_LONG) {
-            registers->a[di->dst.xn] = value;
-        } else if (di->size == IS_WORD) {
-            registers->a[di->dst.xn] = (int32_t)(int16_t)value;
-        }
-    }
-    else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS) || (di->dst.mode == AM_ADDRESS_POST_INC)) {
-        //printf("Store %x in $%06x\n", value, di->dst.address);
-        preDecrement(di, registers, &di->dst);
-        cycleCount = 4;
-        if (di->size == IS_BYTE) {
-            setNZ(registers, (int32_t)(int8_t)(value & 0xff));
-            rwFunc->wb(readWriteUserdata, di->dst.address, value);
-        } else if (di->size == IS_WORD) {
-            setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
-            rwFunc->ww(readWriteUserdata, di->dst.address, value);
-        } else if (di->size == IS_LONG) {
-            setNZ(registers, (int32_t)value);
-            rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
-            rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
-            cycleCount += 4;
-        }
-        postIncrement(di, registers, &di->dst);
-    } else if (di->dst.mode == AM_EXT) {                
-        if (di->dst.xn == AM_EXT_ABS_LONG) {
-            if (di->size == IS_LONG) {
-                rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
-                rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
-                cycleCount = 8;
-            } else if (di->size == IS_WORD) {
-                rwFunc->ww(readWriteUserdata, di->dst.address, (uint16_t)value);
-                cycleCount = 4;
-            } else {
-                rwFunc->wb(readWriteUserdata, di->dst.address, (uint8_t)value);
-                cycleCount = 4;
-            }
-        }
-    }
-    return cycleCount;
 }
 
 static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
@@ -305,20 +164,6 @@ static int executeCmp(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     return cycleCount;
 }
 
-static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    uint32_t value;
-    int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &value);
-    if (cycleCount < 0) {
-        return -1;
-    }
-    if (!isTargetAddressRegister(di)) {
-        setFlag(registers, SR_FLAGS_C, 0);
-        setFlag(registers, SR_FLAGS_V, 0);
-    }
-    cycleCount += writeDest(di, registers, rwFunc, readWriteUserdata, value);
-    return cycleCount;
-}
-
 static int executeBtst(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
     int cycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &value);
@@ -374,31 +219,54 @@ static char *mn_cmpa = "CMPA";
 static char *mn_subq = "SUBQ";
 static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
-static char *mn_move = "MOVE";
-static char *mn_moveq = "MOVEQ";
 static char *mn_unknown = "???";
 static char *mn_condition[] = {
     "BRA", "BSR", "BHI", "BLS", "BCC", "BCS", "BNE", "BEQ", "BVC", "BVS", "BPL", "BMI", "BGE", "BLT", "BGT", "BLE"};
 static char *mn_btst = "BTST";
 
-int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, ExecFunc *execFunc) {
+
+typedef struct {
+    uint16_t mask;
+    uint16_t value;
+    DecodeFunc decodeFunc;
+} DecodeRule;
+
+static const DecodeRule rules[] = {
+    { 0xf000, 0x1000, decodeMove },
+    { 0xf000, 0x2000, decodeMove },
+    { 0xf000, 0x3000, decodeMove },
+    { 0xf000, 0x7000, decodeMoveq }
+};
+
+int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
     uint16_t cycles = 0;
     uint16_t opcode = readWordFunc(readWriteUserdata, registers->pc);
+    di->opcode = opcode;
     increasePc(registers);
     cycles += 4;    
 
     di->mnemonic = mn_unknown;
-    *execFunc = 0;
-
     uint16_t family = opcode & 0xf000;
+
+    for (int i = 0 ; i < sizeof(rules)/sizeof(DecodeRule); i++) {
+        if ((opcode & rules[i].mask) == rules[i].value) {
+            int decodeCycles = rules[i].decodeFunc(opcode, di, registers, rwFunc, readWriteUserdata);
+            if (decodeCycles < 0) {
+                return 0;
+            } else {
+                return cycles + decodeCycles;
+            }
+        }
+    }
+
     if (family == 0) {
         uint16_t dstMode = (opcode >> 6) & 7;
         uint16_t dstReg = (opcode >> 9) & 7;   
         uint16_t srcMode = (opcode >> 3) & 7;
         uint16_t srcReg = opcode & 7;
         if ((dstReg == 4) && (dstMode == 0)) { // BTST #n,<ea>
-            *execFunc = executeBtst;
+            di->execFunc = executeBtst;
             di->family = IF_MOVE;
             di->mnemonic = mn_btst;            
             uint16_t size = (srcMode == AM_DREG) ? IS_LONG : IS_BYTE;
@@ -416,40 +284,9 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             }
             cycles += eaCycles;
         }
-
-    } else if (family < 0x4000) {    
-        *execFunc = executeMove;
-        di->family = IF_MOVE;
-        di->mnemonic = mn_move;
-        //  move.x
-        uint16_t size = (family >> 12);
-        if (size == 1) {
-            size = IS_BYTE;
-        } else if (size == 3) {
-            size = IS_WORD;
-        } else if (size == 2) {
-            size = IS_LONG;
-        }
-        di->size = size;
-        uint16_t srcMode = (opcode >> 3) & 7;
-        uint16_t srcReg = opcode & 7;
-        uint16_t dstMode = (opcode >> 6) & 7;
-        uint16_t dstReg = (opcode >> 9) & 7;        
-        int eaCycles = getEffectiveAddress(registers, srcMode, srcReg, size, &di->src, readWordFunc, readWriteUserdata);
-        if (eaCycles < 0) {
-            return 0;
-        }
-        cycles += eaCycles;
-
-        eaCycles = getEffectiveAddress(registers, dstMode, dstReg, size, &di->dst, readWordFunc, readWriteUserdata);
-        if (eaCycles < 0) {
-            return 0;
-        }
-        cycles += eaCycles;
-        return cycles;
     } else if (family == 0xb000) {
         di->family = IF_MOVE;
-        *execFunc = executeCmp;
+        di->execFunc = executeCmp;
         uint16_t mode = (opcode >> 3) & 7;
         uint16_t srcReg = opcode & 7;
         uint16_t opMode = (opcode >> 6) & 7;
@@ -496,7 +333,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
     } else if (family == 0xd000) { // ADD
         di->family = IF_MOVE;
         di->mnemonic = mn_add;
-        *execFunc = executeAlu;
+        di->execFunc = executeAlu;
         di->aluFunc = aluAdd;
         uint16_t mode = (opcode >> 3) & 7;
         uint16_t srcReg = opcode & 7;
@@ -545,6 +382,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         uint16_t dstMode = (opcode >> 3) & 7;
         uint16_t dstReg = opcode & 7;
         if (size == 3) { // Scc, DBcc
+            return 0;
         } else { // ADDQ/SUBQ
             uint16_t isSub = (opcode >> 8) & 1;
             uint16_t data = ((opcode >> 9) & 7);   
@@ -557,7 +395,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             di->src.xn = AM_EXT_IMMEDIATE;
             di->size = size;
             di->family = IF_MOVE;
-            *execFunc = executeAlu;
+            di->execFunc = executeAlu;
             if (isSub) {
                 di->mnemonic = mn_subq;
                 di->aluFunc = aluSub;
@@ -567,23 +405,8 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             }
             cycles += eaCycles;
         }
-    } else if (family == 0x7000) { // MOVEQ
-        *execFunc = executeMove;
-        di->family = IF_MOVE;
-        di->mnemonic = mn_moveq;
-        uint16_t dstReg = (opcode >> 9) & 7;                
-        di->size = IS_LONG;
-        di->src.mode = AM_EXT;
-        di->src.xn = AM_EXT_IMMEDIATE;
-        di->src.immediate = (int32_t)(int8_t)(opcode);
-        int eaCycles = getEffectiveAddress(registers, AM_DREG , dstReg, IS_LONG, &di->dst, readWordFunc, readWriteUserdata);
-        if (eaCycles < 0) {
-            return 0;
-        }
-        cycles += eaCycles;
-        return cycles;
     } else if ((opcode & 0xf1c0) == 0x41c0) { // LEA
-        *execFunc = executeLea;
+        di->execFunc = executeLea;
         di->family = IF_LEA;
         di->mnemonic = mn_lea;
         uint16_t srcMode = (opcode >> 3) & 7;
@@ -602,7 +425,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         di->condition = condition;
         di->mnemonic = mn_condition[condition];        
         di->family = IF_BRANCH;
-        *execFunc = executeBranch;
+        di->execFunc = executeBranch;
         uint8_t displacement = opcode & 0xff;
         if (displacement == 0) {
             di->displacement = (int32_t)(int16_t)readWordFunc(readWriteUserdata, registers->pc)-2; 
@@ -617,7 +440,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
     } else if (opcode == 0x4e75) {
         di->mnemonic = mn_rts;
         di->family = IF_IMPLIED;
-        *execFunc = executeRts;
+        di->execFunc = executeRts;
     }
     return cycles;
 }

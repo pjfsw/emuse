@@ -124,7 +124,7 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
     writeAddress(address, regs->pc);
     ExecFunc dummyExec;
     uint16_t opcode = cpu->rwFunc.rw(cpu->readWriteUserdata, regs->pc);
-    decode(&di, regs, &cpu->rwFunc, cpu->readWriteUserdata, &dummyExec);
+    decode(&di, regs, &cpu->rwFunc, cpu->readWriteUserdata);
     instruction->count = 0;
     char s[100];
     if (di.family == IF_UNKNOWN) {
@@ -283,7 +283,6 @@ static void postReset(M68k *m68k) {
 int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
-    ExecFunc execFunc;
     if (cpu->cpu.crashed) {
         return -1;
     }
@@ -292,15 +291,15 @@ int m68kClock(void *userdata) {
         cpu->resetState = false;
         return 0;
     }
-    int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata, &execFunc);
+    int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
     if (cycles <= 0) {
         cpu->cpu.crashed = true;
-        printf("### CPU crash at decode step\n");
+        printf("### CPU crash at decode step (opcode $%04x)\n", di.opcode);
         return - 1;
     }
     int execCycles = -1;
-    if (execFunc != NULL) {        
-        execCycles = execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
+    if (di.execFunc != NULL) {        
+        execCycles = di.execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
     }
     if (execCycles < 0) {
         cpu->cpu.crashed = true;
