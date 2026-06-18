@@ -1,6 +1,9 @@
 #include "decode.h"
 #include "sourcedest.h"
 #include "move.h"
+#include "branch.h"
+#include "rts.h"
+#include "btst.h"
 #include <stdio.h>
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
@@ -164,66 +167,14 @@ static int executeCmp(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     return cycleCount;
 }
 
-static int executeBtst(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    uint32_t value;
-    int cycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &value);
-    int isSet = value & (1 << di->src.immediate);
-    setFlag(registers, SR_FLAGS_Z, isSet == 0);
-    if (cycleCount < 0) {
-        return -1;
-    }
-
-    return cycleCount;
-}
-
-static int executeRts(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    uint32_t address = (uint32_t)rwFunc->rw(readWriteUserdata, registers->a[7]) << 16;
-    address |= (uint32_t)rwFunc->rw(readWriteUserdata, registers->a[7]+2);
-    registers->a[7] += 4;
-    registers->pc = address;
-    return 12;    
-}
-
-static int executeBranch(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    int cycles = 6;
-    bool shouldBranch = true;
-    if (di->condition == 1) {
-        uint32_t address = registers->pc;
-        registers->a[7] -= 4;
-        rwFunc->ww(readWriteUserdata, registers->a[7], (uint16_t)(address >> 16));
-        rwFunc->ww(readWriteUserdata, registers->a[7]+2, (uint16_t)address); 
-        cycles += 8;
-    } else if (di->condition == 4) { // BCC
-        shouldBranch = !getFlag(registers, SR_FLAGS_C);
-    } else if (di->condition == 5) { // BCS
-        shouldBranch = getFlag(registers, SR_FLAGS_C);
-    } else if (di->condition == 6) { // BNE
-        shouldBranch = !getFlag(registers, SR_FLAGS_Z);
-    } else if (di->condition == 7) { // BEQ
-        shouldBranch = getFlag(registers, SR_FLAGS_Z);
-    }
-
-    if (shouldBranch) {
-        registers->pc = align24(registers->pc + di->displacement);
-    } else {
-        return 4;
-    }
-    return cycles;  // We already counted the opcode fetch = 4 cycles
-}
-
 static char *mn_add = "ADD";
 static char *mn_addx = "ADDX";
 static char *mn_addq = "ADDQ";
 static char *mn_cmp = "CMP";
 static char *mn_cmpa = "CMPA";
 static char *mn_subq = "SUBQ";
-static char *mn_rts = "RTS";
 static char *mn_lea = "LEA";
 static char *mn_unknown = "???";
-static char *mn_condition[] = {
-    "BRA", "BSR", "BHI", "BLS", "BCC", "BCS", "BNE", "BEQ", "BVC", "BVS", "BPL", "BMI", "BGE", "BLT", "BGT", "BLE"};
-static char *mn_btst = "BTST";
-
 
 typedef struct {
     uint16_t mask;
@@ -232,10 +183,13 @@ typedef struct {
 } DecodeRule;
 
 static const DecodeRule rules[] = {
+    { 0xffff, 0x4e75, decodeRts },
+    { 0xffc0, 0x0800, decodeBtstImmediate}, 
     { 0xf000, 0x1000, decodeMove },
     { 0xf000, 0x2000, decodeMove },
     { 0xf000, 0x3000, decodeMove },
-    { 0xf000, 0x7000, decodeMoveq }
+    { 0xf000, 0x7000, decodeMoveq },
+    { 0xf000, 0x6000, decodeBranch },
 };
 
 int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
@@ -260,31 +214,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         }
     }
 
-    if (family == 0) {
-        uint16_t dstMode = (opcode >> 6) & 7;
-        uint16_t dstReg = (opcode >> 9) & 7;   
-        uint16_t srcMode = (opcode >> 3) & 7;
-        uint16_t srcReg = opcode & 7;
-        if ((dstReg == 4) && (dstMode == 0)) { // BTST #n,<ea>
-            di->execFunc = executeBtst;
-            di->family = IF_MOVE;
-            di->mnemonic = mn_btst;            
-            uint16_t size = (srcMode == AM_DREG) ? IS_LONG : IS_BYTE;
-            di->size = size;            
-            di->src.mode = AM_EXT;
-            di->src.xn = AM_EXT_IMMEDIATE;
-            int eaCycles = getEffectiveAddress(registers, di->src.mode, di->src.xn, size, &di->src, readWordFunc, readWriteUserdata);
-            if (eaCycles < 0) {
-                return 0;
-            }
-            cycles += eaCycles;
-            eaCycles = getEffectiveAddress(registers, srcMode, srcReg, size, &di->dst, readWordFunc, readWriteUserdata);
-            if (eaCycles < 0) {
-                return 0;
-            }
-            cycles += eaCycles;
-        }
-    } else if (family == 0xb000) {
+    if (family == 0xb000) {
         di->family = IF_MOVE;
         di->execFunc = executeCmp;
         uint16_t mode = (opcode >> 3) & 7;
@@ -326,10 +256,8 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
             cycles += eaCycles;
         } else {
             // CMPM
-            return 0;
-            
+            return 0;            
         }
-
     } else if (family == 0xd000) { // ADD
         di->family = IF_MOVE;
         di->mnemonic = mn_add;
@@ -419,28 +347,6 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
         getEffectiveAddress(registers,AM_AREG,dstReg, IS_LONG, &di->dst, readWordFunc, readWriteUserdata);
         cycles += eaCycles;
         return cycles;
-
-    } else if (family == 0x6000) { // BRA, BSR, Bxx
-        uint16_t condition = (opcode >> 8) & 15;
-        di->condition = condition;
-        di->mnemonic = mn_condition[condition];        
-        di->family = IF_BRANCH;
-        di->execFunc = executeBranch;
-        uint8_t displacement = opcode & 0xff;
-        if (displacement == 0) {
-            di->displacement = (int32_t)(int16_t)readWordFunc(readWriteUserdata, registers->pc)-2; 
-            // !! Displacement is taken from the PC after the opcode word not after the extension word
-            di->size = IS_WORD;
-            increasePc(registers);
-            //cycles += 4; Don't update cycles here because branch is annoying
-        } else {
-            di->displacement = (int8_t)displacement;
-            di->size = IS_BYTE;
-        }
-    } else if (opcode == 0x4e75) {
-        di->mnemonic = mn_rts;
-        di->family = IF_IMPLIED;
-        di->execFunc = executeRts;
     }
     return cycles;
 }

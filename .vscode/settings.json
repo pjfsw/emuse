@@ -9,6 +9,7 @@
     "bus.h": "c",
     "booleanfunc.h": "c",
     "pthread.h": "c",
-    "readwritefunc.h": "c"
+    "readwritefunc.h": "c",
+    "cstdint": "c"
   }
 }
