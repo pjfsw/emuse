@@ -92,6 +92,7 @@ static const DecodeRule rules[] = {
     { 0xf0c0, 0x5080, decodeAddqSubq }, // size 10        
     { 0xf000, 0xb000, decodeCmp, IF_MOVE  },  // CMP    
     { 0xf000, 0xd000, decodeAdd, IF_MOVE },
+    { 0xf000, 0x9000, decodeSub, IF_MOVE },
     { 0xf000, 0xc000, decodeAnd, IF_MOVE },
     { 0xf000, 0x8000, decodeOr, IF_MOVE },
     { 0xf000, 0x1000, decodeMove, IF_MOVE },

@@ -271,6 +271,14 @@ int decodeAdd(
     return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
 }
 
+int decodeSub(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "SUB";
+    di->aluFunc = aluSub;
+
+    return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
 int decodeAnd(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     di->mnemonic = "AND";
