@@ -1,19 +1,19 @@
 #include "shift.h"
 #include "sourcedest.h"
 
-typedef void (*ShiftFunc)(uint32_t *value, bool *carry, uint32_t mask, int bits, int count);
+typedef void (*ShiftFunc)(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count);
 
-static void rotateLeft(uint32_t *value, bool *carry, uint32_t mask, int bits, int count) {
+static void rotateLeft(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
     uint32_t v = *value;
     v = ((v << count) | (v >> (bits - count))) & mask;
-    *carry = (v & 1) != 0;
+    setFlag(registers, SR_FLAGS_C, (v & 1) != 0);
     *value = v;
 }
 
-static void rotateRight(uint32_t *value, bool *carry, uint32_t mask, int bits, int count) {
+static void rotateRight(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
     uint32_t v = *value;
     v = ((v >> count) | (v << (bits - count))) & mask;
-    *carry = (v & (1 << (bits-1))) != 0;
+    setFlag(registers, SR_FLAGS_C,  (v & (1 << (bits-1))) != 0);
     *value = v;
 }
 
