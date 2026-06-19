@@ -17,7 +17,7 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
 
     if ((mode == AM_DREG) || (mode == AM_AREG)) { // d0, a0
         return 0;
-    } else if ((mode == AM_ADDRESS) || (mode == AM_ADDRESS_POST_INC)) { // (a0) or (a0)+
+    } else if ((mode == AM_ADDRESS) || (mode == AM_ADDRESS_POST_INC) || (mode == AM_ADDRESS_PRE_DEC)) { // (a0) or (a0)+
         ea->address = registers->a[reg];
         return 0;        
     } else if (mode == AM_ADDR_DISP) { // disp(a0)

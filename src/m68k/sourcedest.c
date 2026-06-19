@@ -4,6 +4,20 @@ static void preDecrement(DecodedInstruction *di, M68kRegisters *registers, Effec
     if (ea->mode != AM_ADDRESS_PRE_DEC) {
         return;
     }
+    int size = 0;
+    if (di->size == IS_LONG) {
+        size = 4;
+    } else if (di->size == IS_WORD) {
+        size = 2;
+    } else {
+        if (ea->xn == 7) {
+            // Stack special case
+            size = 2;
+        } else {
+            size = 1;
+        }
+    }
+    registers->a[ea->xn] = align24(registers->a[ea->xn] - size);
 }
 
 static void postIncrement(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea) {
@@ -52,7 +66,8 @@ int readSource(
     } else if (ea->mode == AM_AREG) {
         *value = registers->a[ea->xn];
         cycleCount = 0;
-    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP) || (ea->mode == AM_ADDRESS_POST_INC)) {
+    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP) || (ea->mode == AM_ADDRESS_POST_INC) ||
+               (ea->mode == AM_ADDRESS_PRE_DEC)) {
         preDecrement(di, registers, ea);
 //        printf("Read $%06x\n", di->src.address);
         cycleCount = 4;
@@ -66,7 +81,6 @@ int readSource(
             cycleCount += 4;
         }
         postIncrement(di, registers, ea);
-
     }
     return cycleCount;
 }
@@ -95,8 +109,8 @@ int writeDest(
         } else if (di->size == IS_WORD) {
             registers->a[di->dst.xn] = (int32_t)(int16_t)value;
         }
-    }
-    else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS) || (di->dst.mode == AM_ADDRESS_POST_INC)) {
+    } else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS) ||
+               (di->dst.mode == AM_ADDRESS_POST_INC) || (di->dst.mode == AM_ADDRESS_PRE_DEC)) {
         //printf("Store %x in $%06x\n", value, di->dst.address);
         preDecrement(di, registers, &di->dst);
         cycleCount = 4;
@@ -113,7 +127,7 @@ int writeDest(
             cycleCount += 4;
         }
         postIncrement(di, registers, &di->dst);
-    } else if (di->dst.mode == AM_EXT) {                
+    } else if (di->dst.mode == AM_EXT) {
         if (di->dst.xn == AM_EXT_ABS_LONG) {
             if (di->size == IS_LONG) {
                 rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
