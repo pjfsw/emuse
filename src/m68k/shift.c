@@ -1,7 +1,23 @@
 #include "shift.h"
 #include "sourcedest.h"
 
-static int executeRol(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+typedef void (*ShiftFunc)(uint32_t *value, bool *carry, uint32_t mask, int bits, int count);
+
+static void rotateLeft(uint32_t *value, bool *carry, uint32_t mask, int bits, int count) {
+    uint32_t v = *value;
+    v = ((v << count) | (v >> (bits - count))) & mask;
+    *carry = (v & 1) != 0;
+    *value = v;
+}
+
+static void rotateRight(uint32_t *value, bool *carry, uint32_t mask, int bits, int count) {
+    uint32_t v = *value;
+    v = ((v >> count) | (v << (bits - count))) & mask;
+    *carry = (v & (1 << (bits-1))) != 0;
+    *value = v;
+}
+
+static int rotate(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, ShiftFunc shiftFunc) {
     uint32_t src;
     int cycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &src);
     if (cycleCount < 0) {
@@ -23,14 +39,24 @@ static int executeRol(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     uint32_t value = src & mask;
     uint32_t count = di->src.immediate % bits;      
     if (count > 0) {
-        value = ((value << count) | (value >> (bits - count))) & mask;
-        setFlag(registers, SR_FLAGS_C, value & 1);        
+        bool carry;
+        shiftFunc(&value, &carry, mask, bits, count);
+        setFlag(registers, SR_FLAGS_C, carry);        
         setFlag(registers, SR_FLAGS_V, 0);
     }
     writeDest(di, registers, rwFunc, readWriteUserdata, value);
 
     cycleCount += 2 + di->src.immediate * 2;
     return cycleCount;
+}
+
+
+static int executeRol(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    return rotate(di, registers, rwFunc, readWriteUserdata, rotateLeft);
+}
+
+static int executeRor(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    return rotate(di, registers, rwFunc, readWriteUserdata, rotateRight);
 }
 
 
@@ -80,7 +106,11 @@ int decodeRoxl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers
 
 
 int decodeRor(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    return -1;
+    di->mnemonic = "ROR";
+    di->execFunc = executeRor;
+    setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
+    setShiftTargetRegister(opcode, &di->dst);
+    return 0;
 }
 
 int decodeRol(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
