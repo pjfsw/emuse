@@ -39,9 +39,7 @@ static int rotate(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFu
     uint32_t value = src & mask;
     uint32_t count = di->src.immediate % bits;      
     if (count > 0) {
-        bool carry;
-        shiftFunc(&value, &carry, mask, bits, count);
-        setFlag(registers, SR_FLAGS_C, carry);        
+        shiftFunc(&value, registers, mask, bits, count);
         setFlag(registers, SR_FLAGS_V, 0);
     }
     writeDest(di, registers, rwFunc, readWriteUserdata, value);
