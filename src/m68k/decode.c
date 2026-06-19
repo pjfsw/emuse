@@ -71,10 +71,6 @@ void setNZ(M68kRegisters *registers, int32_t value) {
     setFlag(registers, SR_FLAGS_Z, value == 0);
 }
 
-static char *mn_cmp = "CMP";
-static char *mn_cmpa = "CMPA";
-static char *mn_unknown = "???";
-
 typedef struct {
     uint16_t mask;
     uint16_t value;
@@ -96,6 +92,8 @@ static const DecodeRule rules[] = {
     { 0xf0c0, 0x5080, decodeAddqSubq }, // size 10        
     { 0xf000, 0xb000, decodeCmp, IF_MOVE  },  // CMP    
     { 0xf000, 0xd000, decodeAdd, IF_MOVE },
+    { 0xf000, 0xc000, decodeAnd, IF_MOVE },
+    { 0xf000, 0x8000, decodeOr, IF_MOVE },
     { 0xf000, 0x1000, decodeMove, IF_MOVE },
     { 0xf000, 0x2000, decodeMove, IF_MOVE },
     { 0xf000, 0x3000, decodeMove, IF_MOVE },
@@ -111,8 +109,7 @@ int decode(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, voi
     increasePc(registers);
     cycles += 4;    
 
-    di->mnemonic = mn_unknown;
-    uint16_t family = opcode & 0xf000;
+    di->mnemonic = "???";
 
     for (int i = 0 ; i < sizeof(rules)/sizeof(DecodeRule); i++) {
         if ((opcode & rules[i].mask) == rules[i].value) {            

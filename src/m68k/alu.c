@@ -62,6 +62,19 @@ static int executeCmp(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     return cycleCount;
 }
 
+static uint32_t aluAnd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t result = (uint64_t)((uint64_t)a & (uint64_t)b);    
+    setFlag(regs, SR_FLAGS_V, false);
+    setFlag(regs, SR_FLAGS_C, false);
+    return (uint32_t)result;
+}
+
+static uint32_t aluOr(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t result = (uint64_t)((uint64_t)a | (uint64_t)b);    
+    setFlag(regs, SR_FLAGS_V, false);
+    setFlag(regs, SR_FLAGS_C, false);
+    return (uint32_t)result;
+}
 
 static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
     uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
@@ -121,43 +134,6 @@ int decodeAddx(
         return 0;  // TODO
     }
     return eaCycles;
-}
-
-int decodeAdd(
-    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    ReadWordFunc readWordFunc = rwFunc->rw;
-
-    int cycles = 0;
-    di->mnemonic = "ADD";
-    di->execFunc = executeAlu;
-    di->aluFunc = aluAdd;
-    uint16_t mode = (opcode >> 3) & 7;
-    uint16_t srcReg = opcode & 7;
-    uint16_t opMode = (opcode >> 6) & 7;
-    uint16_t dstReg = (opcode >> 9) & 7;
-
-    // Byte = 00, Word = 01, Long = 10
-    uint16_t size = opMode & 3;
-    di->size = size;
-    EffectiveAddress ea;
-    int eaCycles = getEffectiveAddress(registers, mode, srcReg, size, &ea, readWordFunc, readWriteUserdata);
-    if (eaCycles < 0) {
-        return -1;
-    }
-    EffectiveAddress dr = {.mode = AM_DREG, .xn = dstReg};
-    uint16_t direction = opMode >> 2;
-    if (!direction) {  // Dn + EA => Dn
-        di->src = ea;
-        di->dst = dr;
-    } else {  // EA + Dn => EA
-        di->src = dr;
-        di->dst = ea;
-    }
-    if (di->size == IS_LONG) {
-        cycles += 2;
-    }
-    cycles += eaCycles;
-    return cycles;
 }
 
 int decodeAddqSubq(
@@ -250,4 +226,63 @@ int decodeCmpa(
 int decodeCmpm(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     return -1;
+}
+
+static int decodeAlu(
+        uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    ReadWordFunc readWordFunc = rwFunc->rw;
+       
+    int cycles = 0;
+    di->execFunc = executeAlu;
+    uint16_t mode = (opcode >> 3) & 7;
+    uint16_t srcReg = opcode & 7;
+    uint16_t opMode = (opcode >> 6) & 7;
+    uint16_t dstReg = (opcode >> 9) & 7;
+
+    // Byte = 00, Word = 01, Long = 10
+    uint16_t size = opMode & 3;
+    di->size = size;
+    EffectiveAddress ea;
+    int eaCycles = getEffectiveAddress(registers, mode, srcReg, size, &ea, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
+        return -1;
+    }
+    EffectiveAddress dr = {.mode = AM_DREG, .xn = dstReg};
+    uint16_t direction = opMode >> 2;
+    if (!direction) {  // Dn + EA => Dn
+        di->src = ea;
+        di->dst = dr;
+    } else {  // EA + Dn => EA
+        di->src = dr;
+        di->dst = ea;
+    }
+    if (di->size == IS_LONG) {
+        cycles += 2;
+    }
+    cycles += eaCycles;
+    return cycles;
+}
+
+int decodeAdd(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ADD";
+    di->aluFunc = aluAdd;
+
+    return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
+int decodeAnd(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "AND";
+    di->aluFunc = aluAnd;
+
+    return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
+int decodeOr(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "OR";
+    di->aluFunc = aluOr;
+
+    return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
 }
