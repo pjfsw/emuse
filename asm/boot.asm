@@ -37,6 +37,18 @@ BootTestNOK:
     move.l #$EF345678,d0
     bsr ConPutHex32
 
+    move.b #' ',d0
+    bsr ConPutc
+
+    move.w #$12F0,d0
+    bsr ConPutHex16
+
+    move.b #' ',d0
+    bsr ConPutc
+    
+    move.b #$f8,d0
+    bsr ConPutHex8
+
 BootMenuLoop:
     inline
     lea menuMsg(pc),a1

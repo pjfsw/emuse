@@ -32,6 +32,16 @@ ConPuts:
 .1:
     rts    
 
+ConPutHexNibble:
+    and.b #15,d0
+    add.b #'0',d0
+    cmp.b #':',d0
+    bcs.s .1
+    add.b #7,d0
+.1:    
+    bsr ConPutc
+    rts
+
 ConPutHex32:
     move.l d2,-(sp)
     move.l d7,-(sp)
@@ -40,19 +50,47 @@ ConPutHex32:
 .1:
     rol.l #4,d2
     move.b d2,d0
-    and.b #15,d0
-    add.b #'0',d0
-    cmp.b #':',d0
-    bcs.s .2
-    add.b #7,d0
-.2:    
-    bsr ConPutc
+    bsr ConPutHexNibble
     subq #1,d7    
     bne.s .1
 
     move.l (sp)+,d7
     move.l (sp)+,d2
     rts
+
+ConPutHex16:
+    move.l d2,-(sp)
+    move.l d7,-(sp)
+    move.w d0,d2   
+    moveq #4,d7
+.1:
+    rol.w #4,d2
+    move.b d2,d0
+    bsr ConPutHexNibble
+    subq #1,d7    
+    bne.s .1
+
+    move.l (sp)+,d7
+    move.l (sp)+,d2
+    rts
+
+ConPutHex8:
+    move.l d2,-(sp)
+    move.l d7,-(sp)
+    move.w d0,d2   
+    moveq #2,d7
+.1:
+    rol.b #4,d2
+    move.b d2,d0
+    bsr ConPutHexNibble
+    subq #1,d7    
+    bne.s .1
+
+    move.l (sp)+,d7
+    move.l (sp)+,d2
+    rts
+
+
 
 ConIsDataAvailable:
     bra UARTIsDataAvailable
