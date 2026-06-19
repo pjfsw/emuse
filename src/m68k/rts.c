@@ -10,7 +10,6 @@ static int executeRts(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
 
 int decodeRts(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     di->mnemonic = "RTS";
-    di->family = IF_IMPLIED;
     di->execFunc = executeRts;
     return 0;
 }

@@ -19,7 +19,6 @@ int decodeMove(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
     di->execFunc = executeMove;
-    di->family = IF_MOVE;
     di->mnemonic = "MOVE";
     //  move.x
     uint16_t size = (opcode >> 12);
@@ -53,7 +52,6 @@ int decodeMoveq(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
     di->execFunc = executeMove;
-    di->family = IF_MOVE;
     di->mnemonic = "MOVEQ";
     uint16_t dstReg = (opcode >> 9) & 7;
     di->size = IS_LONG;
