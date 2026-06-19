@@ -24,6 +24,8 @@ static int executeRol(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     uint32_t count = di->src.immediate % bits;      
     if (count > 0) {
         value = ((value << count) | (value >> (bits - count))) & mask;
+        setFlag(registers, SR_FLAGS_C, value & 1);        
+        setFlag(registers, SR_FLAGS_V, 0);
     }
     writeDest(di, registers, rwFunc, readWriteUserdata, value);
 
