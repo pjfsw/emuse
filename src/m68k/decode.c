@@ -7,6 +7,7 @@
 #include "lea.h"
 #include "move.h"
 #include "rts.h"
+#include "shift.h"
 #include "sourcedest.h"
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
@@ -81,6 +82,12 @@ typedef struct {
 static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
+    { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
+    { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},
+    { 0xf118, 0xe010, decodeRoxr, IF_MOVE},
+    { 0xf118, 0xe110, decodeRoxl, IF_MOVE},
+    { 0xf118, 0xe018, decodeRor, IF_MOVE},
+    { 0xf118, 0xe118, decodeRol, IF_MOVE},
     { 0xf1c0, 0x41c0, decodeLea, IF_LEA},
     { 0xf1c0, 0xb108, decodeCmpm, IF_MOVE },  // CMPM
     { 0xf1c0, 0xb0c0, decodeCmpa, IF_MOVE }, // CMPA.W

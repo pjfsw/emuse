@@ -22,17 +22,20 @@ loop\@:
     endm
 
     org $f00400        ; Move past the vector table    
-Start:   
+Start:
     move.b #OVR_OFF,OVR_REG
-    bsr Blink           ; First blink means the CPU is executing code
-    bsr Blink           ; Second blink means the OVR and stack is working
-    bsr ConOpen
+    ;bsr Blink           ; First blink means the CPU is executing code
+    ;bsr Blink           ; Second blink means the OVR and stack is working
+    bsr ConOpen    
     bne.s BootTestNOK
-    bsr Blink           ; Third blink means the UART is responding
+    ;bsr Blink           ; Third blink means the UART is responding
+    move.l d0,d0
 BootTestNOK:
     bsr ConClr
     lea welcomeMsg(pc),a1
     bsr ConPuts  
+    move.l #$EF345678,d0
+    bsr ConPutHex32
 
 BootMenuLoop:
     inline

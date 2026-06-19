@@ -18,10 +18,21 @@ static void setAddFlags(uint64_t result, uint16_t size, M68kRegisters *regs) {
 
 
 static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint32_t mask;
+    if (size == IS_BYTE) {
+        mask = 0xff;
+    } else if (size == IS_WORD) {
+        mask = 0xffff;
+    } else {
+        mask = 0xffffffff;
+    }
+    a &= mask;
+    b &= mask;
     uint64_t result = (uint64_t)((uint64_t)b - (uint64_t)a);    
     uint64_t realResult;
     uint32_t signMask;
     if (size == IS_BYTE) {
+
         realResult = (uint8_t)result;
         signMask = 0x80;
     } else if (size == IS_WORD) {

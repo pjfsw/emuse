@@ -18,6 +18,7 @@ static void preDecrement(DecodedInstruction *di, M68kRegisters *registers, Effec
         }
     }
     registers->a[ea->xn] = align24(registers->a[ea->xn] - size);
+    ea->address = registers->a[ea->xn];
 }
 
 static void postIncrement(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddress *ea) {
