@@ -43,8 +43,7 @@ ConPutHexNibble:
     rts
 
 ConPutHex32:
-    move.l d2,-(sp)
-    move.l d7,-(sp)
+    movem.l d2/d7,-(sp)
     move.l d0,d2   
     moveq #8,d7
 .1:
@@ -54,13 +53,11 @@ ConPutHex32:
     subq #1,d7    
     bne.s .1
 
-    move.l (sp)+,d7
-    move.l (sp)+,d2
+    movem.l (sp)+,d2/d7
     rts
 
 ConPutHex16:
-    move.l d2,-(sp)
-    move.l d7,-(sp)
+    movem.l d2/d7,-(sp)
     move.w d0,d2   
     moveq #4,d7
 .1:
@@ -70,13 +67,11 @@ ConPutHex16:
     subq #1,d7    
     bne.s .1
 
-    move.l (sp)+,d7
-    move.l (sp)+,d2
+    movem.l (sp)+,d2/d7
     rts
 
 ConPutHex8:
-    move.l d2,-(sp)
-    move.l d7,-(sp)
+    movem.l d2/d7,-(sp)
     move.w d0,d2   
     moveq #2,d7
 .1:
@@ -86,8 +81,7 @@ ConPutHex8:
     subq #1,d7    
     bne.s .1
 
-    move.l (sp)+,d7
-    move.l (sp)+,d2
+    movem.l (sp)+,d2/d7
     rts
 
 
