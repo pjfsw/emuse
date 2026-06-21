@@ -39,6 +39,7 @@ static void postIncrement(DecodedInstruction *di, M68kRegisters *registers, Effe
         }
     }
     registers->a[ea->xn] = align24(registers->a[ea->xn] + size);
+    ea->address = registers->a[ea->xn];
 }
 
 int readSource(
@@ -86,20 +87,26 @@ int readSource(
     return cycleCount;
 }
 
-int writeDest(
-    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
+static int writeDestWithFlagSetting(
+    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value, bool setFlags) {
     uint32_t cycleCount = -1;
 
     if ((di->dst.mode == AM_DREG)) {
         cycleCount = 0;
         if (di->size == IS_LONG) {
-            setNZ(registers, (int32_t)value);
+            if (setFlags) {
+                setNZ(registers, (int32_t)value);
+            }
             registers->d[di->dst.xn] = value;
         } else if (di->size == IS_WORD) {
-            setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
+            if (setFlags) {
+                setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
+            }
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffff0000) | (value & 0xffff);
         } else if (di->size == IS_BYTE) {
-            setNZ(registers, (int32_t)(int8_t)(value & 0xff));
+            if (setFlags) {
+                setNZ(registers, (int32_t)(int8_t)(value & 0xff));
+            }
             registers->d[di->dst.xn] = (registers->d[di->dst.xn] & 0xffffff00) | (value & 0xff);
         }
     }
@@ -116,13 +123,19 @@ int writeDest(
         preDecrement(di, registers, &di->dst);
         cycleCount = 4;
         if (di->size == IS_BYTE) {
-            setNZ(registers, (int32_t)(int8_t)(value & 0xff));
+            if (setFlags) {
+                setNZ(registers, (int32_t)(int8_t)(value & 0xff));
+            }
             rwFunc->wb(readWriteUserdata, di->dst.address, value);
         } else if (di->size == IS_WORD) {
-            setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
+            if (setFlags) {
+                setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
+            }
             rwFunc->ww(readWriteUserdata, di->dst.address, value);
         } else if (di->size == IS_LONG) {
-            setNZ(registers, (int32_t)value);
+            if (setFlags) {
+                setNZ(registers, (int32_t)value);
+            }
             rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
             rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
             cycleCount += 4;
@@ -144,4 +157,14 @@ int writeDest(
         }
     }
     return cycleCount;
+}
+
+int writeDest(
+    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
+    return writeDestWithFlagSetting(di, registers, rwFunc, readWriteUserdata, value, true);
+}
+
+int writeDestNoFlags(
+    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value) {
+    return writeDestWithFlagSetting(di, registers, rwFunc, readWriteUserdata, value, false);
 }

@@ -42,7 +42,7 @@ int decodeMove(
 
     eaCycles = getEffectiveAddress(registers, dstMode, dstReg, size, &di->dst, readWordFunc, readWriteUserdata);
     if (eaCycles < 0) {
-        return 0;
+        return -1;
     }
     cycles += eaCycles;
     return cycles;
@@ -60,7 +60,8 @@ int decodeMoveq(
     di->src.immediate = (int32_t)(int8_t)(opcode);
     int eaCycles = getEffectiveAddress(registers, AM_DREG, dstReg, IS_LONG, &di->dst, readWordFunc, readWriteUserdata);
     if (eaCycles < 0) {
-        return 0;
+        return -1;
     }
     return eaCycles;
 }
+

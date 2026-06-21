@@ -8,7 +8,7 @@ typedef struct {
     char value[20];
 } CpuState;
 
-#define DIS_INSTR_PARTS 16
+#define DIS_INSTR_PARTS 32
 #define DIS_INSTR_PART_LEN 32
 #define DIS_ADDR_LEN 11
 #define DIS_BYTES_LEN 100

@@ -7,3 +7,6 @@ int readSource(DecodedInstruction *di, M68kRegisters *registers, EffectiveAddres
 
 int writeDest(
     DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value);
+
+int writeDestNoFlags(
+    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, uint32_t value);    

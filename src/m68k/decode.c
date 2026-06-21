@@ -6,6 +6,7 @@
 #include "btst.h"
 #include "lea.h"
 #include "move.h"
+#include "movem.h"
 #include "rts.h"
 #include "shift.h"
 #include "sourcedest.h"
@@ -84,6 +85,7 @@ static const DecodeRule rules[] = {
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
     { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
     { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},
+    { 0xfb80, 0x4880, decodeMovem, IF_MOVEM}, 
     { 0xf118, 0xe010, decodeRoxr, IF_MOVE},
     { 0xf118, 0xe110, decodeRoxl, IF_MOVE},
     { 0xf118, 0xe018, decodeRor, IF_MOVE},

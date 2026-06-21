@@ -10,6 +10,7 @@
     "booleanfunc.h": "c",
     "pthread.h": "c",
     "readwritefunc.h": "c",
-    "cstdint": "c"
+    "cstdint": "c",
+    "branch.h": "c"
   }
 }

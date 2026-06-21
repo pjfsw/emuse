@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "m68k.h"
 #include "decode.h"
+#include "movem.h"
 
 static inline void setUser(M68k *m68k) {
     m68k->registers.sr = m68k->registers.sr & (0xffff-SR_FLAGS_S);    
@@ -36,15 +37,27 @@ static void addPadding(Instruction *instruction) {
     addDisassembly(instruction, s, SYM_SYMBOL);
 }
 
+static void disassembleDreg(Instruction *instruction, uint16_t regNo) {
+    char s[100];
+    s[0] = 0;
+    sprintf(s, "D%d", regNo);
+    addDisassembly(instruction, s, SYM_REGISTER);
+}
+
+static void disassembleAreg(Instruction *instruction, uint16_t regNo) {
+    char s[100];
+    s[0] = 0;
+    sprintf(s, "A%d", regNo);
+    addDisassembly(instruction, s, SYM_REGISTER);
+}
+
 static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, InstructionSize size) {
     char s[100];
     s[0] = 0;
     if (ea->mode == AM_DREG) {
-        sprintf(s, "D%d", ea->xn);
-        addDisassembly(instruction, s, SYM_REGISTER);
+        disassembleDreg(instruction, ea->xn);
     } else if (ea->mode == AM_AREG) {
-        sprintf(s, "A%d", ea->xn);
-        addDisassembly(instruction, s, SYM_REGISTER);
+        disassembleAreg(instruction, ea->xn);
     } else if (ea->mode == AM_ADDRESS) {
         sprintf(s, "(A%d)", ea->xn);
         addDisassembly(instruction, s, SYM_REGISTER);
@@ -76,7 +89,7 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
         } else if (ea->xn == AM_EXT_PC_DISP) {
             sprintf(s, "$%X", ea->address);
             addDisassembly(instruction, s, SYM_CONSTANT);
-            addDisassembly(instruction, "(PC)", SYM_SYMBOL);
+            addDisassembly(instruction, "(PC)", SYM_REGISTER);
         }
     } else {
         sprintf(s, "{MODE=%x Xn=%x}", ea->mode, ea->xn);
@@ -111,6 +124,90 @@ static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
     disassembleEa(instruction, &di->dst, di->size);
 }
 
+typedef void (*RegisterDisassemblyFunc)(Instruction *instruction, uint16_t regNo);
+
+typedef struct {
+    int16_t first;
+    int16_t last;
+    uint16_t count;
+    RegisterDisassemblyFunc disFunc;
+    Instruction *instruction;
+} RegisterListState;
+
+static void updateRegisterList(RegisterListState *state, int regNo, uint16_t value) {
+    if (value) {
+        if (state->first < 0) {
+            state->first = regNo;
+        }
+        state->last = regNo;
+    } else {
+        if (state->first >= 0) {
+            if (state->count > 0) {
+                addDisassembly(state->instruction, "/", SYM_SYMBOL);
+            }
+            state->count++;
+            if (state->last > state->first) {
+                state->disFunc(state->instruction, state->first);
+                addDisassembly(state->instruction, "-", SYM_SYMBOL);
+                state->disFunc(state->instruction, state->last);
+            } else {
+                state->disFunc(state->instruction, state->first);
+            }
+        }
+        state->last = -1;
+        state->first = -1;
+    }
+}
+
+static void disassembleRegisterList(Instruction *instruction, EffectiveAddress *ea, bool isReversed) {
+    RegisterListState state;
+    state.count = 0;
+    state.first = -1;
+    state.last = -1;
+    state.disFunc = disassembleDreg;
+    state.instruction = instruction;
+
+    for (int i = 0; i < 8; i++) {
+        int n = i;
+        if (isReversed) {        
+            n = 15-i;
+        }
+        updateRegisterList(&state, i, ea->xn & (1 << n));
+    }
+    updateRegisterList(&state, 8, 0);
+    state.disFunc = disassembleAreg;
+    for (int i = 0; i < 8; i++) {
+        int n = i+8;
+        if (isReversed) {
+            n = 7-i;
+        }
+        updateRegisterList(&state, i, ea->xn & (1 << n));
+    }
+    updateRegisterList(&state, 8, 0);
+}
+
+static void disassembleMovem(DecodedInstruction *di, Instruction *instruction) {
+    switch (di->size) {
+        case IS_LONG:
+            addDisassembly(instruction, ".L", SYM_MNEMONIC);
+            break;
+        case IS_WORD:
+            addDisassembly(instruction, ".W", SYM_MNEMONIC);
+            break;
+    }
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    if (isMovemToRegister(di->opcode)) {
+        disassembleEa(instruction, &di->src, di->size);
+        addDisassembly(instruction, ",", SYM_SYMBOL);
+        disassembleRegisterList(instruction, &di->dst, false);
+    } else {
+        disassembleRegisterList(instruction, &di->src, di->dst.mode == AM_ADDRESS_PRE_DEC);
+        addDisassembly(instruction, ",", SYM_SYMBOL);
+        disassembleEa(instruction, &di->dst, di->size);
+    }
+}
+
 static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *instruction) {
     if (di->size == IS_BYTE) {
         addDisassembly(instruction, ".S", SYM_MNEMONIC);
@@ -138,6 +235,9 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
     switch (di.family) {
         case IF_MOVE:
             disassembleMove(&di, instruction);
+            break;
+        case IF_MOVEM:
+            disassembleMovem(&di, instruction);
             break;
         case IF_LEA:
             disassembleLea(&di,instruction);
