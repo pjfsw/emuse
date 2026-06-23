@@ -86,6 +86,12 @@ ConPutHex8:
 
 
 
+;____________________________________________________________
+;
+; Check if data is available
+; A0 will be destroyed
+; Z=0 data available
+;____________________________________________________________
 ConIsDataAvailable:
     bra UARTIsDataAvailable
 ;____________________________________________________________
@@ -96,8 +102,3 @@ ConGetblocking:
     bra UARTReadCharBlocking
 
     include uart.asm
-
-    rsset SYSTEM_BSS_BASE
-__bss_start equ __RS
-; label: rs.l 1
-__bss_end equ __RS    

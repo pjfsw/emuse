@@ -1,4 +1,4 @@
-RAM_SIZE    equ $100000
+RAM_LIMIT   equ $800000
 OREG        equ $d00000
 OVR         equ 9
 OVR_REG     equ (OREG+OVR)
@@ -13,6 +13,8 @@ SPI_CS_EXT  equ 2
 SPI_CS_ROM  equ 3
 IREG        equ $e00001
 
-SYSTEM_BSS_BASE equ $0F8000 ; Allocate 32 KB of variables and stack to the system
+SYSTEM_BSS_BASE equ $000400 
+ALLOCATOR_BASE  equ $001000 
+SIMPLE_LOADER_BASE equ $010000 
 
     include "uart.i"

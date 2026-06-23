@@ -41,7 +41,8 @@ typedef enum {
     IF_BRANCH,
     IF_IMPLIED,
     IF_LEA,
-    IF_MOVEM
+    IF_MOVEM,
+    IF_JUMP
 } InstructionFamily;
 
 typedef struct {

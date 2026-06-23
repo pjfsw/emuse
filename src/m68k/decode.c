@@ -4,6 +4,7 @@
 #include "alu.h"
 #include "branch.h"
 #include "btst.h"
+#include "jump.h"
 #include "lea.h"
 #include "move.h"
 #include "movem.h"
@@ -82,6 +83,7 @@ typedef struct {
 
 static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
+    { 0xff80, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
     { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
     { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},

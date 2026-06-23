@@ -91,8 +91,9 @@ void busWriteWord(void *userdata, uint32_t address, uint16_t value) {
     }
 }
 
+static uint8_t randomByte;
 static inline uint8_t getRandomByte() {
-    return 0xaa;
+    return randomByte++;
 }
 
 uint8_t busReadByte(void *userdata, uint32_t address) {

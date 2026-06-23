@@ -218,6 +218,12 @@ static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *
     addDisassembly(instruction, s, SYM_CONSTANT);
 }
 
+static void disassembleJump(DecodedInstruction *di, uint32_t pc, Instruction *instruction) {
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    disassembleEa(instruction, &di->dst, di->size);    
+}
+
 static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instruction *instruction) {
     DecodedInstruction di;
     memset(&di, 0, sizeof(DecodedInstruction));
@@ -244,6 +250,9 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
             break;
         case IF_BRANCH:
             disassembleBranch(&di, regs->pc, instruction);
+            break;
+        case IF_JUMP:
+            disassembleJump(&di, regs->pc, instruction);
             break;
         case IF_UNKNOWN:
             char s[100];
