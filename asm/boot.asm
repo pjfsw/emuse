@@ -22,8 +22,28 @@ loop\@:
     endm
 
     org $f00400        ; Move past the vector table    
+
+JT_ConGetblocking: ; -52
+    jmp ConGetblocking
+JT_ConIsDataAvailable: ; -46
+    jmp ConIsDataAvailable
+JT_ConPutHex8:  ; -40
+    jmp ConPutHex8
+JT_ConPutHex16: ; -34
+    jmp ConPutHex16
+JT_ConPutHex32: ; -28
+    jmp ConPutHex32
+JT_ConPuts: ; -22
+    jmp ConPuts
+JT_ConPutc: ; -16
+    jmp ConPutc
+JT_ConClr: ; -10
+    jmp ConClr
+    dc.l 1             ; Version
 Start:
-    move.b #OVR_OFF,OVR_REG
+    move.b #OVR_OFF,OVR_REG    
+    lea Start,a6
+    move.l a6,EXEC_BASE
     
     bsr Blink           ; First blink means the CPU is executing code
     bsr Blink           ; Second blink means the OVR and stack is working

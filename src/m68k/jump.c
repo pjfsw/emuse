@@ -1,4 +1,5 @@
 #include "jump.h"
+#include <stdio.h>
 
 static int executeJsr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t address = registers->pc;
@@ -6,15 +7,19 @@ static int executeJsr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     rwFunc->ww(readWriteUserdata, registers->a[7], (uint16_t)(address >> 16));
     rwFunc->ww(readWriteUserdata, registers->a[7]+2, (uint16_t)address); 
     registers->pc = align24(di->dst.address);    
+    //printf("JSR %06x\n", registers->pc);
     return 12;
 }
 
-int decodeJsr(
+static int executeJmp(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    registers->pc = align24(di->dst.address);    
+    //printf("JMP %06x\n", registers->pc);
+    return 4;
+}
+
+static int decodeJmpJsr(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
-
-    di->execFunc = executeJsr;
-    di->mnemonic = "JSR";
     di->size = IS_LONG;
 
     uint16_t mode = (opcode >> 3) & 7;
@@ -25,4 +30,18 @@ int decodeJsr(
         return -1;
     }
     return eaCycles;
+}
+
+int decodeJsr(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->execFunc = executeJsr;
+    di->mnemonic = "JSR";
+    return decodeJmpJsr(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
+int decodeJmp(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->execFunc = executeJmp;
+    di->mnemonic = "JMP";
+    return decodeJmpJsr(opcode, di, registers, rwFunc, readWriteUserdata);
 }

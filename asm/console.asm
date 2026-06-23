@@ -42,6 +42,10 @@ ConPutHexNibble:
     bsr ConPutc
     rts
 
+;____________________________________________________________
+;
+; Write a 32-bit hex value (D0) to console.
+;____________________________________________________________
 ConPutHex32:
     movem.l d2/d7,-(sp)
     move.l d0,d2   
@@ -56,6 +60,10 @@ ConPutHex32:
     movem.l (sp)+,d2/d7
     rts
 
+;____________________________________________________________
+;
+; Write a 16-bit hex value (D0) to console.
+;____________________________________________________________
 ConPutHex16:
     movem.l d2/d7,-(sp)
     move.w d0,d2   
@@ -70,6 +78,10 @@ ConPutHex16:
     movem.l (sp)+,d2/d7
     rts
 
+;____________________________________________________________
+;
+; Write a 8-bit hex value (D0) to console.
+;____________________________________________________________
 ConPutHex8:
     movem.l d2/d7,-(sp)
     move.w d0,d2   

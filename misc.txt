@@ -1,0 +1,1 @@
+echo U > /dev/tty68k && sleep 0.5 &&  cat build/blinker.hex > /dev/tty68k

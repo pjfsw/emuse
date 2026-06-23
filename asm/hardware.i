@@ -1,3 +1,4 @@
+EXEC_BASE   equ $4
 RAM_LIMIT   equ $800000
 OREG        equ $d00000
 OVR         equ 9
