@@ -1,1 +1,3 @@
 echo U > /dev/tty68k && sleep 0.5 &&  cat build/blinker.hex > /dev/tty68k
+
+vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces asm/utils/blinker.asm -o build/blinker.bin && python mkhex.py build/blinker.bin build/blinker.hex
