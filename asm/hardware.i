@@ -1,6 +1,10 @@
-IRQV_TIMER  equ $00006c
-IRQV_BLANK  equ $000070
-IRQV_UART   equ $000074
+IRQV_SPI    equ $000064 ; Level 1
+IRQV_LVL2   equ $000068 ; Level 2
+IRQV_TIMER  equ $00006c ; Level 3
+IRQV_BLANK  equ $000070 ; Level 4
+IRQV_UART   equ $000074 ; Level 5
+IRQV_LVL6   equ $000078 ; Level 2
+IRQV_LVL7   equ $00007c ; Level 2
 
 EXEC_BASE   equ $4
 RAM_LIMIT   equ $800000
