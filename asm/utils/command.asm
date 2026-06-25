@@ -3,29 +3,48 @@
 
 UART_RTS_ENABLE_THRESHOLD EQU $c0
 UART_RTS_DISABLE_THRESHOLD EQU $e0
+PUTHEX8 equ -40
+PUTHEX16 equ -34
+PUTHEX32 equ -28
+PUTS equ -22
+PUTC equ -16
 
 START equ $10000
     org START
 
+    move.l $4.w,a6
     bsr InstallISR
 
-    move.l $4.w,a6
+    lea MmcInitMsg(pc),a1
+    jsr PUTS(a6)
+    
+    bsr MMCInit
+    tst.w d0
+    move.w d0,d7
+    lea MmcErrorMsg(pc),a1
+    jsr PUTS(a6)
+    move.w d7,d0
+    jsr PUTHEX16(a6)
+    lea LineBreakMsg(pc),a1
+    jsr PUTS(a6)
+
 MainLoop:    
     lea MsgPrompt(pc),a1
-    jsr -22(a6) ; Puts
+    jsr PUTS(a6) ; Puts
 .waitForChar:    
     bsr UartReadChar
     tst.l d0
     bmi.s .waitForChar
     cmp.b #13,d0
     beq.s .lineBreak
-    jsr -16(a6) ; Putc
+    jsr PUTC(a6) ; Putc
     bra.s .waitForChar
 .lineBreak:
     bra MainLoop    
 MsgPrompt:
-    dc.b 13,10,"/$ ",0
+    dc.b 13,10,"[/]$ ",0
     even
+
 InstallISR:    
     move.w #$2700,sr          ; disable while configuring    
     lea UartISR,a0
@@ -96,7 +115,17 @@ UartReadChar:
 
     addq.b #1,UartRdPtr     
     rts       
-    
+
+MmcInitMsg:
+    dc.b "MMC Initialization",13,10,0
+MmcErrorMsg:
+    dc.b "MMC Response code ",0
+LineBreakMsg:
+    dc.b 13,10,0    
+    even
+
+    include mmc.asm
+
 UartRdPtr EQU *
 UartWrPtr EQU *+1
 UartRdBuf EQU *+2
