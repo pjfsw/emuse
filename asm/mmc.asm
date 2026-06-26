@@ -12,13 +12,16 @@ MMC_CMD8     equ $48
 MMC_CMD8_CRC equ $87
 MMC_CMD55    equ $77
 MMC_ACMD41   equ $69
+MMC_CMD17    equ $51
 
 MMC_ERR_CMD0_FAILED    equ $1000
 MMC_ERR_CMD8_FAILED    equ $2000
 MMC_ERR_CMD55_FAILED   equ $3000
 MMC_ERR_ACMD41_FAILED  equ $4000
+MMC_ERR_CMD17_FAILED   equ $5000
 MMC_ERR_WAIT_TIMEOUT   equ $0100
 MMC_ERR_RESP_TIMEOUT   equ $0200
+MMC_ERR_READ_TIMEOUT   equ $0300
 MMC_ERR_ACMD41_TIMEOUT equ $0300
 
     macro MmcSelect
@@ -189,34 +192,98 @@ MMCInitInt:
     moveq #0,d0
     rts
 
+NoArg:
+    dc.l 0
 MMCSendCmd0:
     lea Cmd0(pc),a0
+    lea NoArg(pc),a1
     bra MMCSendCommandInt
 Cmd0:
-    dc.b MMC_CMD0,$00,$00,$00,$00,MMC_CMD0_CRC
+    dc.b MMC_CMD0,MMC_CMD0_CRC
 
 MMCSendCmd8:
     lea Cmd8(pc),a0
+    lea Cmd8Arg(pc),a1
     bra MMCSendCommandInt
 Cmd8:
-    dc.b MMC_CMD8,$00,$00,$01,$aa,MMC_CMD8_CRC
+    dc.b MMC_CMD8,MMC_CMD8_CRC
+Cmd8Arg:    
+    dc.l $000001aa
 
 MMCSendCmd55:
     lea Cmd55(pc),a0
+    lea NoArg(pc),a1
     bra MMCSendCommandInt
 Cmd55:
-    dc.b MMC_CMD55,$00,$00,$00,$00,$FF
+    dc.b MMC_CMD55,$FF
 
 MMCSendAcmd41:
     lea Acmd41(pc),a0
+    lea Acmd41Arg(pc),a1
     bra MMCSendCommandInt
 Acmd41:
-    dc.b MMC_ACMD41,$40,$00,$00,$00,$FF
+    dc.b MMC_ACMD41,$FF
+Acmd41Arg:
+    dc.l $40000000
+
 
 ;____________________________________________________________
 ;
-; A0 = Command structure (CMD, ARG, ARG, ARG, ARG, CRC)
+; Read a sector
+; Sector number in D0
+; 512 byte buffer in A0
 ; Returns D0 = 0: OK, D0 < 0 = Fail
+;
+MMCReadSector:
+    SaveRegisters
+    bsr MMCReadSectorInt
+    RestoreRegisters
+    rts
+MMCReadSectorInt:
+    move.l $4.w,a4
+    MmcMosiClockA5MisoA6
+
+    move.l a0,-(sp)
+    lea Cmd17(pc),a0
+    lea MmcCmdArg,a1
+    move.l d0,(a1)
+    bsr MMCSendCommandInt    
+    move.l (sp)+,a0    
+    tst.b d0
+    beq.s .readCmdOk
+    or.w #MMC_ERR_CMD17_FAILED,d0
+    rts
+.readCmdOk:
+    move.w #255,d7
+.waitReadToken:    
+    bsr MMCReadByteInt    
+    cmp.b #$fe,d0
+    beq.s .readTokenOk
+    dbra d7,.waitReadToken
+    move.w #MMC_ERR_READ_TIMEOUT,d0
+    rts
+.readTokenOk:
+    ; READ BYTES TO BUFFER
+    move.w #511,d7
+.readNextByte:
+    bsr MMCReadByteFastInt
+    move.b d0,(a0)+
+    dbra d7,.readNextByte
+    bsr MMCReadByteFastInt
+    bsr MMCReadByteFastInt
+    MmcDeselect
+    bsr MMCReadByteFastInt
+    moveq #0,d0
+    rts
+
+Cmd17:
+    dc.b MMC_CMD17,$ff
+
+;____________________________________________________________
+;
+; A0 = Command and CRC
+; A1 = Command arguments (4 bytes)
+; Returns D0 = 0-1, OK > 1 = Failed
 ;____________________________________________________________
 MMCSendCommandInt:   
     MmcSelect
@@ -224,12 +291,18 @@ MMCSendCommandInt:
     tst.l d0
     beq.s .waitOk
     rts
-.waitOk:
-    moveq #5,d7
-.sendNextByte:
+.waitOk:    
     move.b (a0)+,d0
-    bsr MMCSendByteInt
-    dbra d7,.sendNextByte
+    bsr MMCSendByteInt  ; Send command
+    
+    moveq #3,d7
+.sendNextArgByte:
+    move.b (a1)+,d0
+    bsr MMCSendByteInt  ; Send argument
+    dbra d7,.sendNextArgByte
+
+    move.b (a0)+,d0
+    bsr MMCSendByteInt  ; Send CRC
 
     ; Wait for response
     move.w #255,d7
@@ -237,7 +310,7 @@ MMCSendCommandInt:
     bsr MMCReadByteInt
     cmp.b #$ff,d0
     bne.s .commandComplete
-    bsr ShortDelay
+    bsr.s ShortDelay
     dbra d7,.waitResponse
     move.w #MMC_ERR_RESP_TIMEOUT,d0
     rts
@@ -265,4 +338,3 @@ MmcWaitBusy:
 .done:
     moveq #0,d0
     rts
-

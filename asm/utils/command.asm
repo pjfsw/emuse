@@ -14,20 +14,11 @@ START equ $10000
 
     move.l $4.w,a6
     bsr InstallISR
-
-    lea MmcInitMsg(pc),a1
-    jsr PUTS(a6)
-    
-    bsr MMCInit
-    tst.w d0
-    move.w d0,d7
-    lea MmcErrorMsg(pc),a1
-    jsr PUTS(a6)
-    move.w d7,d0
-    jsr PUTHEX16(a6)
-    lea LineBreakMsg(pc),a1
-    jsr PUTS(a6)
-
+    bsr InitMmc
+    tst.w MmcStatus
+    bne.s .skipMmc
+    bsr ReadMbr
+.skipMmc:
 MainLoop:    
     lea MsgPrompt(pc),a1
     jsr PUTS(a6) ; Puts
@@ -44,6 +35,77 @@ MainLoop:
 MsgPrompt:
     dc.b 13,10,"[/]$ ",0
     even
+
+InitMmc:
+    lea MmcInitMsg(pc),a1
+    jsr PUTS(a6)
+    
+    bsr MMCInit
+    move.w d0,MmcStatus
+    bra PrintReturnCode
+
+PrintReturnCode:
+    move.l d7,-(sp)
+    move.w d0,d7
+    lea MmcErrorMsg(pc),a1
+    jsr PUTS(a6)
+    move.w d7,d0
+    jsr PUTHEX16(a6)
+    lea LineBreakMsg(pc),a1
+    jsr PUTS(a6)
+    move.l (sp)+,d7
+    rts
+
+ReadMbr:
+    moveq #0,d0
+    lea SectorBuffer,a0
+    bsr MMCReadSector
+    tst.w d0
+    bne PrintReturnCode
+    bra PrintSector
+
+PrintSector:
+    movem.l d5-d7/a2,-(sp)    
+    bsr .printSector
+    movem.l (sp)+,d5-d7/a2
+    rts
+.printSector:
+    lea SectorBuffer,a2
+    moveq #31,d7
+.nextRow:
+    moveq #15,d6
+    moveq #0,d5
+.nextHexCol:
+    move.b (a2,d5.w),d0
+    jsr PUTHEX8(a6)
+    move.b #' ',d0
+    jsr PUTC(a6)
+    addq.w #1,d5
+    dbra d6,.nextHexCol
+
+    moveq #15,d6
+    moveq #0,d5
+.nextAsciiCol:        
+    move.b (a2,d5.w),d0
+    cmp.b #31,d0
+    bhi.s .lowerBoundOk
+    move.b #'.',d0
+    bra.s .asciiOk
+.lowerBoundOk:
+    cmp.b #128,d0
+    blo.s .asciiOk
+    move.b #'.',d0
+.asciiOk:
+    jsr PUTC(a6)
+    addq.w #1,d5
+    dbra d6,.nextAsciiCol
+
+    lea 16(a2),a2
+    lea LineBreakMsg(pc),a1
+    jsr PUTS(a6)
+    dbra d7,.nextRow
+    rts
+
 
 InstallISR:    
     move.w #$2700,sr          ; disable while configuring    
@@ -126,6 +188,10 @@ LineBreakMsg:
 
     include mmc.asm
 
-UartRdPtr EQU *
-UartWrPtr EQU *+1
-UartRdBuf EQU *+2
+SectorBuffer EQU *
+MmcStatus    EQU SectorBuffer+512
+MmcCmdArg    EQU MmcStatus+4
+UartRdPtr    EQU MmcCmdArg+4
+UartWrPtr    EQU UartRdPtr+1
+UartRdBuf    EQU UartWrPtr+1
+    
