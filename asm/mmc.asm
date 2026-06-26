@@ -10,11 +10,16 @@ MMC_CMD0     equ $40
 MMC_CMD0_CRC equ $95
 MMC_CMD8     equ $48
 MMC_CMD8_CRC equ $87
+MMC_CMD55    equ $77
+MMC_ACMD41   equ $69
 
-MMC_ERR_CMD0_FAILED  equ $1000
-MMC_ERR_CMD8_FAILED  equ $8000
-MMC_ERR_WAIT_TIMEOUT equ $0100
-MMC_ERR_RESP_TIMEOUT equ $0200
+MMC_ERR_CMD0_FAILED    equ $1000
+MMC_ERR_CMD8_FAILED    equ $2000
+MMC_ERR_CMD55_FAILED   equ $3000
+MMC_ERR_ACMD41_FAILED  equ $4000
+MMC_ERR_WAIT_TIMEOUT   equ $0100
+MMC_ERR_RESP_TIMEOUT   equ $0200
+MMC_ERR_ACMD41_TIMEOUT equ $0300
 
     macro MmcSelect
     move.b #SPI_CS_MMC,MMC_CS_REG ; Enable chip select
@@ -116,9 +121,9 @@ MMCReadByteFastInt:
     MmcReadBit
     MmcReadBit
     MmcReadBit          ; 256 cycles per byte
-    movem.l d0-d7/a0-a6,-(sp)
-    jsr PUTHEX8(a4)
-    movem.l (sp)+,d0-d7/a0-a6
+    ;movem.l d0-d7/a0-a6,-(sp)
+    ;jsr PUTHEX8(a4)
+    ;movem.l (sp)+,d0-d7/a0-a6
     rts
 
 
@@ -132,6 +137,10 @@ MMCDummyClocksInt:
 
 MMCInit:
     SaveRegisters
+    bsr.s MMCInitInt
+    RestoreRegisters
+    rts
+MMCInitInt:
     move.l $4.w,a4
     MmcDeselect    
     MmcMosiClockA5MisoA6
@@ -139,41 +148,45 @@ MMCInit:
     moveq #9,d7
 .cmd0Loop:
     bsr MMCSendCmd0
-    tst.l d0
-    beq.s .cmd0OK
+    cmp.b #1,d0
+    bls.s .cmd0OK
     dbra d7,.cmd0Loop
     ; Init Failure
     or.w #MMC_ERR_CMD0_FAILED,d0
-    bra .initDone
+    rts
 .cmd0OK:
-    ;moveq #0,d0
-    ;rts
     bsr MMCSendCmd8
-    tst.l d0
-    beq.s .cmd8OK
+    cmp.b #1,d0
+    bls.s .cmd8OK
     ; Init Failure
     or.w #MMC_ERR_CMD8_FAILED,d0
-    bra .initDone
+    rts
 .cmd8OK:
-    moveq #0,d6
     bsr MMCReadByteInt
-    or.b d0,d6
     bsr MMCReadByteInt
-    asl.l #8,d6
-    or.b d0,d6
     bsr MMCReadByteInt
-    asl.l #8,d6
-    or.b d0,d6
     bsr MMCReadByteInt
-    asl.l #8,d6
-    or.b d0,d6
-    move.l d6,d0
 
-    ;moveq #0,d0
-    bra .initDone
-    nop
+    move.w #$fff,d7
+.cmd55Loop:
+    bsr MMCSendCmd55
+    cmp.b #1,d0
+    bls.s .cmd55OK
+    or.w #MMC_ERR_CMD55_FAILED,d0
+    rts
+.cmd55OK:    
+    bsr MMCSendAcmd41
+    cmp.b #1,d0
+    beq.s .stillIdle
+    blo.s .initDone
+    or.w #MMC_ERR_ACMD41_FAILED,d0
+    rts
+.stillIdle:
+    dbra d7,.cmd55Loop
+    move.w #MMC_ERR_ACMD41_TIMEOUT,d0
+    rts
 .initDone:
-    RestoreRegisters
+    moveq #0,d0
     rts
 
 MMCSendCmd0:
@@ -187,6 +200,19 @@ MMCSendCmd8:
     bra MMCSendCommandInt
 Cmd8:
     dc.b MMC_CMD8,$00,$00,$01,$aa,MMC_CMD8_CRC
+
+MMCSendCmd55:
+    lea Cmd55(pc),a0
+    bra MMCSendCommandInt
+Cmd55:
+    dc.b MMC_CMD55,$00,$00,$00,$00,$FF
+
+MMCSendAcmd41:
+    lea Acmd41(pc),a0
+    bra MMCSendCommandInt
+Acmd41:
+    dc.b MMC_ACMD41,$40,$00,$00,$00,$FF
+
 ;____________________________________________________________
 ;
 ; A0 = Command structure (CMD, ARG, ARG, ARG, ARG, CRC)
@@ -216,13 +242,8 @@ MMCSendCommandInt:
     move.w #MMC_ERR_RESP_TIMEOUT,d0
     rts
 .commandComplete:
-    cmp.b #1,d0
-    bhi.s .errorResponse
-    moveq #0,d0
-    rts
-.errorResponse:      
-    moveq #0,d0
-    rts
+    and.l #$ff,d0
+    rts ; Response in D0
 
 ShortDelay:
     move.l d7,-(sp)
