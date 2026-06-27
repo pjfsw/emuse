@@ -14,9 +14,7 @@ START equ $10000
 
     move.l $4.w,a6
     bsr InstallISR
-    bsr InitMmc
-    tst.w MmcStatus
-    bne.s .skipMmc
+    bsr RegisterStorageDevices
     bsr ReadMbr
 .skipMmc:
 MainLoop:    
@@ -36,17 +34,29 @@ MsgPrompt:
     dc.b 13,10,"[/]$ ",0
     even
 
-InitMmc:
+RegisterStorageDevices:
+    bsr SDInit
+    bra RegisterMmc
+
+RegisterMmc:
     lea MmcInitMsg(pc),a1
     jsr PUTS(a6)
     
-    bsr MMCInit
+    bsr MMCInit  
     move.w d0,MmcStatus
+    tst.w d0
+    bne.s .mmcFailed
+    lea MmcStorageDevice,a0
+    bsr SDRegisterDevice          
+    jsr PUTHEX32(a6)
+
+.mmcFailed:    
     bra PrintReturnCode
+    rts
 
 PrintReturnCode:
     move.l d7,-(sp)
-    move.w d0,d7
+    move.w MmcStatus,d7
     lea MmcErrorMsg(pc),a1
     jsr PUTS(a6)
     move.w d7,d0
@@ -57,9 +67,17 @@ PrintReturnCode:
     rts
 
 ReadMbr:
-    moveq #0,d0
+    move.l #'mmc0',d0
+    bsr SDFindDevice
+    tst.l d0
+    bpl.s .deviceFound 
+    lea DeviceNotFoundMsg(pc),a1
+    jmp PUTS(a6)
+    rts
+.deviceFound:    
+    moveq #0,d1 ; Sector
     lea SectorBuffer,a0
-    bsr MMCReadSector
+    bsr SDReadSector
     tst.w d0
     bne PrintReturnCode
     bra PrintSector
@@ -178,6 +196,8 @@ UartReadChar:
     addq.b #1,UartRdPtr     
     rts       
 
+DeviceNotFoundMsg:
+    dc.b "Device not found",13,10,0
 MmcInitMsg:
     dc.b "MMC Initialization",13,10,0
 MmcErrorMsg:
@@ -186,10 +206,18 @@ LineBreakMsg:
     dc.b 13,10,0    
     even
 
+MmcStorageDevice:
+    dc.l "mmc0"
+    dc.l MMCReadSector
+    dc.l MMCWriteSector
+    blk.l 5,0
+
     include mmc.asm
+    include storagedevice.asm
 
 SectorBuffer EQU *
-MmcStatus    EQU SectorBuffer+512
+SDDeviceList EQU SectorBuffer+512 
+MmcStatus    EQU SDDeviceList+512
 MmcCmdArg    EQU MmcStatus+4
 UartRdPtr    EQU MmcCmdArg+4
 UartWrPtr    EQU UartRdPtr+1

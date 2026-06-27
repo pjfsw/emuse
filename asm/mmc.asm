@@ -22,7 +22,8 @@ MMC_ERR_CMD17_FAILED   equ $5000
 MMC_ERR_WAIT_TIMEOUT   equ $0100
 MMC_ERR_RESP_TIMEOUT   equ $0200
 MMC_ERR_READ_TIMEOUT   equ $0300
-MMC_ERR_ACMD41_TIMEOUT equ $0300
+MMC_ERR_ACMD41_TIMEOUT equ $0400
+MCC_ERR_NOT_IMPLEMENTED equ $ffff
 
     macro MmcSelect
     move.b #SPI_CS_MMC,MMC_CS_REG ; Enable chip select
@@ -102,7 +103,7 @@ MMCSendByteInt:
     MmcSendBit
     MmcSendBit
     MmcSendBit          ; 304-320 cycles per byte
-    move.b #0,(a5)
+    move.b #MMC_MOSI_BIT,(a5) ; Clear clock after last bit
     rts
 
 ;____________________________________________________________
@@ -141,6 +142,7 @@ MMCDummyClocksInt:
 MMCInit:
     SaveRegisters
     bsr.s MMCInitInt
+    MmcDeselect
     RestoreRegisters
     rts
 MMCInitInt:
@@ -226,14 +228,17 @@ Acmd41:
 Acmd41Arg:
     dc.l $40000000
 
-
+MMCWriteSector:
+    move.l #MCC_ERR_NOT_IMPLEMENTED,d0
+    rts
 ;____________________________________________________________
 ;
 ; Read a sector
-; Sector number in D0
-; 512 byte buffer in A0
-; Returns D0 = 0: OK, D0 < 0 = Fail
-;
+; Device number in D0 (currently ignored)
+; Sector number in D1
+; 512 byte buffer ptr in A0
+; Returns D0 = 0: OK, D0 != 0: error code 
+;____________________________________________________________
 MMCReadSector:
     SaveRegisters
     bsr MMCReadSectorInt
@@ -246,7 +251,7 @@ MMCReadSectorInt:
     move.l a0,-(sp)
     lea Cmd17(pc),a0
     lea MmcCmdArg,a1
-    move.l d0,(a1)
+    move.l d1,(a1)
     bsr MMCSendCommandInt    
     move.l (sp)+,a0    
     tst.b d0
