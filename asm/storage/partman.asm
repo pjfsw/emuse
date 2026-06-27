@@ -41,6 +41,7 @@ PMInit:
     rts
 
 ;____________________________________________________________
+;
 ; PMRegister
 ;
 ; Register a storage device adds its valid partitions 
@@ -106,6 +107,7 @@ PMRegisterDevice:
     rts
 
 ;____________________________________________________________
+;
 ; PMGetPartitionCount
 ;
 ; Return the number of registered partitions in D0
@@ -128,7 +130,25 @@ PMGetPartitionCount:
 .countDone:
     rts    
 
+findPartitionFromIndex:
+    cmp.l #PM_PART_LIMIT,d0
+    bhs.s .notFound          ; unsigned d0 >= limit
+
+    lsl.l #5,d0              ; index * 32
+    lea  PMPartList,a1    
+    add.l d0,a1
+
+    tst.l PM_DEVICE(a1)
+    beq.s .notFound
+
+    moveq #0,d0
+    rts
+.notFound:
+    move.l #PM_ERR_PARTITION_NOT_FOUND,d0
+    rts    
+
 ;____________________________________________________________
+;
 ; PMGetPartitionInfo
 ;
 ; Get partition information
@@ -142,20 +162,9 @@ PMGetPartitionInfo:
     move.l (sp)+,d7
     rts
 .pmGetPartitionInfoInt:
-    lea PMPartList,a1
-    moveq #PM_PART_LIMIT-1,d7
-.findNext:
+    bsr findPartitionFromIndex
     tst.l d0
-    beq.s .foundIndex
-    lea PM_SIZE(a1),a1
-    subq.l #1,d0
-    dbra d7,.findNext
-    move.l #PM_ERR_PARTITION_NOT_FOUND,d0
-    rts
-.foundIndex:
-    tst.l PM_DEVICE(a1)
-    bne.s .foundPartition
-    move.l #PM_ERR_PARTITION_NOT_FOUND,d0
+    beq.s .foundPartition
     rts
 .foundPartition:
     moveq #PM_SIZE/4-1,d7
@@ -165,8 +174,38 @@ PMGetPartitionInfo:
     moveq #0,d0
     rts
 
+;____________________________________________________________
+;
+; PMReadSector
+;
+; Read sector from partition 
+
+; D0 Partition index
+; D1 Sector number relative to partition
+; A0: Pointer to 512 byte sector buffer
+;
+; Return: D0 = 0: OK, D0 != 0: Error 
+;____________________________________________________________
 PMReadSector:
+;    move.l d7,-(sp)
+    ;bsr.s .pmReadSectorInt
+    ;move.l (sp)+,d7
+    ;rts
+;.pmReadSectorInt:
+    bsr findPartitionFromIndex
+    tst.l d0
+    beq.s .foundPartition
     rts
+.foundPartition:
+    add.l PM_PSTART(a1),d1
+    move.l PM_DEVICE(a1),d0
+    bsr SDReadSector
+    tst.l d0
+    beq.s .readOk
+    or.l #PM_ERR_DEVICE_IO_ERROR,d0
+.readOk:
+    rts
+
 PMWriteSector:
     rts
 

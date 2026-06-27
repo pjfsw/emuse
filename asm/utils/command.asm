@@ -107,32 +107,50 @@ ListPartitions:
     lea LineBreakMsg(pc),a1
     jmp PUTS(a6)
 .getPartitionOk:
-    move.l PM_DEVICE(a2),d0
+    move.l d2,d0
+    moveq #0,d1
+    lea SectorBuffer(pc),a0
+    bsr PMReadSector
+    tst.l d0
+    beq.s .readSectorOk
     jsr PUTHEX32(a6)
-    move.b #'p',d0
+    move.b #'R',d0
     jsr PUTC(a6)
-    move.w PM_INDEX(a2),d0
-    add.b #'0',d0
-    jsr PUTC(a6)
-    move.b #' ',d0
-    jsr PUTC(a6)
-    move.b PM_TYPE(a2),d0
-    jsr PUTHEX8(a6)
-    move.b #' ',d0
-    jsr PUTC(a6)
-    move.l PM_PSTART(a2),d0
-    jsr PUTHEX32(a6)
-    move.b #' ',d0
-    jsr PUTC(a6)
-    move.l PM_PSIZE(a2),d0
-    jsr PUTHEX32(a6)
-
-    lea LineBreakMsg,a1
-    jsr PUTS(a6)
+    lea LineBreakMsg(pc),a1
+    jmp PUTS(a6)
+.readSectorOk:
+    bsr PrintSector
     addq.l #1,d2
-    dbra d7,.nextPartition
+    dbra d7,.nextPartition    
+    ;bsr PrintPartition
+
     rts
-    
+ 
+;PrintPartition:    
+;    move.l PM_DEVICE(a2),d0
+;    jsr PUTHEX32(a6)
+;    move.b #'p',d0
+;    jsr PUTC(a6)
+;    move.w PM_INDEX(a2),d0
+;    add.b #'0',d0
+;    jsr PUTC(a6)
+;    move.b #' ',d0
+;    jsr PUTC(a6)
+;    move.b PM_TYPE(a2),d0
+;    jsr PUTHEX8(a6)
+;    move.b #' ',d0
+;    jsr PUTC(a6)
+;    move.l PM_PSTART(a2),d0
+;    jsr PUTHEX32(a6)
+;    move.b #' ',d0
+;    jsr PUTC(a6)
+;    move.l PM_PSIZE(a2),d0
+;    jsr PUTHEX32(a6)
+;
+;    lea LineBreakMsg,a1
+;    jsr PUTS(a6)
+;    rts
+
 ReadMbr:
     move.l #"mmc0",d0
     bsr SDFindDevice
@@ -264,13 +282,6 @@ UartReadChar:
     addq.b #1,UartRdPtr     
     rts       
 
-PrintLongAsChars:
-    move.l d0,LongAsCharsBuffer
-    lea LongAsCharsBuffer,a1
-    jmp PUTS(a6)
-
-
-
 DeviceNotFoundMsg:
     dc.b "Device not found",13,10,0
 MmcInitMsg:
@@ -286,8 +297,7 @@ MmcStorageDevice:
     dc.l MMCReadSector
     dc.l MMCWriteSector
     blk.l 5,0
-LongAsCharsBuffer:
-    blk.b 6,0
+
     include mmc.asm
     include storagedevice.asm
     include partman.asm
