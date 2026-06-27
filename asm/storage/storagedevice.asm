@@ -24,11 +24,12 @@ SD_RESERVED rs.l 5
 SD_SIZE     rs.b 0
 
 SD_SIZE_SHIFT       equ 5   ; 32 bytes
-SD_DEVICE_LIST_SIZE equ 512
-SD_DEVICE_LIMIT     equ 16
+SD_DEVICE_LIST_SIZE equ 256
+SD_DEVICE_LIMIT     equ 8
 
-SD_ERR_DEVICE_LIST_FULL equ $81000000
-SD_ERR_DEVICE_NOT_FOUND equ $82000000
+SD_ERR_DEVICE_LIST_FULL equ $80010000
+SD_ERR_DEVICE_NOT_FOUND equ $80020000
+SD_ERR_DEVICE_IO_ERROR  equ $800f0000
 
 
 SDInit:
@@ -51,7 +52,7 @@ SDInit:
 ; Add storage device
 ;
 ; A0: pointer to storage device struct
-; Return: D0 - 0 if successful, non-zero if unable to add
+; Return: D0 - device ID > 0 if successful, < 0 if unable to add
 ;____________________________________________________________
 SDRegisterDevice:
     move.l d7,-(sp)
@@ -60,10 +61,12 @@ SDRegisterDevice:
     rts
 .sdRegisterInt:
     lea SDDeviceList,a1
+    moveq #1,d0
     moveq #SD_DEVICE_LIMIT-1,d7
 .checkFreeSlot:
     tst.l SD_ID(a1)
     beq.s .foundSlot
+    addq.l #1,d0
     lea SD_SIZE(a1),a1
     dbra d7,.checkFreeSlot
     move.l #SD_ERR_DEVICE_LIST_FULL,d0
@@ -73,7 +76,6 @@ SDRegisterDevice:
 .copyDevice:
     move.l (a0)+,(a1)+
     dbra d7,.copyDevice
-    moveq #0,d0
     rts
 
 ;____________________________________________________________
@@ -143,7 +145,13 @@ SDReadSector:
     cmp.l #0,a1
     beq .invalidDevice
     move.l SD_READ(a1),a1
-    jmp (a1)
+    jsr (a1)
+    tst.w d0
+    bne.s .addErrorCode
+    rts
+.addErrorCode:
+    or.l #SD_ERR_DEVICE_IO_ERROR,d0
+    rts
 .invalidDevice:
     move.l #SD_ERR_DEVICE_NOT_FOUND,d0
     rts    

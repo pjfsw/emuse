@@ -1,4 +1,5 @@
     incdir ..
+    incdir ../storage
     include hardware.i
 
 UART_RTS_ENABLE_THRESHOLD EQU $c0
@@ -14,8 +15,8 @@ START equ $10000
 
     move.l $4.w,a6
     bsr InstallISR
-    bsr RegisterStorageDevices
-    bsr ReadMbr
+    bsr InitStorageDevices    
+    ;bsr ReadMbr
 .skipMmc:
 MainLoop:    
     lea MsgPrompt(pc),a1
@@ -34,25 +35,39 @@ MsgPrompt:
     dc.b 13,10,"[/]$ ",0
     even
 
-RegisterStorageDevices:
-    bsr SDInit
-    bra RegisterMmc
+InitStorageDevices:
+    bsr SDInit    
+    bsr PMInit    
 
-RegisterMmc:
     lea MmcInitMsg(pc),a1
     jsr PUTS(a6)
-    
+
     bsr MMCInit  
     move.w d0,MmcStatus
-    tst.w d0
-    bne.s .mmcFailed
-    lea MmcStorageDevice,a0
-    bsr SDRegisterDevice          
-    jsr PUTHEX32(a6)
-
-.mmcFailed:    
+    beq.s .mmcOk
     bra PrintReturnCode
-    rts
+.mmcOk:
+    lea MmcStorageDevice,a0
+    bsr SDRegisterDevice         
+    cmp.l #0,d0
+    bhi.s .registerSDOk
+    jsr PUTHEX32(a6)
+    move.b #'S',d0
+    jsr PUTC(a6)
+    lea LineBreakMsg,a1
+    jmp PUTS(a6)
+.registerSDOk:
+    bsr PMRegisterDevice
+    tst.l d0
+    bpl.s .registerPMOk
+    jsr PUTHEX32(a6)
+    move.b #'P',d0
+    jsr PUTC(a6)
+    lea LineBreakMsg,a1
+    jmp PUTS(a6)
+.registerPMOk: 
+    bra ListPartitions
+
 
 PrintReturnCode:
     move.l d7,-(sp)
@@ -66,11 +81,64 @@ PrintReturnCode:
     move.l (sp)+,d7
     rts
 
+ListPartitions:
+    bsr PMGetPartitionCount
+    tst.l d0
+    bpl.s .partitionsCountOk
+    jsr PUTHEX32(a6)
+    move.b #'C',d0
+    jsr PUTC(a6)
+    lea LineBreakMsg(pc),a1
+    jmp PUTS(a6)
+.partitionsCountOk:
+    move.l d0,d7
+    subq.l #1,d7
+    moveq #0,d2
+    lea TestPartitionInfo(pc),a2
+.nextPartition:
+    move.l a2,a0
+    move.l d2,d0
+    bsr PMGetPartitionInfo
+    tst.l d0
+    bpl.s .getPartitionOk
+    jsr PUTHEX32(a6)
+    move.b #'I',d0
+    jsr PUTC(a6)
+    lea LineBreakMsg(pc),a1
+    jmp PUTS(a6)
+.getPartitionOk:
+    move.l PM_DEVICE(a2),d0
+    jsr PUTHEX32(a6)
+    move.b #'p',d0
+    jsr PUTC(a6)
+    move.w PM_INDEX(a2),d0
+    add.b #'0',d0
+    jsr PUTC(a6)
+    move.b #' ',d0
+    jsr PUTC(a6)
+    move.b PM_TYPE(a2),d0
+    jsr PUTHEX8(a6)
+    move.b #' ',d0
+    jsr PUTC(a6)
+    move.l PM_PSTART(a2),d0
+    jsr PUTHEX32(a6)
+    move.b #' ',d0
+    jsr PUTC(a6)
+    move.l PM_PSIZE(a2),d0
+    jsr PUTHEX32(a6)
+
+    lea LineBreakMsg,a1
+    jsr PUTS(a6)
+    addq.l #1,d2
+    dbra d7,.nextPartition
+    rts
+    
 ReadMbr:
-    move.l #'mmc0',d0
+    move.l #"mmc0",d0
     bsr SDFindDevice
     tst.l d0
     bpl.s .deviceFound 
+    jsr PUTHEX8(a6)
     lea DeviceNotFoundMsg(pc),a1
     jmp PUTS(a6)
     rts
@@ -196,12 +264,19 @@ UartReadChar:
     addq.b #1,UartRdPtr     
     rts       
 
+PrintLongAsChars:
+    move.l d0,LongAsCharsBuffer
+    lea LongAsCharsBuffer,a1
+    jmp PUTS(a6)
+
+
+
 DeviceNotFoundMsg:
     dc.b "Device not found",13,10,0
 MmcInitMsg:
     dc.b "MMC Initialization",13,10,0
 MmcErrorMsg:
-    dc.b "MMC Response code ",0
+    dc.b 13,10,"MMC Response code ",0
 LineBreakMsg:
     dc.b 13,10,0    
     even
@@ -211,15 +286,18 @@ MmcStorageDevice:
     dc.l MMCReadSector
     dc.l MMCWriteSector
     blk.l 5,0
-
+LongAsCharsBuffer:
+    blk.b 6,0
     include mmc.asm
     include storagedevice.asm
+    include partman.asm
 
 SectorBuffer EQU *
 SDDeviceList EQU SectorBuffer+512 
-MmcStatus    EQU SDDeviceList+512
+PMPartList   EQU SDDeviceList+256
+MmcStatus    EQU PMPartList+512
 MmcCmdArg    EQU MmcStatus+4
 UartRdPtr    EQU MmcCmdArg+4
 UartWrPtr    EQU UartRdPtr+1
 UartRdBuf    EQU UartWrPtr+1
-    
+TestPartitionInfo EQU UartRdBuf+256
