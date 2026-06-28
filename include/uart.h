@@ -18,3 +18,5 @@ void uartWriteWord(void *userdata, uint32_t address, uint16_t word);
 void uartReset(void *userdata);
 
 void uartClock(void *userdata, int clocks);
+
+bool uartIsInterrupt(void *userdata);

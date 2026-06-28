@@ -9,6 +9,7 @@
 #include "lea.h"
 #include "move.h"
 #include "movem.h"
+#include "rte.h"
 #include "rts.h"
 #include "shift.h"
 #include "sourcedest.h"
@@ -30,6 +31,33 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
         increasePc(registers);
         ea->address = (int32_t)ea->displacement + registers->a[reg];
         return 4;
+    } else if (mode == AM_ADDR_INDEX) { // disp(a0,d0)
+        uint16_t extWord = readWordFunc(readWriteUserdata, registers->pc);
+        increasePc(registers);
+
+        ea->displacement  = (int16_t)(int8_t)(extWord & 255);
+        uint16_t dispRegNo = (extWord >> 12) & 7;
+        uint32_t *dispReg;
+
+        ea->dispReg = dispRegNo;
+        if (extWord & 0x8000) {
+            dispReg = &registers->a[dispRegNo];            
+            ea->addrRegDisp = true;
+        } else {
+            dispReg = &registers->d[dispRegNo];
+            ea->addrRegDisp = false;
+        }
+        
+        int32_t disp2;
+        if (extWord & 0x800) {
+            disp2 = (int32_t)*dispReg;
+            ea->longRegDisp = true;
+        } else {
+            disp2 = (int32_t)(int16_t)(*dispReg & 0xffff);
+            ea->longRegDisp = false;
+        }
+        ea->address = (int32_t)ea->displacement + disp2 + registers->a[reg];
+        return 6;
     } else if (mode == AM_EXT) {
         if (reg == AM_EXT_IMMEDIATE) {
             // Immediate
@@ -85,6 +113,7 @@ typedef struct {
 
 static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
+    { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},
     { 0xffc0, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x4ec0, decodeJmp, IF_JUMP},
     { 0xffc0, 0x46c0, decodeMoveToSr, IF_MOVE_TO_SR},

@@ -68,8 +68,8 @@ int readSource(
     } else if (ea->mode == AM_AREG) {
         *value = registers->a[ea->xn];
         cycleCount = 0;
-    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP) || (ea->mode == AM_ADDRESS_POST_INC) ||
-               (ea->mode == AM_ADDRESS_PRE_DEC)) {
+    } else if ((ea->mode == AM_ADDRESS) || (ea->mode == AM_ADDR_DISP) || (ea->mode == AM_ADDR_INDEX) ||
+               (ea->mode == AM_ADDRESS_POST_INC) || (ea->mode == AM_ADDRESS_PRE_DEC)) {
         preDecrement(di, registers, ea);
 //        printf("Read $%06x\n", di->src.address);
         cycleCount = 4;
@@ -117,7 +117,7 @@ static int writeDestWithFlagSetting(
         } else if (di->size == IS_WORD) {
             registers->a[di->dst.xn] = (int32_t)(int16_t)value;
         }
-    } else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDRESS) ||
+    } else if ((di->dst.mode == AM_ADDR_DISP) || (di->dst.mode == AM_ADDR_INDEX) || (di->dst.mode == AM_ADDRESS) ||
                (di->dst.mode == AM_ADDRESS_POST_INC) || (di->dst.mode == AM_ADDRESS_PRE_DEC)) {
         //printf("Store %x in $%06x\n", value, di->dst.address);
         preDecrement(di, registers, &di->dst);

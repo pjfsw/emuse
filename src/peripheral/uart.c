@@ -53,6 +53,7 @@ struct Uart {
     uint8_t scratch;
     uint8_t fifo_enabled;
     uint8_t fifo_trigger;
+    int32_t rxTimeout;    
 };
 
 Uart *uartCreate(uint32_t cpuClockSpeed, uint32_t uartClockSpeed) {
@@ -204,6 +205,7 @@ static uint8_t receiveByte(Uart *uart) {
     if (!fifoIsEmpty(&uart->rfifo)) {
         uint8_t value;
         if (fifoRead(&uart->rfifo, &value)) {
+            printf("READING 1 BYTE!\n");
             return value;
         }
     }
@@ -266,6 +268,9 @@ static void handleTxFifo(Uart *uart, int clocks) {
 }
 
 static void handleRxFifo(Uart *uart, int clocks) {
+    if (uart->rxTimeout > 0) {
+        uart->rxTimeout -= clocks;
+    }
     if (fifoIsFull(&uart->rfifo) || !ptsIsByteAvailable(uart->pts)) {
         uart->recvTimer = 0;
         return;
@@ -278,6 +283,7 @@ static void handleRxFifo(Uart *uart, int clocks) {
             uint8_t byte;
             if (ptsReadByte(uart->pts, &byte)) {
                 fifoWrite(&uart->rfifo, byte);
+                uart->rxTimeout = 4 * uart->ticksPerCharacter;
             } else {
                 printf("RX BUG! This is not supposed to happen\n");
             }
@@ -305,4 +311,17 @@ void uartClock(void *userdata, int clocks) {
     handleTxFifo(uart, clocks);
     handleRxFifo(uart, clocks);
     handleStatusRegisters(uart);
+}
+
+bool uartIsInterrupt(void *userdata) {
+    Uart *uart = (Uart*)userdata;    
+
+    if ((uart->ier & 0x01) == 0)
+        return false;
+
+    return !fifoIsEmpty(&uart->rfifo);
+    /*if (!uart->fifo_enabled)
+        return !fifoIsEmpty(&uart->rfifo);
+
+    return (uart->rfifo.count > 0 && (uart->rxTimeout <= 0)) || uart->rfifo.count >= uart->fifo_trigger;    */
 }

@@ -127,3 +127,22 @@ uint16_t busReadWord(void *userdata, uint32_t address) {
     }
     return getRandomByte();
 }
+
+void busAddInterruptFunc(Bus *bus, uint8_t level, BooleanFunc interruptFunc, void *userdata) {
+    if ((level < 1) || (level > 7)) {
+        fprintf(stderr, "Invalid interrupt level %d, ignoring\n", level);
+        return;
+    }
+    bus->interruptFunc[level] = interruptFunc;
+    bus->interruptFuncUserdata[level] = userdata;
+}
+
+uint8_t busCheckInterrupt(void *userdata) {
+    Bus *bus = (Bus*)userdata;
+    for (int lvl = 7; lvl > 0; lvl--) {
+        if ((bus->interruptFunc[lvl] != NULL) && (bus->interruptFunc[lvl](bus->interruptFuncUserdata[lvl]))) {
+            return lvl;
+        }
+    }
+    return 0;
+}

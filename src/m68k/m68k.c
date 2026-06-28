@@ -3,6 +3,7 @@
 #include "m68k.h"
 #include "decode.h"
 #include "movem.h"
+#include "pushpop.h"
 
 static inline void setUser(M68k *m68k) {
     m68k->registers.sr = m68k->registers.sr & (0xffff-SR_FLAGS_S);    
@@ -79,6 +80,13 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
         sprintf(s, "%d", ea->displacement);
         addDisassembly(instruction, s, SYM_CONSTANT);        
         sprintf(s, "(A%d)", ea->xn);
+        addDisassembly(instruction, s, SYM_REGISTER);
+    } else if (ea->mode == AM_ADDR_INDEX) {
+        sprintf(s, "%d", ea->displacement);
+        addDisassembly(instruction, s, SYM_CONSTANT);
+        char sizeChar = ea->longRegDisp ? 'L' : 'W';
+        char regChar = ea->addrRegDisp ? 'A' : 'D';
+        sprintf(s, "(A%d,%c%d.%c)", ea->xn, regChar, ea->dispReg, sizeChar);
         addDisassembly(instruction, s, SYM_REGISTER);
     } else if (ea->mode == AM_ADDRESS_POST_INC) {
         sprintf(s, "(A%d)+", ea->xn);
@@ -421,6 +429,32 @@ static void postReset(M68k *m68k) {
     setSupervisor(m68k);
 }
 
+static int handleInterrupt(M68k *cpu, uint8_t level) {
+    M68kRegisters *regs = &cpu->registers;
+    RwFunc *rw = &cpu->rwFunc;    
+    void *readWriteUserdata = cpu->readWriteUserdata;
+
+    push(cpu, regs->pc & 0xffff);
+    push(cpu, (regs->pc >> 16) & 0xffff);
+    push(cpu, regs->sr);       
+
+    if (!isSupervisor(cpu)) {
+        regs->usp = regs->a[7];
+        setSupervisor(cpu);
+        regs->a[7] = regs->ssp;
+    }
+
+    regs->sr &= ~0x0700;        // Clear interrupt level
+    regs->sr |= level << 8;     // Set current level
+    uint32_t vector = (level + 24) * 4;
+    uint32_t newPc = rw->rw(readWriteUserdata, vector) << 16;
+    newPc |= rw->rw(readWriteUserdata, vector+2);
+    newPc = align24(newPc);
+
+    regs->pc = newPc;
+    return 44;
+}
+
 int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
@@ -432,6 +466,12 @@ int m68kClock(void *userdata) {
         cpu->resetState = false;
         return 0;
     }
+    uint8_t level = cpu->ilf(cpu->ilfUserdata);
+    uint8_t threshold = (cpu->registers.sr >> 8) & 7;
+    if ((level > cpu->interruptLevel) & (level > threshold)) {
+        return handleInterrupt(cpu, level);
+    }
+
     int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
     if (cycles <= 0) {
         cpu->cpu.crashed = true;
@@ -451,13 +491,15 @@ int m68kClock(void *userdata) {
     return cycles;
 }
 
-void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata) {
+void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata, InterruptLevelFunc ilf, void *ilfUserdata) {
     memset(m68k, 0, sizeof(M68k));
     m68k->cpu.cpuStateFunc = getCpuState;
     m68k->cpu.disassemblyFunc = getDisassembly;
     m68k->cpu.probeUserdata = m68k;
     m68k->rwFunc = rwFunc;
     m68k->readWriteUserdata = readWriteUserdata;
+    m68k->ilf = ilf;
+    m68k->ilfUserdata = ilfUserdata;
 }
 
 void m68kReset(void *userdata) {
@@ -465,4 +507,5 @@ void m68kReset(void *userdata) {
     m68k->cpu.crashed = false;
     m68k->resetState = true;
     m68k->registers.pc = 0;
+    m68k->interruptLevel = 0;
 }

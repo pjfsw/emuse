@@ -6,8 +6,6 @@ UART_RTS_DISABLE_THRESHOLD EQU $e0
 
 UARTInit:
     move.l #UartISR,IRQV_UART
-    ;lea UartISR,a0
-    ;move.l a0,IRQV_UART
     lea UartData,a0
     clr.b UartRdPtr(a0)
     clr.b UartWrPtr(a0)
@@ -18,7 +16,6 @@ UARTInit:
     move.b #$00,UART_DLM(a0)            ; -"-
     move.b #$03,UART_LCR(a0)            ; 8N1
     move.b #FIFO_CONFIG,UART_FCR(a0)    ; Enable FIFO, 14 bytes trigger
-    ;move.b #MCR_AFE|MCR_DTR|MCR_RTS,UART_MCR(a5); Enable Auto-CTS/RTS and assert DTR     
     move.b #MCR_RTS,UART_MCR(a0)        ; Manual flow control, Assert RTS, allow sender to transmit
     move.b #IER_ERBI,UART_IER(a0)       ; Enable receiver interrupt
 

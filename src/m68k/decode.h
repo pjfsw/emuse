@@ -54,6 +54,9 @@ typedef struct {
     uint32_t address;
     uint32_t immediate;
     int16_t displacement;
+    uint16_t dispReg;   // For indexed mode
+    bool addrRegDisp;   // For indexed mode
+    bool longRegDisp;   // For indexed mode
 } EffectiveAddress;
 
 typedef uint32_t (*AluFunc)(uint32_t src, uint32_t dst, uint16_t size, M68kRegisters *regs);

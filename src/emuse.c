@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
         .ww = busWriteWord
     };
 
-    m68kInit(&cpu, rwFunc, &bus);
+    m68kInit(&cpu, rwFunc, &bus, busCheckInterrupt, &bus);
     busAddCpu(&bus, m68kClock, &cpu);
     busAddResetFunc(&bus, m68kReset, &cpu);
 
@@ -114,6 +114,7 @@ int main(int argc, char* argv[]) {
     busAddClockFunc(&bus, uartClock, uart);
     busAddWriteFunc(&bus, uartWriteByte, uartWriteWord, mappingKey);
     busAddReadFunc(&bus, uartReadByte, uartReadWord, mappingKey);
+    busAddInterruptFunc(&bus, 5, uartIsInterrupt, uart);
 
     AddrLatch outReg;
     addrLatchInit(&outReg, 2);

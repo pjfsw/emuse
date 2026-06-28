@@ -29,17 +29,23 @@ typedef struct {
     Disassembly disassembly;
 } DisassemblyCache;
 
+typedef uint8_t (*InterruptLevelFunc)(void *user_data);
+
 typedef struct {
     Cpu cpu;
     M68kRegisters registers;
     RwFunc rwFunc;
     void *readWriteUserdata;
+    InterruptLevelFunc ilf;
+    void *ilfUserdata;
     DisassemblyCache disassemblyCache[DISASSEMBLY_CACHE_SIZE];
     uint32_t firstDisassemblyAddress;
     bool resetState;
+    uint8_t interruptLevel;
+
 } M68k;
 
-void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata);
+void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata, InterruptLevelFunc ilf, void *ilfUserdata);
 
 int m68kClock(void *userdata);
 

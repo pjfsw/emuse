@@ -50,6 +50,9 @@ typedef struct {
 
     WriteMapping writeMappings[MAX_READWRITE_FUNC];
     int writeMappingsCount;
+
+    BooleanFunc interruptFunc[8];
+    void *interruptFuncUserdata[8];    
 } Bus;
 
 
@@ -65,11 +68,15 @@ void busAddReadFunc(Bus *bus, ReadByteFunc readByteFunc, ReadWordFunc readWordFu
 
 void busAddWriteFunc(Bus *bus, WriteByteFunc writeByteFunc, WriteWordFunc writeWordFunc, ReadWriteMappingKey mappingKey);
 
+void busAddInterruptFunc(Bus *bus, uint8_t level, BooleanFunc interruptFunc, void *userdata);
+
 void busReset(void *userdata);
 
 void busWriteByte(void *userdata, uint32_t address, uint8_t value);
 
 void busWriteWord(void *userdata, uint32_t address, uint16_t value);
+
+uint8_t busCheckInterrupt(void *userdata);
 
 uint8_t busReadByte(void *userdata, uint32_t address);
 
