@@ -65,3 +65,31 @@ int decodeMoveq(
     return eaCycles;
 }
 
+static int executeMoveToSr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t value;
+    int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &value);
+    if (cycleCount < 0) {
+        return -1;
+    }
+    if (getFlag(registers, SR_FLAGS_S)) {
+        registers->sr = value;
+    } else {
+        // TODO!! Throw exception
+        return -1;
+    }
+    return cycleCount + 12;
+}
+
+int decodeMoveToSr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    ReadWordFunc readWordFunc = rwFunc->rw;
+    di->execFunc = executeMoveToSr;
+    di->mnemonic = "MOVE";
+    uint16_t srcMode = (opcode >> 3) & 7;
+    uint16_t srcReg = opcode & 7;
+    di->size = IS_WORD;
+    int eaCycles = getEffectiveAddress(registers, srcMode, srcReg, IS_WORD, &di->src, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
+        return -1;
+    }
+    return eaCycles;
+}

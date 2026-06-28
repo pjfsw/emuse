@@ -239,6 +239,28 @@ int decodeCmpm(
     return -1;
 }
 
+static int decodeAluImmediate(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    ReadWordFunc readWordFunc = rwFunc->rw;
+
+    di->execFunc = executeAlu;
+    uint16_t mode = (opcode >> 3) & 7;
+    uint16_t xn = opcode & 7;
+    uint16_t size = (opcode >> 6) & 3;
+
+    di->size = size;
+    int eaCycles = getEffectiveAddress(registers, mode, xn, size, &di->dst, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
+        return -1;
+    }
+    int eaCycles2 = getEffectiveAddress(registers, AM_EXT, AM_EXT_IMMEDIATE, size, &di->src, readWordFunc, readWriteUserdata);
+    if (eaCycles2 < 0) {
+        return -1;
+    }
+
+    return eaCycles + eaCycles2;
+}
+
 static int decodeAlu(
         uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
@@ -304,4 +326,12 @@ int decodeOr(
     di->aluFunc = aluOr;
 
     return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
+int decodeOri(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ORI";
+    di->aluFunc = aluOr;
+
+    return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
 }

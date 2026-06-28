@@ -23,10 +23,10 @@ loop\@:
 
     org $f00400        ; Move past the vector table    
 
-JT_ConGetblocking: ; -52
-    jmp ConGetblocking
-JT_ConIsDataAvailable: ; -46
-    jmp ConIsDataAvailable
+JT_ConGetChar: ; -52
+    jmp ConGetChar
+JT_ConReserved0 ; -46
+    blk.b 6,0
 JT_ConPutHex8:  ; -40
     jmp ConPutHex8
 JT_ConPutHex16: ; -34
@@ -42,35 +42,40 @@ JT_ConClr: ; -10
     dc.l 1             ; Version
 Start:
     move.b #OVR_OFF,OVR_REG    
+    move.w #$2700,sr    ; disable interrupts while configuring    
+    move.w #$aaaa,d0
+    ori.w #$5555,d0
     lea Start,a6
     move.l a6,EXEC_BASE
     
     bsr Blink           ; First blink means the CPU is executing code
     bsr Blink           ; Second blink means the OVR and stack is working
     bsr ConOpen    
+    move.w #$2400,sr    ; mask level 4, accepts 5–7 (UART)
     bne.s .1
     bsr Blink           ; Third blink means the UART is responding
     move.l d0,d0
 .1:
     bsr DetectRam
-    move.l detectedRamSize,a7   ; Set top of RAM be stack pointer
+    move.l DetectedRamSize,a7   ; Set top of RAM be stack pointer
 
     bsr ConClr
     lea welcomeMsg(pc),a1
     bsr ConPuts  
     
-    move.l detectedRamSize,d0
+    move.l DetectedRamSize,d0
     bsr ConPutHex32
     
     lea detectedMsg(pc),a1
     bsr ConPuts
 
 BootMenuLoop:
-    inline
     lea menuMsg(pc),a1
     bsr ConPuts
-.1
-    bsr ConGetblocking
+.waitChar
+    bsr ConGetChar
+    tst.l d0
+    bmi .waitChar
     cmp.b #'U',d0
     beq StartUploader
     cmp.b #'u',d0
@@ -81,8 +86,8 @@ BootMenuLoop:
     beq StartMonitor
     cmp.b #13,d0
     beq StartBootLoader
-    bra.s .1
-    einline
+    bra.s .waitChar
+
 StartUploader:
     bsr Uploader
     bra.s BootMenuLoop
@@ -110,14 +115,9 @@ DetectRam:
     lea ALLOCATOR_BASE(a0),a0
     bra .1
 RamEnd:
-    move.l a0,detectedRamSize   
+    move.l a0,DetectedRamSize   
     rts
 
-
-    ;bsr MMCStartTransfer
-    ;bsr MMCSendByte
-    ;bsr MMCReadByte
-    ;bsr MMCEndTransfer
 loop:
     bra loop
 welcomeMsg:
@@ -141,10 +141,8 @@ Blink:
     Delay
     rts    
 
-    include ramtest.asm
     include bootloader.asm
     include uploader.asm
     include monitor.asm
-    include mmc.asm
     include console.asm
     include biosram.asm

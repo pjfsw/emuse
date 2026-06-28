@@ -38,8 +38,11 @@ typedef enum {
 typedef enum {
     IF_UNKNOWN=0,
     IF_MOVE,
+    IF_MOVE_TO_SR,
     IF_BRANCH,
     IF_IMPLIED,
+    IF_SINGLE_DEST,
+    IF_SINGLE_SRC,
     IF_LEA,
     IF_MOVEM,
     IF_JUMP

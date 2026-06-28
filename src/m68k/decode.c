@@ -4,6 +4,7 @@
 #include "alu.h"
 #include "branch.h"
 #include "btst.h"
+#include "clr.h"
 #include "jump.h"
 #include "lea.h"
 #include "move.h"
@@ -11,6 +12,7 @@
 #include "rts.h"
 #include "shift.h"
 #include "sourcedest.h"
+#include "tst.h"
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
@@ -85,9 +87,13 @@ static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffc0, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x4ec0, decodeJmp, IF_JUMP},
+    { 0xffc0, 0x46c0, decodeMoveToSr, IF_MOVE_TO_SR},
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
     { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
     { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},
+    { 0xff00, 0x0000, decodeOri, IF_MOVE},
+    { 0xff00, 0x4200, decodeClr, IF_SINGLE_DEST},
+    { 0xff00, 0x4a00, decodeTst, IF_SINGLE_SRC},
     { 0xfb80, 0x4880, decodeMovem, IF_MOVEM}, 
     { 0xf118, 0xe010, decodeRoxr, IF_MOVE},
     { 0xf118, 0xe110, decodeRoxl, IF_MOVE},
@@ -99,9 +105,12 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xb1c0, decodeCmpa, IF_MOVE }, // CMPA.L
     { 0xf130, 0xd100, decodeAddx, IF_MOVE },
     { 0xf130, 0xd108, decodeAddx, IF_MOVE },
-    { 0xf0c0, 0x5000, decodeAddqSubq }, // size 00
-    { 0xf0c0, 0x5040, decodeAddqSubq }, // size 01
-    { 0xf0c0, 0x5080, decodeAddqSubq }, // size 10        
+    { 0xf0c0, 0x5000, decodeAddqSubq, IF_MOVE }, // size 00
+    { 0xf0c0, 0x5040, decodeAddqSubq, IF_MOVE }, // size 01
+    { 0xf0c0, 0x5080, decodeAddqSubq, IF_MOVE }, // size 10        
+    { 0xf0c0, 0x5100, decodeAddqSubq, IF_MOVE }, // size 00
+    { 0xf0c0, 0x5140, decodeAddqSubq, IF_MOVE }, // size 01
+    { 0xf0c0, 0x5180, decodeAddqSubq, IF_MOVE }, // size 10        
     { 0xf000, 0xb000, decodeCmp, IF_MOVE  },  // CMP    
     { 0xf000, 0xd000, decodeAdd, IF_MOVE },
     { 0xf000, 0x9000, decodeSub, IF_MOVE },

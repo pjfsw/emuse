@@ -96,21 +96,12 @@ ConPutHex8:
     movem.l (sp)+,d2/d7
     rts
 
-
-
 ;____________________________________________________________
 ;
-; Check if data is available
-; A0 will be destroyed
-; Z=0 data available
+; Read character from console
+; Return character 0-255 in D0, or -1 if no char available
 ;____________________________________________________________
-ConIsDataAvailable:
-    bra UARTIsDataAvailable
-;____________________________________________________________
-;
-; Read character from console and store (byte) in D0
-;____________________________________________________________
-ConGetblocking:
-    bra UARTReadCharBlocking
+ConGetChar:
+    bra UARTGetChar
 
     include uart.asm

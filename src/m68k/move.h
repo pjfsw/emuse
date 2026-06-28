@@ -6,3 +6,4 @@ int decodeMove(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers
 
 int decodeMoveq(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
 
+int decodeMoveToSr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);

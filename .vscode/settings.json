@@ -11,6 +11,8 @@
     "pthread.h": "c",
     "readwritefunc.h": "c",
     "cstdint": "c",
-    "branch.h": "c"
+    "branch.h": "c",
+    "functional": "c",
+    "chrono": "c"
   }
 }

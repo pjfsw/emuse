@@ -51,6 +51,20 @@ static void disassembleAreg(Instruction *instruction, uint16_t regNo) {
     addDisassembly(instruction, s, SYM_REGISTER);
 }
 
+static void disassembleSize(DecodedInstruction *di, Instruction *instruction) {
+    switch (di->size) {
+        case IS_BYTE:
+            addDisassembly(instruction, ".B", SYM_MNEMONIC);
+            break;
+        case IS_LONG:
+            addDisassembly(instruction, ".L", SYM_MNEMONIC);
+            break;
+        case IS_WORD:
+            addDisassembly(instruction, ".W", SYM_MNEMONIC);
+            break;
+    }
+}
+
 static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, InstructionSize size) {
     char s[100];
     s[0] = 0;
@@ -105,18 +119,24 @@ static void disassembleLea(DecodedInstruction *di, Instruction *instruction) {
     disassembleEa(instruction, &di->dst, di->size);
 }
 
+static void disassembleSingle(DecodedInstruction *di, Instruction *instruction, EffectiveAddress *ea) {
+    disassembleSize(di, instruction);
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    disassembleEa(instruction, ea, di->size);
+}
+            
+static void disassembleMoveToSr(DecodedInstruction *di, Instruction *instruction) {
+    addDisassembly(instruction, ".W", SYM_MNEMONIC);
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    disassembleEa(instruction, &di->src, di->size);
+    addDisassembly(instruction, ",", SYM_SYMBOL);
+    addDisassembly(instruction, "SR", SYM_REGISTER);
+}
+
 static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
-    switch (di->size) {
-        case IS_BYTE:
-            addDisassembly(instruction, ".B", SYM_MNEMONIC);
-            break;
-        case IS_LONG:
-            addDisassembly(instruction, ".L", SYM_MNEMONIC);
-            break;
-        case IS_WORD:
-            addDisassembly(instruction, ".W", SYM_MNEMONIC);
-            break;
-    }
+    disassembleSize(di, instruction);
     addPadding(instruction);
     addDisassembly(instruction, " ", SYM_SYMBOL);
     disassembleEa(instruction, &di->src, di->size);
@@ -245,8 +265,17 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
         case IF_MOVEM:
             disassembleMovem(&di, instruction);
             break;
+        case IF_MOVE_TO_SR:
+            disassembleMoveToSr(&di, instruction);
+            break;
         case IF_LEA:
             disassembleLea(&di,instruction);
+            break;
+        case IF_SINGLE_SRC:
+            disassembleSingle(&di, instruction, &di.src);
+            break;
+        case IF_SINGLE_DEST:
+            disassembleSingle(&di, instruction, &di.dst);
             break;
         case IF_BRANCH:
             disassembleBranch(&di, regs->pc, instruction);

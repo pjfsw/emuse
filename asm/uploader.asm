@@ -2,7 +2,6 @@
 
 NOT_A_DIGIT equ $FFFF
 
-
 Uploader:
     lea Uploader_StartMsg(pc),a1
     bsr ConPuts
@@ -10,31 +9,33 @@ Uploader:
     lea SIMPLE_LOADER_BASE,a2       ; Loader v0.9 loads everything into address $10000
     moveq #0,d2                     ; D2 is the current digit
     move.w #2,d3                    ; Digits remaining for the next byte
-NextNibble:
-    bsr ConGetblocking
+.nextNibble:
+    bsr ConGetChar
+    tst.l d0
+    bmi.s .nextNibble
     cmp.b #27,d0
-    beq.s UploaderAbort    
+    beq.s .abort    
     cmp.b #'.',d0    
-    beq.s UploaderDone
+    beq.s .done
     and.w #$ff,d0
     bsr ConvertDigit
     cmp.w #NOT_A_DIGIT,d0
-    beq.s NextNibble
+    beq.s .nextNibble
 
     rol.b #4,d2
     or.b d0,d2   
     subq.w #1,d3
-    bne.s NextNibble    
+    bne.s .nextNibble    
     move.b d2,(a2)+
     moveq #0,d2
     move.w #2,d3
-    bra.s NextNibble
+    bra.s .nextNibble
 
-UploaderAbort:
+.abort:
     lea Uploader_AbortedMsg(pc),a1
     bsr ConPuts
     rts
-UploaderDone:
+.done:
     lea Uploader_DoneMsg(pc),a1
     bsr ConPuts
     move.l #SIMPLE_LOADER_BASE,d0
@@ -52,26 +53,26 @@ UploaderDone:
 ; Convert digit in D0 to nibble
 ConvertDigit:
     cmp.b #'0',d0
-    bcs.s ConvertDigit_Invalid
+    bcs.s .isInvalid
 
     cmp.b #'9',d0
-    bcs.s ConvertDigit_Digit
-    beq.s ConvertDigit_Digit
+    bcs.s .isDigit
+    beq.s .isDigit
 
     cmp.b #'A',d0
-    bcs.s ConvertDigit_Invalid
+    bcs.s .isInvalid
 
     cmp.b #'G',d0      ; one past 'F'
-    bcc.s ConvertDigit_Invalid      ; >= 'G'
+    bcc.s .isInvalid      ; >= 'G'
 
     ; A-F
     sub.b #'A'-10,d0
-    bra.s ConvertDigit_Done
-ConvertDigit_Digit:
+    bra.s .isDone
+.isDigit:
     sub.b #'0',d0
-ConvertDigit_Done:
+.isDone:
     rts
-ConvertDigit_Invalid:
+.isInvalid:
     move.w #NOT_A_DIGIT,d0
     rts
     
