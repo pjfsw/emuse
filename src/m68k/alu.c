@@ -320,6 +320,14 @@ int decodeAnd(
     return decodeAlu(opcode, di, registers, rwFunc, readWriteUserdata);
 }
 
+int decodeAndi(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ANDI";
+    di->aluFunc = aluAnd;
+
+    return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
 int decodeOr(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     di->mnemonic = "OR";

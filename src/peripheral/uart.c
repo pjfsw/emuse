@@ -205,7 +205,6 @@ static uint8_t receiveByte(Uart *uart) {
     if (!fifoIsEmpty(&uart->rfifo)) {
         uint8_t value;
         if (fifoRead(&uart->rfifo, &value)) {
-            printf("READING 1 BYTE!\n");
             return value;
         }
     }
@@ -319,9 +318,9 @@ bool uartIsInterrupt(void *userdata) {
     if ((uart->ier & 0x01) == 0)
         return false;
 
-    return !fifoIsEmpty(&uart->rfifo);
-    /*if (!uart->fifo_enabled)
+    if (!uart->fifo_enabled) {
         return !fifoIsEmpty(&uart->rfifo);
+    }
 
-    return (uart->rfifo.count > 0 && (uart->rxTimeout <= 0)) || uart->rfifo.count >= uart->fifo_trigger;    */
+    return (uart->rfifo.count > 0 && (uart->rxTimeout <= 0)) || uart->rfifo.count >= uart->fifo_trigger; 
 }
