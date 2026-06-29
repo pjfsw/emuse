@@ -14,9 +14,8 @@ TESTSECTOR equ $800000
 
 START equ $10000
     org START
-
     move.l $4.w,a6
-    ;bsr InstallISR
+    
     bsr InitStorageDevices    
     tst.l d0
     beq.s .storageOk
@@ -27,24 +26,12 @@ START equ $10000
     bsr printErrorCode
 .storageOk:
     bsr PrintPartitionInfo
-    tst.l d0
-    beq.s WriteData
-    bsr printErrorCode
-WriteData:
     moveq #0,d0
-    move.l #TESTSECTOR,d1
-    lea TestMessage,a0
-    bsr MMCWriteSector
-    tst.l d0
-    bne.s FailedToWrite
-    moveq #0,d0
-    move.l #TESTSECTOR+1,d1
-    lea TestMessage2,a0
-    bsr MMCWriteSector
-
-    bra MainLoop
-FailedToWrite:
-    bsr printErrorCode
+    moveq #0,d1
+    lea SectorBuffer,a0
+    bsr PMReadSector
+    bsr PrintSector
+    bsr PrintFat
 MainLoop:    
     lea MsgPrompt(pc),a1
     jsr PUTS(a6) ; Puts
@@ -58,8 +45,14 @@ MainLoop:
     bra.s .waitForChar
 .lineBreak:
     bsr TransferTest
-    bsr ReadBack
     bra MainLoop    
+
+PrintANumberInD0:
+    jsr PUTHEX32(a6)
+
+    lea LineBreakMsg,a1
+    jsr PUTS(a6)
+    rts
 
 printErrorCode:
     jsr PUTHEX32(a6)
@@ -121,20 +114,46 @@ PrintPartitionInfo:
     jsr PUTS(a6)
     moveq #0,d0
     rts
-
-
-ReadBack:
-    move.l #TESTSECTOR,d6
-    moveq #1,d7
-.next:    
+    
+PrintFat:
     moveq #0,d0
-    move.l d6,d1
-    lea SectorBuffer,a0
-    bsr MMCReadSector
-    bsr PrintSector
-    addq.l #1,d6
-    dbra d7,.next    
+    lea FatData,a1
+    bsr FATRegisterPartition
+    tst.l d0
+    beq.s .fatOk
+    bsr printErrorCode
+.fatOk:    
+    lea FatData,a2
+
+    moveq #0,d0
+    move.b FAT_SECT_PER_CLUST(a2),d0
+    lea FatSectPerClustMsg,a1    
+    bsr PrintTextAndNumber
+
+    move.l FAT_FAT1_START(a2),d0
+    lea FatFat1StartMsg,a1
+    bsr PrintTextAndNumber
+
+    move.l FAT_FAT2_START(a2),d0
+    lea FatFat2StartMsg,a1
+    bsr PrintTextAndNumber
+
+    move.l FAT_ROOT_START(a2),d0
+    lea FatRootStartMsg,a1
+    bsr PrintTextAndNumber
+
+    move.l FAT_DATA_START(a2),d0
+    lea FatDataStartMsg,a1
+    bsr PrintTextAndNumber
     rts
+PrintTextAndNumber:
+    move.l d0,-(sp)
+    jsr PUTS(a6)
+    move.l (sp)+,d0
+    jsr PUTHEX32(a6)
+    lea LineBreakMsg(pc),a1
+    jmp PUTS(a6)
+
 
 TransferTest:
     moveq #0,d2 ; Sector to load
@@ -210,10 +229,19 @@ TestMessage2:
     blk.b 511-(*-TestMessage2),$55
     dc.b "X"
 PartitionStartMsg:
-    dc.b 13,10,"Partition start: $",0
+    dc.b "Partition start: $",0
 PartitionSizeMsg:
     dc.b "Partition size:  $",0
-
+FatSectPerClustMsg:
+    dc.b "Sectors per cluster: ",0
+FatFat1StartMsg:
+    dc.b "FAT 1 Start        : ",0    
+FatFat2StartMsg:
+    dc.b "FAT 2 Start        : ",0    
+FatRootStartMsg:
+    dc.b "Root Start         : ",0    
+FatDataStartMsg:
+    dc.b "Data Start         : ",0    
 InitStorageErrorMsg:
     dc.b 13,10,"Boot device initialization error: ",0
 LineBreakMsg:
@@ -229,6 +257,7 @@ MmcStorageDevice:
     include mmc.asm
     include storagedevice.asm
     include partman.asm
+    include fat16.asm
 
 SectorBuffer EQU SYSTEM_BSS_BASE+4
 SDDeviceList EQU *
@@ -236,3 +265,4 @@ PMPartList   EQU SDDeviceList+256
 MmcStatus    EQU PMPartList+512
 MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
+FatData      EQU TestPartitionInfo+32

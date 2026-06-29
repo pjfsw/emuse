@@ -16,8 +16,8 @@ PM_RESERVED  rs.l 2
 PM_SIZE      rs.b 0
 
 PM_SIZE_SHIFT       equ 5   ; 32 bytes
-PM_PART_LIST_SIZE   equ 512
-PM_PART_LIMIT       equ 16
+PM_PART_LIST_SIZE   equ 128
+PM_PART_LIMIT       equ 4
 
 PM_ERR_DEVICE_LIST_FULL equ $80100000
 PM_ERR_DEVICE_NOT_FOUND equ $80200000
@@ -42,13 +42,12 @@ PMInit:
 
 ;____________________________________________________________
 ;
-; PMRegister
+; PMRegisterDevice
 ;
 ; Register a storage device adds its valid partitions 
 ;
 ; D0: device id to store
-; Return: D0 > 0: number of partitions added,
-;         D0 = 0: no partitions found 
+; Return: D0 = 0: successful
 ;         D0 < 0: an error occured
 ;____________________________________________________________
 PMRegisterDevice:
@@ -103,7 +102,7 @@ PMRegisterDevice:
 .thisPartitionEnd:    
     lea $10(a1),a1
     dbra d7,.nextPartition    
-    move.l d3,d0
+    moveq #0,d0
     rts
 
 ;____________________________________________________________
