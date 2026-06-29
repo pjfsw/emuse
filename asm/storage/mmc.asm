@@ -13,16 +13,20 @@ MMC_CMD8_CRC equ $87
 MMC_CMD55    equ $77
 MMC_ACMD41   equ $69
 MMC_CMD17    equ $51
+MMC_CMD24    equ $58
 
 MMC_ERR_CMD0_FAILED    equ $1000
 MMC_ERR_CMD8_FAILED    equ $2000
 MMC_ERR_CMD55_FAILED   equ $3000
 MMC_ERR_ACMD41_FAILED  equ $4000
 MMC_ERR_CMD17_FAILED   equ $5000
+MMC_ERR_CMD24_FAILED   equ $6000
 MMC_ERR_WAIT_TIMEOUT   equ $0100
 MMC_ERR_RESP_TIMEOUT   equ $0200
 MMC_ERR_READ_TIMEOUT   equ $0300
 MMC_ERR_ACMD41_TIMEOUT equ $0400
+MMC_ERR_WRITE_ERROR    equ $0500
+MMC_ERR_WRITE_TIMEOUT  equ $0600
 MCC_ERR_NOT_IMPLEMENTED equ $ffff
 
     macro MmcSelect
@@ -228,9 +232,6 @@ Acmd41:
 Acmd41Arg:
     dc.l $40000000
 
-MMCWriteSector:
-    move.l #MCC_ERR_NOT_IMPLEMENTED,d0
-    rts
 ;____________________________________________________________
 ;
 ; Read a sector
@@ -243,6 +244,7 @@ MMCReadSector:
     SaveRegisters
     bsr MMCReadSectorInt
     RestoreRegisters
+    MmcDeselect
     rts
 MMCReadSectorInt:
     move.l $4.w,a4
@@ -265,7 +267,8 @@ MMCReadSectorInt:
     cmp.b #$fe,d0
     beq.s .readTokenOk
     dbra d7,.waitReadToken
-    move.w #MMC_ERR_READ_TIMEOUT,d0
+    
+    move.w #MMC_ERR_READ_TIMEOUT,d0    
     rts
 .readTokenOk:
     ; READ BYTES TO BUFFER
@@ -276,13 +279,71 @@ MMCReadSectorInt:
     dbra d7,.readNextByte
     bsr MMCReadByteFastInt
     bsr MMCReadByteFastInt
-    MmcDeselect
     bsr MMCReadByteFastInt
     moveq #0,d0
     rts
-
 Cmd17:
     dc.b MMC_CMD17,$ff
+
+;____________________________________________________________
+;
+; Write a sector
+; Device number in D0 (currently ignored)
+; Sector number in D1
+; 512 byte buffer ptr in A0
+; Returns D0 = 0: OK, D0 != 0: error code 
+;____________________________________________________________
+MMCWriteSector:
+    SaveRegisters
+    bsr .writeSectorInt
+    RestoreRegisters
+    MmcDeselect
+    rts
+.writeSectorInt:
+    move.l $4.w,a4
+    MmcMosiClockA5MisoA6
+    move.l a0,-(sp)
+    lea Cmd24(pc),a0
+    lea MmcCmdArg,a1
+    move.l d1,(a1)
+    bsr MMCSendCommandInt    
+    move.l (sp)+,a0    
+    tst.b d0
+    beq.s .writeCmdOk
+    or.w #MMC_ERR_CMD24_FAILED,d0
+    rts
+.writeCmdOk:
+    bsr MMCReadByteInt  ; send $FF but using read instead of write is slightly faster
+    move.b #$fe,d0
+    bsr MMCSendByteInt
+    ; WRITE BYTES FROM BUFFER
+    move.w #511,d7
+.writeNextByte:
+    move.b (a0)+,d0
+    bsr MMCSendByteInt
+    dbra d7,.writeNextByte
+    bsr MMCReadByteInt  ; Send dummy CRC as $FF
+    bsr MMCReadByteInt  ; -"-
+    bsr MMCReadByteInt  ; Get write response
+    and.b #$1f,d0
+    move.b d0,d6        ; Save error code for later
+    bsr MmcWaitBusy
+    tst.l d0
+    beq.s .waitOk
+    move.w #MMC_ERR_WRITE_TIMEOUT,d0
+    rts
+.waitOk:
+    moveq #0,d0
+    cmp.b #$05,d6
+    bne.s .writeError
+    rts
+.writeError:
+    move.b d6,d0      
+    or.w #MMC_ERR_WRITE_ERROR,d0
+    rts
+Cmd24:
+    dc.b MMC_CMD24,$ff    
+
 
 ;____________________________________________________________
 ;
