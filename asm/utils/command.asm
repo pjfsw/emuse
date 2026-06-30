@@ -118,34 +118,44 @@ PrintPartitionInfo:
 PrintFat:
     moveq #0,d0
     lea FatData,a1
-    bsr FATRegisterPartition
+    bsr FATInitPartition
     tst.l d0
     beq.s .fatOk
-    bsr printErrorCode
-.fatOk:    
+    bra printErrorCode
+.fatOk:        
     lea FatData,a2
+    move.l a2,d0    ; FAT struct
+    moveq #0,d1     ; Root directory
+    lea SectorBuffer,a0
+    lea DirectoryCtx,a1
+    bsr FATOpenDir
+    tst.l d0
+    beq.s .dirCtxOk
+    bra printErrorCode
+.dirCtxOk:
+    lea DirectoryOfMsg,a1
+    jsr PUTS(a6)
+    lea DirectoryCtx,a2
+    lea DirEntry,a3
+.nextEntry:    
+    move.l a2,d0
+    move.l a3,a1
+    bsr FATReadDir
+    cmp.l #0,d0
+    beq.s .endOfDir
+    bpl.s .dirEntryOk
+    bra printErrorCode
+.dirEntryOk:    
+    move.l a3,a1
+    jsr PUTS(a6)
+    lea LineBreakMsg,a1
+    jsr PUTS(a6)
+    bra .nextEntry
+.endOfDir:
+    lea EndOfDirMsg,a1
+    jsr PUTS(a6)
+    rts    
 
-    moveq #0,d0
-    move.b FAT_SECT_PER_CLUST(a2),d0
-    lea FatSectPerClustMsg,a1    
-    bsr PrintTextAndNumber
-
-    move.l FAT_FAT1_START(a2),d0
-    lea FatFat1StartMsg,a1
-    bsr PrintTextAndNumber
-
-    move.l FAT_FAT2_START(a2),d0
-    lea FatFat2StartMsg,a1
-    bsr PrintTextAndNumber
-
-    move.l FAT_ROOT_START(a2),d0
-    lea FatRootStartMsg,a1
-    bsr PrintTextAndNumber
-
-    move.l FAT_DATA_START(a2),d0
-    lea FatDataStartMsg,a1
-    bsr PrintTextAndNumber
-    rts
 PrintTextAndNumber:
     move.l d0,-(sp)
     jsr PUTS(a6)
@@ -220,28 +230,14 @@ PrintSector:
     dbra d7,.nextRow
     rts
 
-TestMessage:
-    dc.b "Hello this is a test writing data to disk!"
-    blk.b 511-(*-TestMessage),$aa
-    dc.b "Z"
-TestMessage2:    
-    dc.b "this is another test blablabla"
-    blk.b 511-(*-TestMessage2),$55
-    dc.b "X"
+DirectoryOfMsg:
+    dc.b "Directory listing of /:",13,10,0
+EndOfDirMsg:
+    dc.b "123456 bytes free.",13,10,0
 PartitionStartMsg:
     dc.b "Partition start: $",0
 PartitionSizeMsg:
     dc.b "Partition size:  $",0
-FatSectPerClustMsg:
-    dc.b "Sectors per cluster: ",0
-FatFat1StartMsg:
-    dc.b "FAT 1 Start        : ",0    
-FatFat2StartMsg:
-    dc.b "FAT 2 Start        : ",0    
-FatRootStartMsg:
-    dc.b "Root Start         : ",0    
-FatDataStartMsg:
-    dc.b "Data Start         : ",0    
 InitStorageErrorMsg:
     dc.b 13,10,"Boot device initialization error: ",0
 LineBreakMsg:
@@ -266,3 +262,5 @@ MmcStatus    EQU PMPartList+512
 MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
 FatData      EQU TestPartitionInfo+32
+DirectoryCtx EQU FatData+32
+DirEntry     EQU DirectoryCtx+32

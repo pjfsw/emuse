@@ -3,31 +3,62 @@
 ; FAT16 file system
 ;____________________________________________________________
     rsreset
+FAT_PART_ID    rs.l 1
+FAT_PART_SIZE  rs.l 1
 FAT_FAT1_START rs.l 1
 FAT_FAT2_START rs.l 1
 FAT_ROOT_START rs.l 1
 FAT_DATA_START rs.l 1
-FAT_SIZE       rs.l 1
 FAT_SECT_PER_CLUST rs.b 1
+FAT_RESERVED   rs.b 7
+FAT_SIZE       rs.b 0
+
+    rsreset
+FAT_DIRCTX_FAT_PTR    rs.l 1
+FAT_DIRCTX_SECBUF_PTR rs.l 1
+FAT_DIRCTX_FIRST_SEC  rs.l 1
+FAT_DIRCTX_PARENT_SEC rs.l 1
+FAT_DIRCTX_CURR_SEC   rs.l 1
+FAT_DIRCTX_CURR_ENT   rs.w 1
+FAT_DIRCTX_RESERVED   rs.w 5
+FAT_DIRCTX_SIZE       rs.b 0
+
+    rsreset
+FAT_DIRENT_NAME          rs.b 8
+FAT_DIRENT_EXT           rs.b 3
+FAT_DIRENT_ATTR          rs.b 1
+FAT_DIRENT_NTRES         rs.b 1
+FAT_DIRENT_CRT_TIME_T    rs.b 1
+FAT_DIRENT_CRT_TIME      rs.w 1
+FAT_DIRENT_CRT_DATE      rs.w 1
+FAT_DIRENT_ACC_DATE      rs.w 1
+FAT_DIRENT_CLUS_HI       rs.w 1
+FAT_DIRENT_MOD_TIME      rs.w 1
+FAT_DIRENT_MOD_DATE      rs.w 1
+FAT_DIRENT_CLUS_LO       rs.w 1
+FAT_DIRENT_FILE_SIZE     rs.l 1
+FAT_DIRENT_SIZE          rs.b 0
 
 
+;____________________________________________________________
 ;
-; FAT16CheckPartition:
+; FATInitPartition:
 ;
-; Register partition is a valid FAT16 partition
+; Initialize partition if it is a valid FAT16 partition
 ;
 ; D0: partition number
-; A1: 32-byte struct to fill if successfuly
+; A1: 32-byte partition struct to fill if successful
 ;
 ; Return: D0 = 0: is valid FAT16
 ;         D0 ! 0: is not valid FAT 16
 ;____________________________________________________________
-FATRegisterPartition:
+FATInitPartition:
     movem.l d2-d7/a5,-(sp)
     bsr.s .fatCheckPartitionInt
     movem.l (sp)+,d2-d7/a5
     rts
 .fatCheckPartitionInt:
+    move.l d0,FAT_PART_ID(a1)
     move.l a1,-(sp)
     lea SectorBuffer,a5
     move.l a5,a0
@@ -126,6 +157,90 @@ FATRegisterPartition:
     moveq #1,d0
     rts
 
+;____________________________________________________________
+;
+; FATOpenDir
+;
+; Create a directory context based on a specific dir identifier
+;
+; D0: partition struct as created by FATInitPartition
+; D1: directory identifier or 0 for root directory
+; A0: pointer to target 512 byte sector buffer, must be valid
+;     as long as the context is used
+; A1: pointer to target 32 byte directory context
+;
+; Return: D0 = 0: ok
+;         D0 ! 0: not ok
+;____________________________________________________________
+FATOpenDir:
+    movem.l d2-d7/a5,-(sp)
+    bsr.s .fatOpenDirInt
+    movem.l (sp)+,d2-d7/a5
+    rts
+.fatOpenDirInt:
+    move.l d0,a5    ; The FAT partition context
+    move.l d0,FAT_DIRCTX_FAT_PTR(a1)     
+    move.l a0,FAT_DIRCTX_SECBUF_PTR(a1)
+    tst.l d1
+    bne.s .dirSectorOk  ; TODO Check what d1 is when non-zero !!!
+    move.l FAT_PART_ID(a5),d0
+    move.l FAT_ROOT_START(a5),d1    
+.dirSectorOk:    
+    move.l d1,FAT_DIRCTX_FIRST_SEC(a1)
+    move.l d1,FAT_DIRCTX_CURR_SEC(a1)
+    clr.w FAT_DIRCTX_CURR_ENT(a1)    
+    bsr PMReadSector
+    rts
+;____________________________________________________________
+;
+; FATReadDir
+;
+; Read next dir entry from dir context
+;
+; D0: directory context as created by FATOpenDir
+; A1: pointer to target 32 byte directory entry
+;
+; Return: D0 = 0: ok, no more entries (entry is invalid)
+;         D0 > 0: ok, end 
+;         D0 < 0: not ok
+;____________________________________________________________
+FATReadDir:
+    movem.l d2-d7/a5-a6,-(sp)
+    bsr.s .fatReadDirInt
+    movem.l (sp)+,d2-d7/a5-a6
+    rts
+.fatReadDirInt:
+    move.l d0,a5
+    move.l FAT_DIRCTX_SECBUF_PTR(a5),a6
+    moveq #0,d1
+    move.w FAT_DIRCTX_CURR_ENT(a5),d1
+.checkEntry:    
+    cmp.w #512,d1
+    beq.s .endOfDirListing  ; For now just support 16 entries
+    move.b (a6,d1.l),d0
+    beq.s .endOfDirListing
+    cmp.b #$e5,d0
+    beq.s .findNextEntry
+    cmp.b #$0f,FAT_DIRENT_ATTR(a6,d1.l)
+    beq.s .findNextEntry
+    bra.s .entryOk
+.findNextEntry:
+    add.w #32,d1
+    bra.s .checkEntry
+.entryOk:
+    move.w d1,FAT_DIRCTX_CURR_ENT(a5)
+    add.w #32,FAT_DIRCTX_CURR_ENT(a5)
+    moveq #10,d7     ; Copy file name
+.copyFilename:
+    move.b (a6,d1.l),(a1)+
+    addq.l #1,d1
+    dbra d7,.copyFilename    
+    move.b #0,(a1)+
+    moveq #1,d0
+    rts
+.endOfDirListing;    
+    moveq #0,d0
+    rts
+
     include partman.asm
     include littleendian.asm
-
