@@ -15,30 +15,15 @@ FAT_SIZE       rs.b 0
 
     rsreset
 FAT_DIRCTX_FAT_PTR    rs.l 1
+FAT_DIRCTX_PART_ID    rs.l 1
+; Pointer to 512 byte sector buffer
 FAT_DIRCTX_SECBUF_PTR rs.l 1
 FAT_DIRCTX_FIRST_SEC  rs.l 1
 FAT_DIRCTX_PARENT_SEC rs.l 1
 FAT_DIRCTX_CURR_SEC   rs.l 1
 FAT_DIRCTX_CURR_ENT   rs.w 1
-FAT_DIRCTX_RESERVED   rs.w 5
+FAT_DIRCTX_RESERVED   rs.w 3
 FAT_DIRCTX_SIZE       rs.b 0
-
-    rsreset
-FAT_DIRENT_NAME          rs.b 8
-FAT_DIRENT_EXT           rs.b 3
-FAT_DIRENT_ATTR          rs.b 1
-FAT_DIRENT_NTRES         rs.b 1
-FAT_DIRENT_CRT_TIME_T    rs.b 1
-FAT_DIRENT_CRT_TIME      rs.w 1
-FAT_DIRENT_CRT_DATE      rs.w 1
-FAT_DIRENT_ACC_DATE      rs.w 1
-FAT_DIRENT_CLUS_HI       rs.w 1
-FAT_DIRENT_MOD_TIME      rs.w 1
-FAT_DIRENT_MOD_DATE      rs.w 1
-FAT_DIRENT_CLUS_LO       rs.w 1
-FAT_DIRENT_FILE_SIZE     rs.l 1
-FAT_DIRENT_SIZE          rs.b 0
-
 
 ;____________________________________________________________
 ;
@@ -179,6 +164,7 @@ FATOpenDir:
     rts
 .fatOpenDirInt:
     move.l d0,a5    ; The FAT partition context
+    move.l FAT_PART_ID(a5),FAT_DIRCTX_PART_ID(a1)    
     move.l d0,FAT_DIRCTX_FAT_PTR(a1)     
     move.l a0,FAT_DIRCTX_SECBUF_PTR(a1)
     tst.l d1
@@ -205,37 +191,58 @@ FATOpenDir:
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FATReadDir:
-    movem.l d2-d7/a5-a6,-(sp)
+    movem.l d2-d7/a4-a6,-(sp)
     bsr.s .fatReadDirInt
-    movem.l (sp)+,d2-d7/a5-a6
+    movem.l (sp)+,d2-d7/a4-a6
     rts
 .fatReadDirInt:
     move.l d0,a5
     move.l FAT_DIRCTX_SECBUF_PTR(a5),a6
     moveq #0,d1
-    move.w FAT_DIRCTX_CURR_ENT(a5),d1
+    move.w FAT_DIRCTX_CURR_ENT(a5),d1 
 .checkEntry:    
     cmp.w #512,d1
-    beq.s .endOfDirListing  ; For now just support 16 entries
-    move.b (a6,d1.l),d0
+    bne.s .sectorOk
+    ; Read next sector 
+    move.l FAT_DIRCTX_PART_ID(a5),d0
+    move.l FAT_DIRCTX_CURR_SEC(a5),d1
+    addq.l #1,d1
+    move.l d1,FAT_DIRCTX_CURR_SEC(a5)
+    move.l a6,a0
+    move.l a1,-(sp)
+    bsr PMReadSector
+    move.l (sp)+,a1
+    tst.l d0
+    beq.s .nextSectorOk
+    rts
+.nextSectorOk:
+    clr.w FAT_DIRCTX_CURR_ENT(a5)
+    moveq #0,d1      
+.sectorOk:    
+    move.b (a6,d1.w),d0
     beq.s .endOfDirListing
     cmp.b #$e5,d0
     beq.s .findNextEntry
-    cmp.b #$0f,FAT_DIRENT_ATTR(a6,d1.l)
+    cmp.b #$0f,d0
     beq.s .findNextEntry
+    move.b 11(a6,d1.w),d0
+    btst #2,d0
+    bne.s .findNextEntry
+    btst #3,d0
+    bne.s .findNextEntry
     bra.s .entryOk
 .findNextEntry:
     add.w #32,d1
     bra.s .checkEntry
 .entryOk:
     move.w d1,FAT_DIRCTX_CURR_ENT(a5)
-    add.w #32,FAT_DIRCTX_CURR_ENT(a5)
     moveq #10,d7     ; Copy file name
 .copyFilename:
     move.b (a6,d1.l),(a1)+
     addq.l #1,d1
     dbra d7,.copyFilename    
     move.b #0,(a1)+
+    add.w #32,FAT_DIRCTX_CURR_ENT(a5)
     moveq #1,d0
     rts
 .endOfDirListing;    

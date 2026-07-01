@@ -129,6 +129,7 @@ PMGetPartitionCount:
 .countDone:
     rts    
 
+; Copy Partition structure into memory pointed to by A1
 findPartitionFromIndex:
     cmp.l #PM_PART_LIMIT,d0
     bhs.s .notFound          ; unsigned d0 >= limit

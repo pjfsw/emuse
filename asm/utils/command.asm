@@ -44,7 +44,7 @@ MainLoop:
     jsr PUTC(a6) ; Putc
     bra.s .waitForChar
 .lineBreak:
-    bsr TransferTest
+    ;bsr TransferTest
     bra MainLoop    
 
 PrintANumberInD0:
