@@ -1,6 +1,4 @@
 FILEATTR_DIR     EQU $01
-FILEATTR_RO      EQU $02
-DIRENT_READONLY  EQU $02
 
     rsreset
 DIRENT_NAME      rs.b 8

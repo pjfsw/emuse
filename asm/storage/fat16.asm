@@ -32,7 +32,7 @@ FAT_DIRCTX_SIZE       rs.b 0
 ; Initialize partition if it is a valid FAT16 partition
 ;
 ; D0: partition number
-; A1: 32-byte partition struct to fill if successful
+; A1: 32-byte FAT partition context to fill if successful
 ;
 ; Return: D0 = 0: is valid FAT16
 ;         D0 ! 0: is not valid FAT 16
@@ -148,7 +148,7 @@ FATInitPartition:
 ;
 ; Create a directory context based on a specific dir identifier
 ;
-; D0: partition struct as created by FATInitPartition
+; D0: FAT context as created by FATInitPartition
 ; D1: directory identifier or 0 for root directory
 ; A0: pointer to target 512 byte sector buffer, must be valid
 ;     as long as the context is used
@@ -183,7 +183,7 @@ FATOpenDir:
 ;
 ; Read next dir entry from dir context
 ;
-; D0: directory context as created by FATOpenDir
+; A0: directory context as created by FATOpenDir
 ; A1: pointer to target 32 byte directory entry
 ;
 ; Return: D0 = 0: ok, no more entries (entry is invalid)
@@ -196,7 +196,7 @@ FATReadDir:
     movem.l (sp)+,d2-d7/a4-a6
     rts
 .fatReadDirInt:
-    move.l d0,a5
+    move.l a0,a5
     move.l FAT_DIRCTX_SECBUF_PTR(a5),a6
     moveq #0,d1
     move.w FAT_DIRCTX_CURR_ENT(a5),d1 
@@ -229,12 +229,17 @@ FATReadDir:
     btst #2,d0
     bne.s .findNextEntry
     btst #3,d0
-    bne.s .findNextEntry
-    bra.s .entryOk
+    beq.s .entryOk
 .findNextEntry:
     add.w #32,d1
     bra.s .checkEntry
 .entryOk:
+    moveq #0,d2
+    btst #4,d0
+    beq.s .attrOk
+    or.w #FILEATTR_DIR,d2
+.attrOk:
+    move.b d2,DIRENT_ATTR(a1)
     move.w d1,FAT_DIRCTX_CURR_ENT(a5)
     moveq #10,d7     ; Copy file name
 .copyFilename:
@@ -249,5 +254,6 @@ FATReadDir:
     moveq #0,d0
     rts
 
+    include dirent.i
     include partman.asm
     include littleendian.asm

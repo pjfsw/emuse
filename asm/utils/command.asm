@@ -138,7 +138,7 @@ PrintFat:
     lea DirectoryCtx,a2
     lea DirEntry,a3
 .nextEntry:    
-    move.l a2,d0
+    move.l a2,a0
     move.l a3,a1
     bsr FATReadDir
     cmp.l #0,d0
@@ -148,7 +148,12 @@ PrintFat:
 .dirEntryOk:    
     move.l a3,a1
     jsr PUTS(a6)
-    lea LineBreakMsg,a1
+    tst.b DIRENT_ATTR(a3)
+    beq.s .isFile
+    lea DirTextMsg,a1
+    jsr PUTS(a6)
+.isFile:    
+    lea LineBreakMsg,a1   
     jsr PUTS(a6)
     bra .nextEntry
 .endOfDir:
@@ -230,6 +235,8 @@ PrintSector:
     dbra d7,.nextRow
     rts
 
+DirTextMsg:
+    dc.b " <DIR>",0
 DirectoryOfMsg:
     dc.b "Directory listing of /:",13,10,0
 EndOfDirMsg:
