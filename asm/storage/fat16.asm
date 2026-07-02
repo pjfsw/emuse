@@ -149,7 +149,7 @@ FATInitPartition:
 ; Create a directory context based on a specific dir identifier
 ;
 ; D0: FAT context as created by FATInitPartition
-; D1: directory identifier or 0 for root directory
+; D1: directory first sector (from partition start) or 0 for root directory
 ; A0: pointer to target 512 byte sector buffer, must be valid
 ;     as long as the context is used
 ; A1: pointer to target 32 byte directory context
@@ -169,9 +169,9 @@ FATOpenDir:
     move.l a0,FAT_DIRCTX_SECBUF_PTR(a1)
     tst.l d1
     bne.s .dirSectorOk  ; TODO Check what d1 is when non-zero !!!
-    move.l FAT_PART_ID(a5),d0
     move.l FAT_ROOT_START(a5),d1    
 .dirSectorOk:    
+    move.l FAT_PART_ID(a5),d0
     move.l d1,FAT_DIRCTX_FIRST_SEC(a1)
     move.l d1,FAT_DIRCTX_CURR_SEC(a1)
     clr.w FAT_DIRCTX_CURR_ENT(a1)    
@@ -197,6 +197,12 @@ FATReadDir:
     rts
 .fatReadDirInt:
     move.l a0,a5
+    move.l a1,a4
+    moveq #7,d7
+.fillEntry:
+    clr.l (a1)+
+    dbra d7,.fillEntry
+
     move.l FAT_DIRCTX_SECBUF_PTR(a5),a6
     moveq #0,d1
     move.w FAT_DIRCTX_CURR_ENT(a5),d1 
@@ -209,9 +215,7 @@ FATReadDir:
     addq.l #1,d1
     move.l d1,FAT_DIRCTX_CURR_SEC(a5)
     move.l a6,a0
-    move.l a1,-(sp)
     bsr PMReadSector
-    move.l (sp)+,a1
     tst.l d0
     beq.s .nextSectorOk
     rts
@@ -234,14 +238,27 @@ FATReadDir:
     add.w #32,d1
     bra.s .checkEntry
 .entryOk:
-    moveq #0,d2
     btst #4,d0
     beq.s .attrOk
-    or.w #FILEATTR_DIR,d2
+    move.b #FILEATTR_DIR,DIRENT_ATTR(a4)
 .attrOk:
-    move.b d2,DIRENT_ATTR(a1)
     move.w d1,FAT_DIRCTX_CURR_ENT(a5)
-    moveq #10,d7     ; Copy file name
+    
+    lea 0(a6,d1.w),a6      
+    ; Copy first sector
+    lea 26(a6),a0
+    bsr FATConvClusterToSectorInt
+    move.l d0,DIRENT_SECTOR(a4)
+    
+    ; Now copy file size
+    lea 28(a6),a0
+    jsr ReadLe32
+    move.l d0,DIRENT_FSIZE(a4)    
+    
+    ; Copy file name
+    move.l a4,a1
+    moveq #10,d7     
+    moveq #0,d1
 .copyFilename:
     move.b (a6,d1.l),(a1)+
     addq.l #1,d1
@@ -253,6 +270,18 @@ FATReadDir:
 .endOfDirListing;    
     moveq #0,d0
     rts
+
+    ; Pointer to 16-bit Little endian cluster in A0
+FATConvClusterToSectorInt:
+    jsr ReadLe16    
+    subq.l #2,d0
+    move.l FAT_DIRCTX_FAT_PTR(a5),a0
+    moveq #0,d1
+    move.b FAT_SECT_PER_CLUST(a0),d1
+    mulu d1,d0
+    add.l FAT_DATA_START(a0),d0
+    rts
+
 
     include dirent.i
     include partman.asm

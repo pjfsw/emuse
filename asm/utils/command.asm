@@ -32,6 +32,12 @@ START equ $10000
     bsr PMReadSector
     bsr PrintSector
     bsr PrintFat
+    moveq #0,d1
+    bsr PrintDir
+    move.l #$f98,d1
+    bsr PrintDir
+    move.l #$e98,d1
+    bsr PrintDir
 MainLoop:    
     lea MsgPrompt(pc),a1
     jsr PUTS(a6) ; Puts
@@ -121,11 +127,16 @@ PrintFat:
     bsr FATInitPartition
     tst.l d0
     beq.s .fatOk
-    bra printErrorCode
+    bra printErrorCode    
 .fatOk:        
+    rts
+
+; Directory sector in d1
+PrintDir:
     lea FatData,a2
     move.l a2,d0    ; FAT struct
-    moveq #0,d1     ; Root directory
+    ;moveq #0,d1     ; Root directory
+    ;move.l #$f98,d1
     lea SectorBuffer,a0
     lea DirectoryCtx,a1
     bsr FATOpenDir
@@ -147,19 +158,42 @@ PrintFat:
     bra printErrorCode
 .dirEntryOk:    
     move.l a3,a1
+    bsr PrintEightChars
+    bsr PrintSpace
+    lea 8(a3),a1
     jsr PUTS(a6)
+    bsr PrintSpace
     tst.b DIRENT_ATTR(a3)
     beq.s .isFile
     lea DirTextMsg,a1
     jsr PUTS(a6)
-.isFile:    
+.entryDone:
+    bsr PrintSpace
+    move.l DIRENT_SECTOR(a3),d0
+    jsr PUTHEX32(a6)
     lea LineBreakMsg,a1   
     jsr PUTS(a6)
     bra .nextEntry
+.isFile:    
+    move.l DIRENT_FSIZE(a3),d0
+    jsr PUTHEX32(a6)
+    bra.s .entryDone
 .endOfDir:
-    lea EndOfDirMsg,a1
-    jsr PUTS(a6)
     rts    
+
+PrintSpace:
+    move.b #' ',d0
+    jmp PUTC(a6)
+
+PrintEightChars:
+    moveq #7,d7
+.nextChar:
+    move.b (a1)+,d0
+    move.l a1,-(sp)
+    jsr PUTC(a6)
+    move.l (sp)+,a1
+    dbra d7,.nextChar
+    rts
 
 PrintTextAndNumber:
     move.l d0,-(sp)
@@ -236,11 +270,9 @@ PrintSector:
     rts
 
 DirTextMsg:
-    dc.b " <DIR>",0
+    dc.b "   <DIR>",0
 DirectoryOfMsg:
     dc.b "Directory listing of /:",13,10,0
-EndOfDirMsg:
-    dc.b "123456 bytes free.",13,10,0
 PartitionStartMsg:
     dc.b "Partition start: $",0
 PartitionSizeMsg:
