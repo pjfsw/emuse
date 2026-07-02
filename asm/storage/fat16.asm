@@ -25,6 +25,7 @@ FAT_DIRCTX_CURR_ENT   rs.w 1
 FAT_DIRCTX_RESERVED   rs.w 3
 FAT_DIRCTX_SIZE       rs.b 0
 
+FAT_ERR_INVALID_CLUSTER EQU $81000000
 ;____________________________________________________________
 ;
 ; FATInitPartition:
@@ -149,7 +150,7 @@ FATInitPartition:
 ; Create a directory context based on a specific dir identifier
 ;
 ; D0: FAT context as created by FATInitPartition
-; D1: directory first sector (from partition start) or 0 for root directory
+; D1: directory first cluster or 0 for root directory
 ; A0: pointer to target 512 byte sector buffer, must be valid
 ;     as long as the context is used
 ; A1: pointer to target 32 byte directory context
@@ -168,14 +169,24 @@ FATOpenDir:
     move.l d0,FAT_DIRCTX_FAT_PTR(a1)     
     move.l a0,FAT_DIRCTX_SECBUF_PTR(a1)
     tst.l d1
-    bne.s .dirSectorOk  ; TODO Check what d1 is when non-zero !!!
+    bne.s .isSubDir  ; TODO Check what d1 is when non-zero !!!
     move.l FAT_ROOT_START(a5),d1    
+    bra.s .dirSectorOk
+.isSubDir:    
+    cmp.l #$2,d1
+    blo.s .badCluster
+    cmp.l #$ffff,d1
+    bhi.s .badCluster
+    bsr FATClusterToSectorInt
 .dirSectorOk:    
     move.l FAT_PART_ID(a5),d0
     move.l d1,FAT_DIRCTX_FIRST_SEC(a1)
     move.l d1,FAT_DIRCTX_CURR_SEC(a1)
     clr.w FAT_DIRCTX_CURR_ENT(a1)    
     bsr PMReadSector
+    rts
+.badCluster:
+    move.l #FAT_ERR_INVALID_CLUSTER,d0
     rts
 ;____________________________________________________________
 ;
@@ -247,8 +258,9 @@ FATReadDir:
     lea 0(a6,d1.w),a6      
     ; Copy first sector
     lea 26(a6),a0
-    bsr FATConvClusterToSectorInt
-    move.l d0,DIRENT_SECTOR(a4)
+    jsr ReadLe16
+    and.l #$ffff,d0
+    move.l d0,DIRENT_BLOCK(a4)
     
     ; Now copy file size
     lea 28(a6),a0
@@ -271,17 +283,17 @@ FATReadDir:
     moveq #0,d0
     rts
 
-    ; Pointer to 16-bit Little endian cluster in A0
-FATConvClusterToSectorInt:
-    jsr ReadLe16    
-    subq.l #2,d0
-    move.l FAT_DIRCTX_FAT_PTR(a5),a0
-    moveq #0,d1
-    move.b FAT_SECT_PER_CLUST(a0),d1
-    mulu d1,d0
-    add.l FAT_DATA_START(a0),d0
+    ; Convert 16-bit FAT cluster number in D1 to absolute sector
+    ; Input: Block in D1, FAT context in A5
+    ; Output: Sector in D1
+FATClusterToSectorInt:
+    and.l #$ffff,d1
+    subq.l #2,d1
+    moveq #0,d0
+    move.b FAT_SECT_PER_CLUST(a5),d0
+    mulu d0,d1
+    add.l FAT_DATA_START(a5),d1
     rts
-
 
     include dirent.i
     include partman.asm

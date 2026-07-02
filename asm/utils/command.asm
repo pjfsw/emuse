@@ -34,9 +34,9 @@ START equ $10000
     bsr PrintFat
     moveq #0,d1
     bsr PrintDir
-    move.l #$f98,d1
+    move.l #$1b,d1
     bsr PrintDir
-    move.l #$e98,d1
+    move.l #$1d,d1
     bsr PrintDir
 MainLoop:    
     lea MsgPrompt(pc),a1
@@ -169,7 +169,7 @@ PrintDir:
     jsr PUTS(a6)
 .entryDone:
     bsr PrintSpace
-    move.l DIRENT_SECTOR(a3),d0
+    move.l DIRENT_BLOCK(a3),d0
     jsr PUTHEX32(a6)
     lea LineBreakMsg,a1   
     jsr PUTS(a6)
