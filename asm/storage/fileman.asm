@@ -7,6 +7,7 @@
 
 FM_MAX_DEVICE_COUNT  equ PM_PART_LIMIT
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
+FM_ERR_INVALID_PATH  equ $88020000
 
     rsreset
 FM_DEVICE_NAME  rs.b 4
@@ -97,6 +98,102 @@ FMRegisterDevice:
     rts 
 
 DebugDebug: dc.l 0
+     
+NormalizeChar:
+    cmp.b #32,d0
+    blo.s .invalidChar
+    cmp.b #127,d0
+    bhi.s .invalidChar
+    cmp.b #'.',d0
+    beq.s .invalidChar
+    cmp.b #'\',d0
+    beq.s .invalidChar
+    cmp.b #'/',d0
+    beq.s .invalidChar
+    cmp.b #'a',d0
+    blo.s .okChar
+    cmp.b #'z',d0
+    bhi.s .okChar    
+    sub.w #32,d0
+.okChar:
+    rts
+.invalidChar:
+    moveq #-1,d0
+    rts    
+
+; 
+; A0: Remaining path input
+; A1: Pointer to word-aligned 16 byte buffer where the next path element will be stored
+; Return D0: 0 = OK, !0 = Error
+ExtractNextPathElement:
+    movem.l d7/a2,-(sp)
+    bsr.s .extractNextPathElementInt
+    movem.l (sp)+,d7/a2
+    rts    
+.extractNextPathElementInt:    
+    clr.l (a1)
+    clr.l 4(a1)
+    clr.l 8(a1)
+    clr.l 12(a1)
+    moveq #7,d7    ; Max path element size
+    move.l a1,a2
+.nextBaseChar:
+    move.b (a0)+,d0
+    tst.b d0
+    beq.s .subPathFound
+    cmp.b #'/',d0            
+    beq.s .subPathFound
+    cmp.b #'.',d0
+    beq.s .basePartDone
+    bsr NormalizeChar
+    tst.l d0
+    bmi.s .invalidPath 
+    move.b d0,(a1)+
+    dbra d7,.nextBaseChar
+.invalidPath:    
+    move.b (a0)+,d0
+    tst.b d0
+    beq.s .subPathFound
+    cmp.b #'.',d0
+    beq.s .parseExtChar    
+    move.l #FM_ERR_INVALID_PATH,d0
+    rts
+.basePartDone:
+    move.b #' ',(a1)+
+    dbra d7,.basePartDone
+.parseExtChar:
+    moveq #2,d7
+.nextExtChar:
+    move.b (a0)+,d0
+    tst.b d0
+    beq.s .subPathFound
+    cmp.b #'/',d0            
+    beq.s .subPathFound
+    bsr NormalizeChar
+    tst.l d0
+    bmi.s .invalidPath 
+    move.b d0,(a1)+
+    dbra d7,.nextExtChar
+    move.b (a0)+,d0
+    tst.b d0
+    beq.s .subPathFound
+    cmp.b #'/',d0
+    beq.s .subPathFound
+    move.l #FM_ERR_INVALID_PATH,d0
+    rts
+.subPathFound:
+    move.l a2,a1
+    moveq #10,d7
+.zeroToSpace:
+    move.b (a1)+,d0
+    tst.b d0
+    bne.s .notZero
+    move.b #' ',-1(a1)
+.notZero:    
+    dbra d7,.zeroToSpace
+    moveq #0,d0
+    rts
+
 ;____________________________________________________________
 ;
 ; Open directory for reading
