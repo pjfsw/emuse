@@ -113,18 +113,98 @@ PrintDirEntry:
     beq.s .isFile
     lea DirTextMsg,a1
     jsr PUTS(a6)
-    bra.s .printBlock
+    bra.s .printDate
 .isFile:    
     move.l DIRENT_FSIZE(a3),d0
     bsr PrintDecimalLong
+.printDate:
+    bsr PrintSpace
+    bsr PrintSpace
+    move.w DIRENT_MOD_DATE(a3),d0
+    bsr PrintDate
+    bsr PrintSpace
+    move.w DIRENT_MOD_TIME(a3),d0
+    bsr PrintTime
+
 .printBlock:
     bsr PrintSpace
     bsr PrintSpace
     move.l DIRENT_BLOCK(a3),d0
     jsr PUTHEX32(a6)
+
     lea LineBreakMsg,a1   
     jsr PUTS(a6)
     rts
+PrintDate:
+    move.w DIRENT_MOD_DATE(a3),d2
+
+    rol.w #4,d2
+    rol.w #3,d2
+    move.w d2,d0
+    and.w #127,d0
+    add.w #1980,d0
+    bsr PrintDateWord
+    bsr PrintDash
+
+    rol #4,d2
+    move.w d2,d0
+    and.w #15,d0
+    bsr PrintTwoDigitsDateWord
+    bsr PrintDash
+
+    rol #5,d2
+    move.w d2,d0
+    and.w #31,d0
+    bsr PrintTwoDigitsDateWord
+    rts
+PrintTime:
+    move.w DIRENT_MOD_TIME(a3),d2
+    rol.w #5,d2
+    move.w d2,d0
+    and.w #31,d0
+    bsr PrintTwoDigitsDateWord
+    
+    bsr PrintColon
+    rol.w #6,d2
+    move.w d2,d0
+    and.w #63,d0
+    bsr PrintTwoDigitsDateWord
+
+    ;bsr PrintColon
+    ;rol.w #5,d2
+    ;move.w d2,d0
+    ;and.w #31,d0
+    ;lsr.w #1,d0
+    ;bsr PrintTwoDigitsDateWord
+
+    rts
+PrintTwoDigitsDateWord:
+    lea DecBuffer,a0    
+    bsr PrintU16Decimal
+    move.l a0,d0
+    sub.l #DecBuffer,a0
+    moveq #2,d7
+    sub.l a0,d7
+    bmi.s .print
+.pad:
+    move.b #'0',d0
+    jsr PUTC(a6)
+    dbra d7,.pad
+.print:    
+    lea DecBuffer,a1
+    jmp PUTS(a6)
+
+PrintDateWord:
+    lea DecBuffer,a0
+    bsr PrintU16Decimal
+    lea DecBuffer,a1
+    jmp PUTS(a6)
+PrintDash:
+    move.b #'-',d0
+    jmp PUTC(a6)
+PrintColon:
+    move.b #':',d0
+    jmp PUTC(a6)
 
 PrintDecimalWord:
     lea DecBuffer,a0    

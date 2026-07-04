@@ -262,7 +262,7 @@ FATReadDir:
     moveq #0,d1      
 .sectorOk:    
     move.b (a6,d1.w),d0
-    beq.s .endOfDirListing
+    beq .endOfDirListing
     cmp.b #$e5,d0
     beq.s .findNextEntry
     cmp.b #$0f,d0
@@ -293,6 +293,15 @@ FATReadDir:
     lea 28(a6),a0
     jsr ReadLe32
     move.l d0,DIRENT_FSIZE(a4)    
+
+    ; Copy modify date
+    lea 22(a6),a0
+    jsr ReadLe16
+    move.w d0,DIRENT_MOD_TIME(a4)
+
+    lea 24(a6),a0
+    jsr ReadLe16
+    move.w d0,DIRENT_MOD_DATE(a4)
     
     ; Copy file name
     move.l a4,a1
