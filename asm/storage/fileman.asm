@@ -5,10 +5,12 @@
 ; Abstraction layer containing basic file i/o features
 ;____________________________________________________________
 
+FM_OPCODE_JMP_ABSOLUTE equ $4ef9
 FM_MAX_DEVICE_COUNT  equ PM_PART_LIMIT
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH  equ $88020000
 FM_ERR_PATH_NOT_FOUND equ $88030000
+
 
 ;____________________________________________________________
 ;
@@ -42,7 +44,7 @@ FM_FS_DATA      rs.b FAT_SIZE
 ; Return: D0 = 0: ok
 ;         D0 ! 0: not ok
 ;____________________________________________________________
-FM_OPEN_DIR     rs.l 1
+FM_OPEN_DIR     rs.w 3
 ;____________________________________________________________
 ;
 ; FATReadDir
@@ -56,7 +58,7 @@ FM_OPEN_DIR     rs.l 1
 ;         D0 > 0: ok, end 
 ;         D0 < 0: not ok
 ;____________________________________________________________
-FM_READ_DIR     rs.l 1
+FM_READ_DIR     rs.w 3
 FM_UNPADDED_SIZE rs.b 0
 FM_PADDING      rs.b 64-FM_UNPADDED_SIZE
 FM_SIZE         rs.b 0
@@ -133,8 +135,11 @@ FMRegisterDevice:
     add.b #'0',d0
     move.b d0,2+FM_DEVICE_NAME(a5)
     move.l #0,FM_PM_PART_ID(a5)
-    move.l #FATOpenDir,FM_OPEN_DIR(a5)
-    move.l #FATReadDir,FM_READ_DIR(a5)   
+    move.w #FM_OPCODE_JMP_ABSOLUTE,d0
+    move.w d0,FM_OPEN_DIR(a5)
+    move.l #FATOpenDir,2+FM_OPEN_DIR(a5)
+    move.w d0,FM_READ_DIR(a5)
+    move.l #FATReadDir,2+FM_READ_DIR(a5)   
     moveq #0,d0
     move.l #5,DebugDebug
     rts 
@@ -336,8 +341,7 @@ FMOpenDir:
     move.l a4,a1    ; Use target context directly
     move.l d2,d1    ; Directory to scan
     lea DOSINFO_RBUF(a3),a0            
-    ;jsr FM_OPEN_DIR(a6)
-    jsr FATOpenDir
+    jsr FM_OPEN_DIR(a6)
     tst.l d0
     beq.s .openDirOk
     rts
@@ -357,8 +361,8 @@ FMOpenDir:
 .findNextEntry:
     move.l a4,a0
     lea DOSINFO_DIRENT(a3),a1
-    ;jsr FM_READ_DIR(a6)
-    jsr FATReadDir
+    jsr FM_READ_DIR(a6)
+    ;jsr FATReadDir
     cmp.l #0,d0
     bgt.s .nextEntryOk
     beq.s .pathNotFound
