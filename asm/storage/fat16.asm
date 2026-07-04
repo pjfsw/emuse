@@ -1,6 +1,32 @@
 ;____________________________________________________________
 ;
 ; FAT16 file system
+;
+; struct FatDirEntry {
+;     char     name[8];
+;     char     ext[3];
+;     uint8_t  attr;
+;     uint8_t  ntReserved;
+;     uint8_t  createTimeTenths;
+;     uint16_t createTime;
+;     uint16_t createDate;
+;     uint16_t accessDate;
+;     uint16_t firstClusterHigh;   // FAT32 only
+;     uint16_t modifyTime;
+;     uint16_t modifyDate;
+;     uint16_t firstClusterLow;
+;     uint32_t fileSize;
+; };
+; 
+; 0x01 Read Only
+; 0x02 Hidden
+; 0x04 System
+; 0x08 Volume Label
+; 0x10 Directory
+; 0x20 Archive
+; 0x40 unused
+; 0x80 unused
+; 
 ;____________________________________________________________
     rsreset
 FAT_PART_ID    rs.l 1

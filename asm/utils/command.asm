@@ -15,25 +15,21 @@ TESTSECTOR equ $800000
 
 START equ $10000
     org START
-    move.l $4.w,a6
+    move.l $4.w,a6 
     
+    lea DosLoadingMsg,a1
+    jsr PUTS(a6)
+
     bsr InitStorageDevices    
     tst.l d0
     beq.s .storageOk
     move.l d0,d7
-    move.l DebugDebug,d0
-    bsr printErrorCode
     lea InitStorageErrorMsg(pc),a1
     jsr PUTS(a6)
     move.l d7,d0
-    bsr printErrorCode
+    bsr PrintErrorCode
+    rts
 .storageOk:
-    moveq #0,d1
-    bsr PrintDir
-    move.l #$1b,d1
-    bsr PrintDir
-    move.l #$1d,d1
-    bsr PrintDir
     bsr ClearCommandLine
     lea CommandLine,a5  ; Command line buffer
 MainLoop:    
@@ -85,8 +81,7 @@ ParseCommandLine:
     bsr FMOpenDir
     tst.l d0
     beq.s .nextEntry
-    bsr printErrorCode
-    rts
+    bra PrintCommandError
 .nextEntry:    
     lea DirectoryCtx,a0
     move.l a3,a1
@@ -94,12 +89,18 @@ ParseCommandLine:
     cmp.l #0,d0
     beq.s .endOfDir
     bpl.s .dirEntryOk
-    bra printErrorCode
+    bra PrintCommandError
 .dirEntryOk:    
     bsr PrintDirEntry
     bra.s .nextEntry
 .endOfDir:
     rts
+PrintCommandError:
+    move.l d0,d7
+    lea CommandError,a1
+    jsr PUTS(a6)
+    move.l d7,d0
+    bra PrintErrorCode
 
 PrintDirEntry:
     move.l a3,a1
@@ -115,8 +116,9 @@ PrintDirEntry:
     bra.s .printBlock
 .isFile:    
     move.l DIRENT_FSIZE(a3),d0
-    jsr PUTHEX32(a6)
+    bsr PrintDecimalLong
 .printBlock:
+    bsr PrintSpace
     bsr PrintSpace
     move.l DIRENT_BLOCK(a3),d0
     jsr PUTHEX32(a6)
@@ -124,7 +126,24 @@ PrintDirEntry:
     jsr PUTS(a6)
     rts
 
+PrintDecimalWord:
+    lea DecBuffer,a0    
+    bsr PrintU16Decimal
+    lea DecBuffer,a1
+    jmp PUTS(a6)
 
+PrintDecimalLong:
+    lea DecBuffer,a0    
+    bsr PrintU32Decimal
+    move.l a0,d0
+    sub.l #DecBuffer,a0
+    moveq #11,d7
+    sub.l a0,d7
+.pad:
+    bsr PrintSpace
+    dbra d7,.pad
+    lea DecBuffer,a1
+    jmp PUTS(a6)
 
 ClearCommandLine:
     moveq #MAX_CMDLINE_LENGTH/4-1,d7
@@ -136,7 +155,7 @@ ClearCommandLine:
 
     rts
 
-printErrorCode:
+PrintErrorCode:
     jsr PUTHEX32(a6)
     lea LineBreakMsg(pc),a1
     jmp PUTS(a6)
@@ -157,57 +176,6 @@ InitStorageDevices:
     bsr FMRegisterDevice
     rts
     
-; Directory sector in d1
-PrintDir:
-    lea FMDeviceList,a0
-    lea FM_FS_DATA(a0),a0
-    move.l a0,d0    ; FAT struct
-    ;moveq #0,d1     ; Root directory
-    ;move.l #$f98,d1    
-    lea SectorBuffer,a0
-    lea DirectoryCtx,a1
-    bsr FATOpenDir
-    tst.l d0
-    beq.s .dirCtxOk
-    bra printErrorCode
-.dirCtxOk:
-    lea DirectoryOfMsg,a1
-    jsr PUTS(a6)
-    lea DirectoryCtx,a2
-    lea DirEntry,a3
-.nextEntry:    
-    move.l a2,a0
-    move.l a3,a1
-    bsr FATReadDir
-    cmp.l #0,d0
-    beq.s .endOfDir
-    bpl.s .dirEntryOk
-    bra printErrorCode
-.dirEntryOk:    
-    move.l a3,a1
-    bsr PrintEightChars
-    bsr PrintSpace
-    lea 8(a3),a1
-    jsr PUTS(a6)
-    bsr PrintSpace
-    tst.b DIRENT_ATTR(a3)
-    beq.s .isFile
-    lea DirTextMsg,a1
-    jsr PUTS(a6)
-.entryDone:
-    bsr PrintSpace
-    move.l DIRENT_BLOCK(a3),d0
-    jsr PUTHEX32(a6)
-    lea LineBreakMsg,a1   
-    jsr PUTS(a6)
-    bra .nextEntry
-.isFile:    
-    move.l DIRENT_FSIZE(a3),d0
-    jsr PUTHEX32(a6)
-    bra.s .entryDone
-.endOfDir:
-    rts    
-
 PrintSpace:
     move.b #' ',d0
     jmp PUTC(a6)
@@ -230,16 +198,14 @@ PrintTextAndNumber:
     lea LineBreakMsg(pc),a1
     jmp PUTS(a6)
 
+DosLoadingMsg:
+    dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 DirTextMsg:
-    dc.b "   <DIR>",0
-DirectoryOfMsg:
-    dc.b "Directory listing of /:",13,10,0
-PartitionStartMsg:
-    dc.b "Partition start: $",0
-PartitionSizeMsg:
-    dc.b "Partition size:  $",0
+    dc.b "<DIR>      ",0
+CommandError:
+    dc.b 13,10,"Command return error:",0
 InitStorageErrorMsg:
-    dc.b 13,10,"Boot device initialization error: ",0
+    dc.b 13,10,"Failed to initialize boot device: ",0
 PathErrorMsg:
     dc.b "Invalid path",0
 LineBreakMsg:
@@ -257,9 +223,10 @@ MmcStorageDevice:
     include partman.asm
     include fat16.asm
     include fileman.asm
+    include decimal.asm
 
-PathOut:
-    blk.b 16,0
+DecBuffer:
+    dc.b 11,0
 
 SectorBuffer EQU SYSTEM_BSS_BASE+4
 CommandLine  EQU *
