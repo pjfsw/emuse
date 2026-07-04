@@ -9,18 +9,13 @@
 ;
 ; D0-D1/A0-A1 cannot be guaranteed to be preserved on after return.
 ;
-; Accessed with a 32 byte storage struct
-; 
-; uint32_t ID       - Identifier of the device including device number
-; uint32_t INIT     - Init function. Takes the ID as input in D0 and returns result in D0.
-; uint32_t 
 ;____________________________________________________________
 
     rsreset
-SD_ID       rs.l 1
+SD_ID       rs.w 1
 SD_READ     rs.l 1
 SD_WRITE    rs.l 1
-SD_RESERVED rs.l 5
+SD_RESERVED rs.w 11
 SD_SIZE     rs.b 0
 
 SD_SIZE_SHIFT       equ 5   ; 32 bytes
@@ -64,7 +59,7 @@ SDRegisterDevice:
     moveq #1,d0
     moveq #SD_DEVICE_LIMIT-1,d7
 .checkFreeSlot:
-    tst.l SD_ID(a1)
+    tst.w SD_ID(a1)
     beq.s .foundSlot
     addq.l #1,d0
     lea SD_SIZE(a1),a1
@@ -83,7 +78,7 @@ SDRegisterDevice:
 ;
 ; Find storage device by storage id
 ;
-; D0: 4 byte storage id ie. "mmc0"
+; D0: 2 byte storage id ie. "SD"
 ; Return: D0 > 0: device handle, D0 < 0: device not found
 ;____________________________________________________________
 SDFindDevice:
@@ -96,7 +91,7 @@ SDFindDevice:
     moveq #SD_DEVICE_LIMIT-1,d7
     moveq.l #1,d1
 .nextDevice:
-    cmp.l SD_ID(a1),d0
+    cmp.w SD_ID(a1),d0
     beq.s .deviceFound
     addq.l #1,d1
     lea SD_SIZE(a1),a1
@@ -129,7 +124,7 @@ SDDeviceNumberToStructInA1:
 ;
 ; Read a sector from the device
 ;
-; D0: Device handle (as returned by SDFindDevice)
+; D0: Device number
 ; D1: Sector number
 ; A0: Pointer to 512 byte sector buffer
 ;

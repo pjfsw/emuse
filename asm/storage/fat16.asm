@@ -26,6 +26,7 @@ FAT_DIRCTX_RESERVED   rs.w 3
 FAT_DIRCTX_SIZE       rs.b 0
 
 FAT_ERR_INVALID_CLUSTER EQU $81000000
+
 ;____________________________________________________________
 ;
 ; FATInitPartition:

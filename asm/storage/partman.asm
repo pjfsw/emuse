@@ -22,6 +22,7 @@ PM_PART_LIMIT       equ 4
 PM_ERR_DEVICE_LIST_FULL equ $80100000
 PM_ERR_DEVICE_NOT_FOUND equ $80200000
 PM_ERR_PARTITION_NOT_FOUND equ $80300000
+PM_ERR_INVALID_MBR      equ $80400000
 PM_ERR_DEVICE_IO_ERROR  equ $80f00000
 
 PMInit:
@@ -68,7 +69,7 @@ PMRegisterDevice:
     lea SectorBuffer,a1
     cmp.w #$55aa,$1fe(a1)    ; Sanity check
     beq.s .isValidMbr
-    moveq #0,d0    
+    move.l #PM_ERR_INVALID_MBR,d0    
     rts    
 .isValidMbr:
     moveq #3,d7
