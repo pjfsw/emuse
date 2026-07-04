@@ -254,13 +254,25 @@ PrintFilename:
 ; A0 - an 8.3 formatted filename
 ; A1 - another 8.3 formatted filename
 ;____________________________________________________________
-
 CompareFilenames:
     movem.l d7/a0-a6,-(sp)
     bsr.s .compareFileNamesInt
     movem.l (sp)+,d7/a0-a6
     rts
  .compareFileNamesInt:    
+    ;bsr PrintTheFilenames
+    moveq #10,d7
+.compareFilenameChar:
+    move.b (a1)+,d0
+    cmp.b (a0)+,d0
+    bne.s .noMatch
+    dbra d7,.compareFilenameChar
+    moveq #0,d0    
+    rts
+.noMatch:
+    moveq #-1,d0
+    rts
+PrintTheFilenames:
     move.l a1,a2
     move.l a0,a3
     
@@ -284,19 +296,8 @@ CompareFilenames:
     ; Compare filenames
     move.l a2,a1
     move.l a3,a0
-    moveq #10,d7
-.compareFilenameChar:
-    move.b (a1)+,d0
-    cmp.b (a0)+,d0
-    bne.s .noMatch
-    dbra d7,.compareFilenameChar
-    move.b #'!',d0
-    jsr PUTC(a6)
-    moveq #0,d0    
     rts
-.noMatch:
-    moveq #-1,d0
-    rts
+
 .st1:    
     dc.b 13,10,"A0:",0
 .st2:    
@@ -367,10 +368,6 @@ FMOpenDir:
     move.l #FM_ERR_PATH_NOT_FOUND,d0
     rts
 .nextEntryOk:
-    ;lea DOSINFO_PATHENT(a3),a1
-    ;move.l $4.w,a6
-    ;jsr PUTS(a6)
-    ;rts
     lea DOSINFO_DIRENT(a3),a0
     move.b DIRENT_ATTR(a0),d0
     cmp.b #FILEATTR_DIR,d0
@@ -384,6 +381,21 @@ FMOpenDir:
     lea DOSINFO_DIRENT(a3),a0
     move.l DIRENT_BLOCK(a0),d2  ; New directory
     bra .readCurrentDir
+
+;____________________________________________________________
+;
+; Read next directory entry
+;
+; A0: directory context as created by FMOpenDir
+; A1: pointer to target 32 byte directory entry
+;
+; Return: D0 = 0: ok, no more entries (entry is invalid)
+;         D0 > 0: ok, end 
+;         D0 < 0: not ok
+;____________________________________________________________
+FMReadDir:
+    jmp FATReadDir
+
 
     include fat16.asm
     include partman.asm

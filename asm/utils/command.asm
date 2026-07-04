@@ -79,44 +79,51 @@ MainLoop:
     bra .waitForChar
 
 ParseCommandLine:
-    lea LineBreakMsg,a1
-    jsr PUTS(a6)
-
+    lea DirEntry,a3
     lea DirectoryCtx,a0
-    lea CommandLine,a1
+    lea CommandLine,a1    
     bsr FMOpenDir
+    tst.l d0
+    beq.s .nextEntry
     bsr printErrorCode
     rts
-
-ParseCommandLineOld:
-    lea LineBreakMsg,a1
-    jsr PUTS(a6)
-    move.l a5,a0
-.nextPath:
-    move.b (a0),d0
-    bne.s .notDone
+.nextEntry:    
+    lea DirectoryCtx,a0
+    move.l a3,a1
+    bsr FMReadDir
+    cmp.l #0,d0
+    beq.s .endOfDir
+    bpl.s .dirEntryOk
+    bra printErrorCode
+.dirEntryOk:    
+    bsr PrintDirEntry
+    bra.s .nextEntry
+.endOfDir:
     rts
-.notDone:
-    lea PathOut,a1
-    bsr ExtractNextPathElement
-    tst.l d0
-    bne.s .pathError
-    movem.l a0-a1,-(sp)
-    move.b #'"',d0
-    jsr PUTC(a6)
-    lea PathOut,a1
+
+PrintDirEntry:
+    move.l a3,a1
+    bsr PrintEightChars
+    bsr PrintSpace
+    lea 8(a3),a1
     jsr PUTS(a6)
-    move.b #'"',d0
-    jsr PUTC(a6)
-    lea LineBreakMsg,a1
+    bsr PrintSpace
+    tst.b DIRENT_ATTR(a3)
+    beq.s .isFile
+    lea DirTextMsg,a1
     jsr PUTS(a6)
-    movem.l (sp)+,a0-a1
-    bra.s .nextPath
-.pathError:
-    lea PathErrorMsg,a1
+    bra.s .printBlock
+.isFile:    
+    move.l DIRENT_FSIZE(a3),d0
+    jsr PUTHEX32(a6)
+.printBlock:
+    bsr PrintSpace
+    move.l DIRENT_BLOCK(a3),d0
+    jsr PUTHEX32(a6)
+    lea LineBreakMsg,a1   
     jsr PUTS(a6)
-    lea LineBreakMsg,a1
-    jmp PUTS(a6)
+    rts
+
 
 
 ClearCommandLine:
