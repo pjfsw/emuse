@@ -8,12 +8,54 @@
 FM_MAX_DEVICE_COUNT  equ PM_PART_LIMIT
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH  equ $88020000
+FM_ERR_PATH_NOT_FOUND equ $88030000
 
+;____________________________________________________________
+;
+; DOSLibScratch
+;____________________________________________________________
+    rsreset
+DOSINFO_DIRENT  rs.b 32
+DOSINFO_PATHENT rs.b 16
+DOSINFO_RBUF    rs.b 512
+
+;____________________________________________________________
+;
+; FMDeviceList
+;____________________________________________________________
     rsreset
 FM_DEVICE_NAME  rs.b 4
 FM_PM_PART_ID   rs.l 1
 FM_FS_DATA      rs.b FAT_SIZE
+;____________________________________________________________
+;
+; FATOpenDir
+;
+; Create a directory context based on a specific dir identifier
+;
+; D0: FAT context as created by FATInitPartition
+; D1: directory first cluster or 0 for root directory
+; A0: pointer to target 512 byte sector buffer, must be valid
+;     as long as the context is used
+; A1: pointer to target 32 byte directory context
+;
+; Return: D0 = 0: ok
+;         D0 ! 0: not ok
+;____________________________________________________________
 FM_OPEN_DIR     rs.l 1
+;____________________________________________________________
+;
+; FATReadDir
+;
+; Read next dir entry from dir context
+;
+; A0: directory context as created by FATOpenDir
+; A1: pointer to target 32 byte directory entry
+;
+; Return: D0 = 0: ok, no more entries (entry is invalid)
+;         D0 > 0: ok, end 
+;         D0 < 0: not ok
+;____________________________________________________________
 FM_READ_DIR     rs.l 1
 FM_UNPADDED_SIZE rs.b 0
 FM_PADDING      rs.b 64-FM_UNPADDED_SIZE
@@ -194,6 +236,73 @@ ExtractNextPathElement:
     moveq #0,d0
     rts
 
+PrintFilename:
+    movem.l d7/a1,-(sp)
+    moveq #10,d7
+.nextChar:
+    move.b (a1)+,d0
+    cmp.b #31,d0
+    bhi.s .ok
+    move.b #'X',d0
+.ok:
+    jsr PUTC(a6)
+    dbra d7,.nextChar
+    movem.l (sp)+,d7/a1
+    rts
+;____________________________________________________________
+;
+; A0 - an 8.3 formatted filename
+; A1 - another 8.3 formatted filename
+;____________________________________________________________
+
+CompareFilenames:
+    movem.l d7/a0-a6,-(sp)
+    bsr.s .compareFileNamesInt
+    movem.l (sp)+,d7/a0-a6
+    rts
+ .compareFileNamesInt:    
+    move.l a1,a2
+    move.l a0,a3
+    
+    move.l $4.w,a6
+    move.b #'"',d0
+    jsr PUTC(a6)
+    lea .st1,a1
+    jsr PUTS(a6)
+    move.l a3,a1
+    bsr PrintFilename
+    move.b #'"',d0
+    jsr PUTC(a6)
+    lea .st2,a1
+    jsr PUTS(a6)
+    move.b #'"',d0
+    jsr PUTC(a6)
+    move.l a2,a1
+    bsr PrintFilename
+    move.b #'"',d0
+    jsr PUTC(a6)
+    ; Compare filenames
+    move.l a2,a1
+    move.l a3,a0
+    moveq #10,d7
+.compareFilenameChar:
+    move.b (a1)+,d0
+    cmp.b (a0)+,d0
+    bne.s .noMatch
+    dbra d7,.compareFilenameChar
+    move.b #'!',d0
+    jsr PUTC(a6)
+    moveq #0,d0    
+    rts
+.noMatch:
+    moveq #-1,d0
+    rts
+.st1:    
+    dc.b 13,10,"A0:",0
+.st2:    
+    dc.b "A1:",0
+    even
+
 ;____________________________________________________________
 ;
 ; Open directory for reading
@@ -204,10 +313,77 @@ ExtractNextPathElement:
 ; D0: 0 on success, < 0 on error
 ;____________________________________________________________
 FMOpenDir:
-    ; For current path element
-    ;   Find it in dir
-    ;     If not found or file, exit error
-    ;     If dir, set current path element
+    movem.l d2/d7/a3-a6,-(sp)
+    bsr.s .fmOpenDirInt
+    movem.l (sp)+,d2/d7/a3-a6
+    rts    
+.fmOpenDirInt:  
+    lea DOSLibScratch,a3   ; Temporary variables for process - TODO fix this dynamically
+    move.l a0,a4    ; Target context
+    move.l a1,a5    ; Path
+    lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
+    moveq #0,d2     ; Current directory, for now always root
+    move.b (a5),d0
+    cmp.b #'/',d0
+    bne.s .noLeadingSlash
+    lea 1(a5),a5
+.noLeadingSlash:
+    ; TODO Get current directory
+.readCurrentDir:
+    lea FM_FS_DATA(a6),a0
+    move.l a0,d0
+    move.l a4,a1    ; Use target context directly
+    move.l d2,d1    ; Directory to scan
+    lea DOSINFO_RBUF(a3),a0            
+    ;jsr FM_OPEN_DIR(a6)
+    jsr FATOpenDir
+    tst.l d0
+    beq.s .openDirOk
+    rts
+.openDirOk:
+    tst.b (a5)
+    bne.s .openNextPath
+    rts ; ALL DONE
+.openNextPath:      
+    move.l a5,a0
+    lea DOSINFO_PATHENT(a3),a1
+    bsr ExtractNextPathElement
+    tst.l d0
+    beq.s .scanDirectory
+    rts
+.scanDirectory:
+    move.l a0,a5
+.findNextEntry:
+    move.l a4,a0
+    lea DOSINFO_DIRENT(a3),a1
+    ;jsr FM_READ_DIR(a6)
+    jsr FATReadDir
+    cmp.l #0,d0
+    bgt.s .nextEntryOk
+    beq.s .pathNotFound
+    ; Some other error
+    rts
+.pathNotFound:
+    move.l #FM_ERR_PATH_NOT_FOUND,d0
+    rts
+.nextEntryOk:
+    ;lea DOSINFO_PATHENT(a3),a1
+    ;move.l $4.w,a6
+    ;jsr PUTS(a6)
+    ;rts
+    lea DOSINFO_DIRENT(a3),a0
+    move.b DIRENT_ATTR(a0),d0
+    cmp.b #FILEATTR_DIR,d0
+    bne.s .findNextEntry
+
+    lea DOSINFO_PATHENT(a3),a1
+    bsr CompareFilenames
+    tst.l d0
+    bne.s .findNextEntry
+
+    lea DOSINFO_DIRENT(a3),a0
+    move.l DIRENT_BLOCK(a0),d2  ; New directory
+    bra .readCurrentDir
 
     include fat16.asm
     include partman.asm

@@ -60,8 +60,8 @@ MainLoop:
 .lineBreak:
     lea LineBreakMsg,a1
     jsr PUTS(a6)
-    lea CommandLine,a1
-    jsr PUTS(a6)    
+    ;lea CommandLine,a1
+    ;jsr PUTS(a6)    
     bsr ParseCommandLine
     bsr ClearCommandLine
     bra MainLoop    
@@ -79,6 +79,16 @@ MainLoop:
     bra .waitForChar
 
 ParseCommandLine:
+    lea LineBreakMsg,a1
+    jsr PUTS(a6)
+
+    lea DirectoryCtx,a0
+    lea CommandLine,a1
+    bsr FMOpenDir
+    bsr printErrorCode
+    rts
+
+ParseCommandLineOld:
     lea LineBreakMsg,a1
     jsr PUTS(a6)
     move.l a5,a0
@@ -254,3 +264,4 @@ TestPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU TestPartitionInfo+32
 DirEntry     EQU DirectoryCtx+32
 FMDeviceList EQU DirEntry+32
+DOSLibScratch EQU FMDeviceList+256
