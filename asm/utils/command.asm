@@ -78,10 +78,17 @@ ParseCommandLine:
     lea DirEntry,a3
     lea DirectoryCtx,a0
     lea CommandLine,a1    
-    bsr FMOpenDir
+    bsr FMCreateContext
     tst.l d0
-    beq.s .nextEntry
+    beq.s .resolveOk
     bra PrintCommandError
+.resolveOk:
+    lea DirectoryCtx,a0
+    btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
+    bne.s .isDir
+    lea NotDirectoryMsg,a1
+    jmp PUTS(a6)
+.isDir:
 .nextEntry:    
     lea DirectoryCtx,a0
     move.l a3,a1
@@ -282,6 +289,8 @@ DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 DirTextMsg:
     dc.b "<DIR>      ",0
+NotDirectoryMsg:
+    dc.b "Not a directory",0    
 CommandError:
     dc.b 13,10,"Command return error:",0
 InitStorageErrorMsg:

@@ -1,5 +1,5 @@
-FILEATTR_DIR     EQU $01
-
+PATTR_DIR_BIT EQU $00
+PATTR_DIR     EQU (1<<PATTR_DIR_BIT)
     rsreset
 DIRENT_NAME      rs.b 8
 DIRENT_EXT       rs.b 3
@@ -24,5 +24,6 @@ PCTX_FIRST_SEC  rs.l 1
 PCTX_PARENT_SEC rs.l 1
 PCTX_NEXT_SEC   rs.l 1
 PCTX_CURR_ENT   rs.w 1
-PCTX_RESERVED   rs.w 3
+PCTX_ATTR       rs.b 1
+PCTX_RESERVED   rs.b 5
 PCTX_SIZEOF     rs.b 0

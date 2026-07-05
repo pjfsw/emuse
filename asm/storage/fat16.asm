@@ -268,7 +268,7 @@ FATReadDir:
 .entryOk:
     btst #4,d0
     beq.s .attrOk
-    move.b #FILEATTR_DIR,DIRENT_ATTR(a4)
+    move.b #PATTR_DIR,DIRENT_ATTR(a4)
 .attrOk:
     move.w d1,PCTX_CURR_ENT(a5)
     

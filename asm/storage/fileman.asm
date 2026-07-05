@@ -311,14 +311,14 @@ PrintTheFilenames:
 
 ;____________________________________________________________
 ;
-; Open directory for reading
+; Create context based on path name
 ;
-; A0: Pointer to target directory context
+; A0: Pointer to target path context
 ; A1: Pointer to path (zero-terminated)
 ;
 ; D0: 0 on success, < 0 on error
 ;____________________________________________________________
-FMOpenDir:
+FMCreateContext:
     movem.l d2/d7/a3-a6,-(sp)
     bsr.s .fmOpenDirInt
     movem.l (sp)+,d2/d7/a3-a6
@@ -328,6 +328,7 @@ FMOpenDir:
     move.l a0,a4    ; Target context
     move.l a1,a5    ; Path
     lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
+    move.b #PATTR_DIR,PCTX_ATTR(a4)
     moveq #0,d2     ; Current directory, for now always root
     move.b (a5),d0
     cmp.b #'/',d0
@@ -373,9 +374,9 @@ FMOpenDir:
     rts
 .nextEntryOk:
     lea DOSINFO_DIRENT(a3),a0
-    move.b DIRENT_ATTR(a0),d0
-    cmp.b #FILEATTR_DIR,d0
-    bne.s .findNextEntry
+    move.b DIRENT_ATTR(a0),PCTX_ATTR(a4)
+    ;cmp.b #PATTR_DIR,d0
+    ;bne.s .findNextEntry
 
     lea DOSINFO_PATHENT(a3),a1
     bsr CompareFilenames
