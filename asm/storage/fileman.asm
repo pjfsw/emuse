@@ -10,7 +10,7 @@ FM_MAX_DEVICE_COUNT  equ PM_PART_LIMIT
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH  equ $88020000
 FM_ERR_PATH_NOT_FOUND equ $88030000
-
+FM_ERR_NOT_A_DIRECTORY equ $88040000
 
 ;____________________________________________________________
 ;
@@ -151,8 +151,8 @@ NormalizeChar:
     blo.s .invalidChar
     cmp.b #127,d0
     bhi.s .invalidChar
-    cmp.b #'.',d0
-    beq.s .invalidChar
+;    cmp.b #'.',d0
+;    beq.s .invalidChar
     cmp.b #'\',d0
     beq.s .invalidChar
     cmp.b #'/',d0
@@ -182,8 +182,33 @@ ExtractNextPathElement:
     clr.l 4(a1)
     clr.l 8(a1)
     clr.l 12(a1)
-    moveq #7,d7    ; Max path element size
     move.l a1,a2
+
+    ; Special case for "." and ".."
+    cmp.b #'.',(a0)
+    bne.s .normalCase
+    cmp.b #'/',1(a0)
+    beq.s .singleDot
+    tst.b 1(a0)
+    beq.s .singleDot
+    cmp.b #'.',1(a0)
+    bne.s .normalCase
+    cmp.b #'/',2(a0)
+    beq.s .doubleDot
+    tst.b 2(a0)
+    beq.s .doubleDot
+    bra.s .normalCase
+.singleDot:
+    move.b (a0)+,(a1)+
+    lea 1(a0),a0
+    bra .subPathFound    
+.doubleDot:
+    move.b (a0)+,(a1)+
+    move.b (a0)+,(a1)+
+    lea 1(a0),a0
+    bra .subPathFound
+.normalCase:    
+    moveq #7,d7    ; Max path element size
 .nextBaseChar:
     move.b (a0)+,d0
     tst.b d0
@@ -197,12 +222,12 @@ ExtractNextPathElement:
     bmi.s .invalidPath 
     move.b d0,(a1)+
     dbra d7,.nextBaseChar
-.invalidPath:    
     move.b (a0)+,d0
     tst.b d0
     beq.s .subPathFound
     cmp.b #'.',d0
     beq.s .parseExtChar    
+.invalidPath:    
     move.l #FM_ERR_INVALID_PATH,d0
     rts
 .basePartDone:
@@ -344,9 +369,9 @@ FMCreateContext:
     lea DOSINFO_RBUF(a3),a0            
     jsr FM_CREATE_PATH_CTX(a6)
     tst.l d0
-    beq.s .openDirOk
+    beq.s .createPathCtxOk
     rts
-.openDirOk:
+.createPathCtxOk:
     tst.b (a5)
     bne.s .openNextPath
     rts ; ALL DONE
@@ -359,6 +384,14 @@ FMCreateContext:
     rts
 .scanDirectory:
     move.l a0,a5
+    tst.l d2    ; Root directory ?
+    bne.s .scanNormally
+    lea DOSINFO_PATHENT(a3),a1
+    cmp.b #'.',(a1)
+    bne.s .scanNormally
+    cmp.b #' ',1(a1)
+    beq.s .createPathCtxOk
+.scanNormally:    
 .findNextEntry:
     move.l a4,a0
     lea DOSINFO_DIRENT(a3),a1
@@ -375,8 +408,6 @@ FMCreateContext:
 .nextEntryOk:
     lea DOSINFO_DIRENT(a3),a0
     move.b DIRENT_ATTR(a0),PCTX_ATTR(a4)
-    ;cmp.b #PATTR_DIR,d0
-    ;bne.s .findNextEntry
 
     lea DOSINFO_PATHENT(a3),a1
     bsr CompareFilenames
@@ -399,8 +430,12 @@ FMCreateContext:
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FMReadDir:
+    btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
+    beq.s .notDirectory
     jmp FATReadDir
-
+.notDirectory:
+    move.l #FM_ERR_NOT_A_DIRECTORY,d0
+    rts
 
     include fat16.asm
     include partman.asm
