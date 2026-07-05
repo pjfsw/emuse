@@ -129,18 +129,6 @@ MMCReadByteFastInt:
     MmcReadBit
     MmcReadBit
     MmcReadBit          ; 256 cycles per byte
-    ;movem.l d0-d7/a0-a6,-(sp)
-    ;jsr PUTHEX8(a4)
-    ;movem.l (sp)+,d0-d7/a0-a6
-    rts
-
-
-MMCDummyClocksInt:    
-    ; Send dummy clocks to initialize MMC
-    moveq #9,d7
-.sendDummyClocks:
-    bsr MMCReadByteInt
-    dbra d7,.sendDummyClocks
     rts
 
 MMCInit:
@@ -153,7 +141,7 @@ MMCInitInt:
     move.l $4.w,a4
     MmcDeselect    
     MmcMosiClockA5MisoA6
-    bsr MMCDummyClocksInt
+    bsr.s .sendDummyClocksInt
     moveq #9,d7
 .cmd0Loop:
     bsr MMCSendCmd0
@@ -196,6 +184,13 @@ MMCInitInt:
     rts
 .initDone:
     moveq #0,d0
+    rts
+.sendDummyClocksInt:    
+    ; Send dummy clocks to initialize MMC
+    moveq #9,d7
+.sendDummyClocks:
+    bsr MMCReadByteInt
+    dbra d7,.sendDummyClocks
     rts
 
 NoArg:
@@ -295,7 +290,7 @@ Cmd17:
 ;____________________________________________________________
 MMCWriteSector:
     SaveRegisters
-    bsr .writeSectorInt
+    bsr.s .writeSectorInt
     RestoreRegisters
     MmcDeselect
     rts
@@ -376,15 +371,14 @@ MMCSendCommandInt:
     bsr MMCReadByteInt
     cmp.b #$ff,d0
     bne.s .commandComplete
-    bsr.s ShortDelay
+    bsr.s .shortDelay
     dbra d7,.waitResponse
     move.w #MMC_ERR_RESP_TIMEOUT,d0
     rts
 .commandComplete:
     and.l #$ff,d0
     rts ; Response in D0
-
-ShortDelay:
+.shortDelay:
     move.l d7,-(sp)
     move.w #255,d7
 .loop:

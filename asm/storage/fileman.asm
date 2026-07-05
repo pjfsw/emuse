@@ -7,11 +7,12 @@
 
 FM_OPCODE_JMP_ABSOLUTE equ $4ef9
 FM_MAX_DEVICE_COUNT  equ PM_PART_LIMIT
+
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
-FM_ERR_INVALID_PATH  equ $88020000
-FM_ERR_PATH_NOT_FOUND equ $88030000
-FM_ERR_NOT_A_DIRECTORY equ $88040000
-FM_ERR_NOT_A_FILE equ $88050000
+FM_ERR_INVALID_PATH        equ $88020000
+FM_ERR_PATH_NOT_FOUND      equ $88030000
+FM_ERR_NOT_A_DIRECTORY     equ $88040000
+FM_ERR_NOT_A_FILE          equ $88050000
 
 ;____________________________________________________________
 ;
@@ -88,7 +89,7 @@ FM_SIZE         rs.b 0
 ;____________________________________________________________
 FMInit:
     move.l d7,-(sp)
-    bsr .fmInitInt
+    bsr.s .fmInitInt
     move.l (sp)+,d7
     rts
 .fmInitInt:
@@ -110,7 +111,7 @@ FMInit:
 ;____________________________________________________________
 FMRegisterDevice:       
     movem.l d5-d7/a5-a6,-(sp)
-    bsr .fmRegisterDeviceInt
+    bsr.s .fmRegisterDeviceInt
     movem.l (sp)+,d5-d7/a5-a6
     rts
 .fmRegisterDeviceInt:    

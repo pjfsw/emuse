@@ -27,6 +27,11 @@ SD_ERR_DEVICE_NOT_FOUND equ $80020000
 SD_ERR_DEVICE_IO_ERROR  equ $800f0000
 
 
+;____________________________________________________________
+; SDInit
+;
+; Initialize Storage device module
+;____________________________________________________________
 SDInit:
     move.l d7,-(sp)
     bsr.s .sdInitInt
@@ -35,9 +40,8 @@ SDInit:
 .sdInitInt:    
     lea SDDeviceList,a1
     moveq #SD_DEVICE_LIST_SIZE/4-1,d7
-    moveq #0,d0
 .loop:    
-    move.l d0,(a1)+
+    clr.l (a1)+
     dbra d7,.loop
     rts
 
@@ -102,6 +106,13 @@ SDFindDevice:
     move.l d1,d0
     rts    
 
+;____________________________________________________________
+;
+; SDDeviceNumberToStructInA1
+; 
+; D0 : Device number
+; Returns address to device struct in A1 (or 0 if fail)
+;____________________________________________________________
 SDDeviceNumberToStructInA1:
     subq.l #1,d0
     tst.l d0
@@ -118,7 +129,6 @@ SDDeviceNumberToStructInA1:
     move.l #0,a1
     rts
 
-
 ;____________________________________________________________
 ; SDReadSector
 ;
@@ -131,11 +141,6 @@ SDDeviceNumberToStructInA1:
 ; Return: D0 = 0: OK, D0 != 0: Error 
 ;____________________________________________________________
 SDReadSector:
-    move.l d7,-(sp)
-    bsr.s .sdReadSector
-    move.l (sp)+,d7
-    rts
-.sdReadSector:
     bsr SDDeviceNumberToStructInA1
     cmp.l #0,a1
     beq .invalidDevice

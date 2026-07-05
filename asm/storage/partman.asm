@@ -25,6 +25,10 @@ PM_ERR_PARTITION_NOT_FOUND equ $80300000
 PM_ERR_INVALID_MBR      equ $80400000
 PM_ERR_DEVICE_IO_ERROR  equ $80f00000
 
+;____________________________________________________________
+;
+; PMInit - initialize the partion manager
+;____________________________________________________________
 PMInit:
     move.l d7,-(sp)
     bsr.s .pmInitInt
@@ -33,12 +37,9 @@ PMInit:
 .pmInitInt:    
     lea PMPartList,a1
     moveq #PM_PART_LIST_SIZE/4-1,d7
-    moveq #0,d0
 .loop:    
-    move.l d0,(a1)+
+    clr.l (a1)+
     dbra d7,.loop
-    rts
-
     rts
 
 ;____________________________________________________________
@@ -136,7 +137,7 @@ findPartitionFromIndex:
     bhs.s .notFound          ; unsigned d0 >= limit
 
     lsl.l #5,d0              ; index * 32
-    lea  PMPartList,a1    
+    lea PMPartList,a1    
     add.l d0,a1
 
     tst.l PM_DEVICE(a1)
@@ -188,11 +189,6 @@ PMGetPartitionInfo:
 ; Return: D0 = 0: OK, D0 != 0: Error 
 ;____________________________________________________________
 PMReadSector:
-;    move.l d7,-(sp)
-    ;bsr.s .pmReadSectorInt
-    ;move.l (sp)+,d7
-    ;rts
-;.pmReadSectorInt:
     bsr findPartitionFromIndex
     tst.l d0
     beq.s .foundPartition
