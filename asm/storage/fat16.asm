@@ -193,6 +193,7 @@ FATCreatePathContext:
     cmp.l #$ffff,d1
     bhi.s .badCluster
     move.l d1,PCTX_CURR_BLOCK(a1)
+    move.l a5,a0
     bsr FATClusterToSectorInt
 .dirSectorOk:    
     move.l FAT_PART_ID(a5),d0
@@ -310,17 +311,54 @@ FATReadDir:
     moveq #0,d0
     rts
 
-    ; Convert 16-bit FAT cluster number in D1 to absolute sector
-    ; Input: Block in D1, FAT context in A5
-    ; Output: Sector in D1
+; Convert 16-bit FAT cluster number in D1 to absolute sector
+; Input: Block in D1, FAT context in A0
+; Output: Sector in D1
 FATClusterToSectorInt:
     and.l #$ffff,d1
     subq.l #2,d1
     moveq #0,d0
-    move.b FAT_SECT_PER_CLUST(a5),d0
+    move.b FAT_SECT_PER_CLUST(a0),d0
     mulu d0,d1
-    add.l FAT_DATA_START(a5),d1
+    add.l FAT_DATA_START(a0),d1
     rts
+
+;____________________________________________________________
+; A0 = filesystem context
+; A1 = path context
+;____________________________________________________________
+FATGetNextCluster:
+    movem.l d2-d3/a2,-(sp)
+    bsr.s .fatGetNextClusterInt
+    movem.l (sp)+,d2-d3/a2
+    rts
+.fatGetNextClusterInt:
+    move.l FAT_FAT1_START(a0),d1
+    move.l a1,a2
+    move.l PCTX_CURR_BLOCK(a2),d0
+    move.l d0,d2
+    add.l d2,d2 ; FAT16 byte offset
+    move.l d2,d3
+    lsr.l #7,d3
+    lsr.l #2,d3 ; /512
+    add.l d1,d3 ; FAT sector LBA
+    and.w #$1fe,d2
+    ; Read the sector
+    move.l d3,d1
+    move.l PCTX_PART_ID(a2),d0
+    move.l PCTX_SECBUF_PTR(a2),a0
+    bsr PMReadSector
+    tst.l d0
+    bpl .ok        
+    rts
+.ok:
+    move.l PCTX_SECBUF_PTR(a2),a0
+    moveq #0,d0
+    move.b 1(a0,d2.w),d0
+    lsl.w #8,d0
+    move.b 0(a0,d2.w),d0    ; d0 = next cluster
+    rts
+
 
 ;____________________________________________________________
 ;
@@ -336,15 +374,35 @@ FATClusterToSectorInt:
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FATReadFileSector:
-    movem.l d2-d7/a4-a6,-(sp)
+    movem.l d2-d7/a3-a6,-(sp)
     bsr.s .fatReadFileInt
-    movem.l (sp)+,d2-d7/a4-a6
+    movem.l (sp)+,d2-d7/a3-a6
     rts
 .fatReadFileInt:
     move.l a0,a5    ; Path context in A5
-    move.l PCTX_PART_ID(a5),d0
+    move.l a1,a3    ; Save sector buffer
+
+    move.l PCTX_FS_PTR(a5),a4
+    moveq #0,d0
+    move.b FAT_SECT_PER_CLUST(a4),d0
+    add.l PCTX_FIRST_SEC(a5),d0
     move.l PCTX_NEXT_SEC(a5),d1
-    move.l a1,a0
+    cmp.l d0,d1
+    blo.s .sameCluster
+    ; Need to get new cluster
+    move.l a4,a0
+    move.l a5,a1
+    bsr FATGetNextCluster   
+    move.l d0,PCTX_CURR_BLOCK(a5)
+    move.l d0,d1
+    move.l a4,a0
+    bsr FATClusterToSectorInt
+    move.l d1,PCTX_FIRST_SEC(a5)
+    move.l d1,PCTX_NEXT_SEC(a5)            
+.sameCluster:        
+    move.l PCTX_NEXT_SEC(a5),d1
+    move.l PCTX_PART_ID(a5),d0
+    move.l a3,a0
     bsr PMReadSector
     add.l #1,PCTX_NEXT_SEC(a5)   
     move.l #512,d0
