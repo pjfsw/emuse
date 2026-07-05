@@ -498,16 +498,16 @@ FMReadFile:
     move.l a0,a3    ; Process context
     lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
 
-    moveq #0,d6    ; Bytes read
     move.l a1,a5    ; Read buffer
     move.l d0,d7    ; Bytes to read
     move.l PCTX_BYTES_REM(a4),d0
     cmp.l d0,d7
     bls.s .useD7  ; D7 <= file remaining
     move.l d0,d7   ; use file remaining    
-    beq .eof       ; EOF, nothing to do
 .useD7:
-    move.w PCTX_OFFSET(a4),d5
+    move.l d7,d6   ; Save value of original bytes to read
+    beq .eof       ; EOF, nothing to do
+    tst.w PCTX_OFFSET(a4)
     beq.s .aligned
     moveq #-1,d0     ; for now error
     rts
@@ -524,11 +524,8 @@ FMReadFile:
     bpl.s .readOk    
     rts
 .readOk:
-    move.l #512,d0
-    sub.l d0,d7
-    add.l d0,a5
-    sub.l d0,PCTX_BYTES_REM(a4)
-    add.l d0,d6
+    lea 512(a5),a5
+    sub.l #512,d7
     bra.s .aligned
 .readPartial:
     move.l a4,a0
@@ -540,14 +537,16 @@ FMReadFile:
     rts
 .readPartialOk:
     move.l d7,d0
-    sub.l d0,PCTX_BYTES_REM(a4)
-    add.l d0,d6
     add.w d0,PCTX_OFFSET(a4)
-    subq.l #1,d7
+    move.w d7,d5
+    subq.w #1,d5
     lea DOSINFO_RBUF(a3),a1
 .copyBytes:
     move.b (a1)+,(a5)+
-    dbra d7,.copyBytes
+    dbra d5,.copyBytes
+    moveq #0,d7
 .eof:
     move.l d6,d0 ; EOF
+    sub.l d7,d0
+    sub.l d0,PCTX_BYTES_REM(a4)
     rts

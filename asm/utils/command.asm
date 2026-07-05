@@ -236,7 +236,7 @@ ClearCommandLine:
 ReadFileContents:
     lea DirectoryCtx,a0
     lea TestBuf,a1
-    move.l #512,d0
+    move.l #1024,d0
     bsr FMReadFile
     tst.l d0
     beq.s .readDone
@@ -253,13 +253,12 @@ ReadFileContents:
     bra ReadFileContents
 .readDone:
     rts
+
 PrintChar:
     cmp.b #10,d0
     beq.s .printLineBreak
     cmp.b #32,d0
     blo.s .printSpace
-    cmp.b #126,d0
-    bhi.s .printSpace
     jmp PUTC(a6)
 .printLineBreak:
     lea LineBreakMsg,a1
