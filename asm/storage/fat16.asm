@@ -46,7 +46,7 @@ FAT_DIRCTX_PART_ID    rs.l 1
 FAT_DIRCTX_SECBUF_PTR rs.l 1
 FAT_DIRCTX_FIRST_SEC  rs.l 1
 FAT_DIRCTX_PARENT_SEC rs.l 1
-FAT_DIRCTX_CURR_SEC   rs.l 1
+FAT_DIRCTX_NEXT_SEC   rs.l 1
 FAT_DIRCTX_CURR_ENT   rs.w 1
 FAT_DIRCTX_RESERVED   rs.w 3
 FAT_DIRCTX_SIZE       rs.b 0
@@ -208,9 +208,9 @@ FATOpenDir:
 .dirSectorOk:    
     move.l FAT_PART_ID(a5),d0
     move.l d1,FAT_DIRCTX_FIRST_SEC(a1)
-    move.l d1,FAT_DIRCTX_CURR_SEC(a1)
+    move.l d1,FAT_DIRCTX_NEXT_SEC(a1)
     clr.w FAT_DIRCTX_CURR_ENT(a1)    
-    bsr PMReadSector
+    moveq #0,d0
     rts
 .badCluster:
     move.l #FAT_ERR_INVALID_CLUSTER,d0
@@ -245,19 +245,21 @@ FATReadDir:
     moveq #0,d1
     move.w FAT_DIRCTX_CURR_ENT(a5),d1 
 .checkEntry:    
-    cmp.w #512,d1
+    and.w #$1ff,d1
     bne.s .sectorOk
     ; Read next sector 
     move.l FAT_DIRCTX_PART_ID(a5),d0
-    move.l FAT_DIRCTX_CURR_SEC(a5),d1
-    addq.l #1,d1
-    move.l d1,FAT_DIRCTX_CURR_SEC(a5)
+    move.l FAT_DIRCTX_NEXT_SEC(a5),d1
     move.l a6,a0
     bsr PMReadSector
     tst.l d0
     beq.s .nextSectorOk
     rts
 .nextSectorOk:
+    move.l FAT_DIRCTX_NEXT_SEC(a5),d1
+    addq.l #1,d1
+    move.l d1,FAT_DIRCTX_NEXT_SEC(a5)
+
     clr.w FAT_DIRCTX_CURR_ENT(a5)
     moveq #0,d1      
 .sectorOk:    
