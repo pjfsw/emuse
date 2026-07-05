@@ -14,3 +14,15 @@ DIRENT_MOD_DATE  rs.w 1
 DIRENT_MOD_TIME  rs.w 1
 DIRENT_RESERVED  rs.b 4
 DIRENT_STR_SIZE  rs.b 0
+
+    rsreset
+PCTX_FS_PTR     rs.l 1
+PCTX_PART_ID    rs.l 1
+; Pointer to 512 byte sector buffer
+PCTX_SECBUF_PTR rs.l 1
+PCTX_FIRST_SEC  rs.l 1
+PCTX_PARENT_SEC rs.l 1
+PCTX_NEXT_SEC   rs.l 1
+PCTX_CURR_ENT   rs.w 1
+PCTX_RESERVED   rs.w 3
+PCTX_SIZEOF     rs.b 0

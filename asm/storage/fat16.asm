@@ -39,18 +39,6 @@ FAT_SECT_PER_CLUST rs.b 1
 FAT_RESERVED   rs.b 7
 FAT_SIZE       rs.b 0
 
-    rsreset
-FAT_DIRCTX_FAT_PTR    rs.l 1
-FAT_DIRCTX_PART_ID    rs.l 1
-; Pointer to 512 byte sector buffer
-FAT_DIRCTX_SECBUF_PTR rs.l 1
-FAT_DIRCTX_FIRST_SEC  rs.l 1
-FAT_DIRCTX_PARENT_SEC rs.l 1
-FAT_DIRCTX_NEXT_SEC   rs.l 1
-FAT_DIRCTX_CURR_ENT   rs.w 1
-FAT_DIRCTX_RESERVED   rs.w 3
-FAT_DIRCTX_SIZE       rs.b 0
-
 FAT_ERR_INVALID_CLUSTER EQU $81000000
 
 ;____________________________________________________________
@@ -172,9 +160,9 @@ FATInitPartition:
 
 ;____________________________________________________________
 ;
-; FATOpenDir
+; FATCreatePathContext
 ;
-; Create a directory context based on a specific dir identifier
+; Create a path context based on partition and first cluster
 ;
 ; D0: FAT context as created by FATInitPartition
 ; D1: directory first cluster or 0 for root directory
@@ -185,16 +173,16 @@ FATInitPartition:
 ; Return: D0 = 0: ok
 ;         D0 ! 0: not ok
 ;____________________________________________________________
-FATOpenDir:
+FATCreatePathContext:
     movem.l d2-d7/a5,-(sp)
-    bsr.s .fatOpenDirInt
+    bsr.s .fatCreathPathContextInt
     movem.l (sp)+,d2-d7/a5
     rts
-.fatOpenDirInt:
+.fatCreathPathContextInt:
     move.l d0,a5    ; The FAT partition context
-    move.l FAT_PART_ID(a5),FAT_DIRCTX_PART_ID(a1)    
-    move.l d0,FAT_DIRCTX_FAT_PTR(a1)     
-    move.l a0,FAT_DIRCTX_SECBUF_PTR(a1)
+    move.l FAT_PART_ID(a5),PCTX_PART_ID(a1)    
+    move.l d0,PCTX_FS_PTR(a1)     
+    move.l a0,PCTX_SECBUF_PTR(a1)
     tst.l d1
     bne.s .isSubDir  ; TODO Check what d1 is when non-zero !!!
     move.l FAT_ROOT_START(a5),d1    
@@ -207,9 +195,9 @@ FATOpenDir:
     bsr FATClusterToSectorInt
 .dirSectorOk:    
     move.l FAT_PART_ID(a5),d0
-    move.l d1,FAT_DIRCTX_FIRST_SEC(a1)
-    move.l d1,FAT_DIRCTX_NEXT_SEC(a1)
-    clr.w FAT_DIRCTX_CURR_ENT(a1)    
+    move.l d1,PCTX_FIRST_SEC(a1)
+    move.l d1,PCTX_NEXT_SEC(a1)
+    clr.w PCTX_CURR_ENT(a1)    
     moveq #0,d0
     rts
 .badCluster:
@@ -241,26 +229,26 @@ FATReadDir:
     clr.l (a1)+
     dbra d7,.fillEntry
 
-    move.l FAT_DIRCTX_SECBUF_PTR(a5),a6
+    move.l PCTX_SECBUF_PTR(a5),a6
     moveq #0,d1
-    move.w FAT_DIRCTX_CURR_ENT(a5),d1 
+    move.w PCTX_CURR_ENT(a5),d1 
 .checkEntry:    
     and.w #$1ff,d1
     bne.s .sectorOk
     ; Read next sector 
-    move.l FAT_DIRCTX_PART_ID(a5),d0
-    move.l FAT_DIRCTX_NEXT_SEC(a5),d1
+    move.l PCTX_PART_ID(a5),d0
+    move.l PCTX_NEXT_SEC(a5),d1
     move.l a6,a0
     bsr PMReadSector
     tst.l d0
     beq.s .nextSectorOk
     rts
 .nextSectorOk:
-    move.l FAT_DIRCTX_NEXT_SEC(a5),d1
+    move.l PCTX_NEXT_SEC(a5),d1
     addq.l #1,d1
-    move.l d1,FAT_DIRCTX_NEXT_SEC(a5)
+    move.l d1,PCTX_NEXT_SEC(a5)
 
-    clr.w FAT_DIRCTX_CURR_ENT(a5)
+    clr.w PCTX_CURR_ENT(a5)
     moveq #0,d1      
 .sectorOk:    
     move.b (a6,d1.w),d0
@@ -282,7 +270,7 @@ FATReadDir:
     beq.s .attrOk
     move.b #FILEATTR_DIR,DIRENT_ATTR(a4)
 .attrOk:
-    move.w d1,FAT_DIRCTX_CURR_ENT(a5)
+    move.w d1,PCTX_CURR_ENT(a5)
     
     lea 0(a6,d1.w),a6      
     ; Copy first sector
@@ -314,7 +302,7 @@ FATReadDir:
     addq.l #1,d1
     dbra d7,.copyFilename    
     move.b #0,(a1)+
-    add.w #32,FAT_DIRCTX_CURR_ENT(a5)
+    add.w #32,PCTX_CURR_ENT(a5)
     moveq #1,d0
     rts
 .endOfDirListing;    

@@ -44,7 +44,7 @@ FM_FS_DATA      rs.b FAT_SIZE
 ; Return: D0 = 0: ok
 ;         D0 ! 0: not ok
 ;____________________________________________________________
-FM_OPEN_DIR     rs.w 3
+FM_CREATE_PATH_CTX     rs.w 3
 ;____________________________________________________________
 ;
 ; FATReadDir
@@ -136,8 +136,8 @@ FMRegisterDevice:
     move.b d0,2+FM_DEVICE_NAME(a5)
     move.l #0,FM_PM_PART_ID(a5)
     move.w #FM_OPCODE_JMP_ABSOLUTE,d0
-    move.w d0,FM_OPEN_DIR(a5)
-    move.l #FATOpenDir,2+FM_OPEN_DIR(a5)
+    move.w d0,FM_CREATE_PATH_CTX(a5)
+    move.l #FATCreatePathContext,2+FM_CREATE_PATH_CTX(a5)
     move.w d0,FM_READ_DIR(a5)
     move.l #FATReadDir,2+FM_READ_DIR(a5)   
     moveq #0,d0
@@ -341,7 +341,7 @@ FMOpenDir:
     move.l a4,a1    ; Use target context directly
     move.l d2,d1    ; Directory to scan
     lea DOSINFO_RBUF(a3),a0            
-    jsr FM_OPEN_DIR(a6)
+    jsr FM_CREATE_PATH_CTX(a6)
     tst.l d0
     beq.s .openDirOk
     rts
