@@ -11,6 +11,7 @@ FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH  equ $88020000
 FM_ERR_PATH_NOT_FOUND equ $88030000
 FM_ERR_NOT_A_DIRECTORY equ $88040000
+FM_ERR_NOT_A_FILE equ $88050000
 
 ;____________________________________________________________
 ;
@@ -353,6 +354,14 @@ PrintTheFilenames:
 
 ;____________________________________________________________
 ;
+; GetCurrentProcess - store pointer to context in A0
+;____________________________________________________________
+GetCurrentProcess:
+    lea DOSLibScratch,a0
+    rts
+
+;____________________________________________________________
+;
 ; Create context based on path name
 ;
 ; A0: Pointer to target path context
@@ -366,9 +375,11 @@ FMCreateContext:
     movem.l (sp)+,d2/d7/a3-a6
     rts    
 .fmCreateContextInt:  
-    lea DOSLibScratch,a3   ; Temporary variables for process - TODO fix this dynamically
-    move.l a0,a4    ; Target context
+    move.l a0,a4    ; Path context (target)
     move.l a1,a5    ; Path
+    bsr GetCurrentProcess
+    move.l a0,a3    ; Process context
+
     lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
     move.b #PATTR_DIR,PCTX_ATTR(a4)
     moveq #0,d2     ; Current directory, for now always root
@@ -472,9 +483,71 @@ FMReadDir:
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FMReadFile:
-    movem.l d2/d7/a3-a6,-(sp)
+    movem.l d5-d7/a3-a6,-(sp)
     bsr.s .fmReadFileInt
-    movem.l (sp)+,d2/d7/a3-a6
+    movem.l (sp)+,d5-d7/a3-a6
     rts    
 .fmReadFileInt:    
-    moveq #0,d0
+    move.l a0,a4    ; Path context
+    btst.b #PATTR_DIR_BIT,PCTX_ATTR(a4)
+    beq.s .isFile
+    move.l #FM_ERR_NOT_A_FILE,d0
+    rts
+.isFile:
+    bsr GetCurrentProcess
+    move.l a0,a3    ; Process context
+    lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
+
+    moveq #0,d6    ; Bytes read
+    move.l a1,a5    ; Read buffer
+    move.l d0,d7    ; Bytes to read
+    move.l PCTX_BYTES_REM(a4),d0
+    cmp.l d0,d7
+    bls.s .useD7  ; D7 <= file remaining
+    move.l d0,d7   ; use file remaining    
+    beq .eof       ; EOF, nothing to do
+.useD7:
+    move.w PCTX_OFFSET(a4),d5
+    beq.s .aligned
+    moveq #-1,d0     ; for now error
+    rts
+.aligned:
+    tst.l d7
+    beq.s .eof    
+    cmp.l #512,d7
+    blo.s .readPartial   
+    move.l a4,a0
+    move.l a5,a1
+    jsr FM_READ_FILE_SECTOR(a6)
+    tst.l d0
+    beq.s .eof
+    bpl.s .readOk    
+    rts
+.readOk:
+    move.l #512,d0
+    sub.l d0,d7
+    add.l d0,a5
+    sub.l d0,PCTX_BYTES_REM(a4)
+    add.l d0,d6
+    bra.s .aligned
+.readPartial:
+    move.l a4,a0
+    lea DOSINFO_RBUF(a3),a1
+    jsr FM_READ_FILE_SECTOR(a6)
+    tst.l d0
+    beq.s .eof
+    bpl.s .readPartialOk
+    rts
+.readPartialOk:
+    move.l d7,d0
+    sub.l d0,PCTX_BYTES_REM(a4)
+    add.l d0,d6
+    add.w d0,PCTX_OFFSET(a4)
+    subq.l #1,d7
+    lea DOSINFO_RBUF(a3),a1
+.copyBytes:
+    move.b (a1)+,(a5)+
+    dbra d7,.copyBytes
+.eof:
+    move.l d6,d0 ; EOF
+    rts

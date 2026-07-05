@@ -198,7 +198,7 @@ FATCreatePathContext:
     move.l FAT_PART_ID(a5),d0
     move.l d1,PCTX_FIRST_SEC(a1)
     move.l d1,PCTX_NEXT_SEC(a1)
-    clr.w PCTX_CURR_ENT(a1)    
+    clr.w PCTX_OFFSET(a1)    
     moveq #0,d0
     rts
 .badCluster:
@@ -232,7 +232,7 @@ FATReadDir:
 
     move.l PCTX_SECBUF_PTR(a5),a6
     moveq #0,d1
-    move.w PCTX_CURR_ENT(a5),d1 
+    move.w PCTX_OFFSET(a5),d1 
 .checkEntry:    
     and.w #$1ff,d1
     bne.s .sectorOk
@@ -249,7 +249,7 @@ FATReadDir:
     addq.l #1,d1
     move.l d1,PCTX_NEXT_SEC(a5)
 
-    clr.w PCTX_CURR_ENT(a5)
+    clr.w PCTX_OFFSET(a5)
     moveq #0,d1      
 .sectorOk:    
     move.b (a6,d1.w),d0
@@ -271,7 +271,7 @@ FATReadDir:
     beq.s .attrOk
     move.b #PATTR_DIR,DIRENT_ATTR(a4)
 .attrOk:
-    move.w d1,PCTX_CURR_ENT(a5)
+    move.w d1,PCTX_OFFSET(a5)
     
     lea 0(a6,d1.w),a6      
     ; Copy first sector
@@ -303,7 +303,7 @@ FATReadDir:
     addq.l #1,d1
     dbra d7,.copyFilename    
     move.b #0,(a1)+
-    add.w #32,PCTX_CURR_ENT(a5)
+    add.w #32,PCTX_OFFSET(a5)
     moveq #1,d0
     rts
 .endOfDirListing;    
@@ -332,7 +332,7 @@ FATClusterToSectorInt:
 ; A1: 512 byte sector buffer
 ;
 ; Return: D0 = 0: end of file reached
-;         D0 > 0: number of bytes read
+;         D0 > 0: number of bytes read (512)
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FATReadFileSector:
@@ -344,7 +344,10 @@ FATReadFileSector:
     move.l a0,a5    ; Path context in A5
     move.l PCTX_PART_ID(a5),d0
     move.l PCTX_NEXT_SEC(a5),d1
+    move.l a1,a0
     bsr PMReadSector
+    add.l #1,PCTX_NEXT_SEC(a5)   
+    move.l #512,d0
     rts
 
     include dirent.i

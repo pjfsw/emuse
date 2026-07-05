@@ -86,8 +86,7 @@ ParseCommandLine:
     lea DirectoryCtx,a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     bne.s .isDir
-    lea NotDirectoryMsg,a1
-    jmp PUTS(a6)
+    bra ReadFileContents
 .isDir:
 .nextEntry:    
     lea DirectoryCtx,a0
@@ -132,7 +131,6 @@ PrintDirEntry:
     bsr PrintSpace
     move.w DIRENT_MOD_TIME(a3),d0
     bsr PrintTime
-
 .printBlock:
     bsr PrintSpace
     bsr PrintSpace
@@ -235,6 +233,41 @@ ClearCommandLine:
 
     rts
 
+ReadFileContents:
+    lea DirectoryCtx,a0
+    lea TestBuf,a1
+    move.l #512,d0
+    bsr FMReadFile
+    tst.l d0
+    beq.s .readDone
+    bpl.s .readOk
+    bra PrintErrorCode
+.readOk:
+    move.l d0,d7
+    subq.l #1,d7
+    lea TestBuf,a2
+.printChar:
+    move.b (a2)+,d0
+    bsr PrintChar
+    dbra d7,.printChar
+    bra ReadFileContents
+.readDone:
+    rts
+PrintChar:
+    cmp.b #10,d0
+    beq.s .printLineBreak
+    cmp.b #32,d0
+    blo.s .printSpace
+    cmp.b #126,d0
+    bhi.s .printSpace
+    jmp PUTC(a6)
+.printLineBreak:
+    lea LineBreakMsg,a1
+    jmp PUTS(a6)
+.printSpace:
+    move.b #' ',d0
+    jmp PUTC(a6) 
+
 PrintErrorCode:
     jsr PUTHEX32(a6)
     lea LineBreakMsg(pc),a1
@@ -321,3 +354,4 @@ DirectoryCtx EQU TestPartitionInfo+32
 DirEntry     EQU DirectoryCtx+32
 FMDeviceList EQU DirEntry+32
 DOSLibScratch EQU FMDeviceList+256
+TestBuf     EQU $20000
