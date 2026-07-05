@@ -31,11 +31,11 @@ FM_PM_PART_ID   rs.l 1
 FM_FS_DATA      rs.b FAT_SIZE
 ;____________________________________________________________
 ;
-; FATOpenDir
+; FM_CREATE_PATH_CTX
 ;
-; Create a directory context based on a specific dir identifier
+; Create a path context based on a specific dir identifier
 ;
-; D0: FAT context as created by FATInitPartition
+; D0: File system context from initialization
 ; D1: directory first cluster or 0 for root directory
 ; A0: pointer to target 512 byte sector buffer, must be valid
 ;     as long as the context is used
@@ -47,9 +47,9 @@ FM_FS_DATA      rs.b FAT_SIZE
 FM_CREATE_PATH_CTX     rs.w 3
 ;____________________________________________________________
 ;
-; FATReadDir
+; FM_READ_DIR
 ;
-; Read next dir entry from dir context
+; Read next dir entry from path context
 ;
 ; A0: directory context as created by FATOpenDir
 ; A1: pointer to target 32 byte directory entry
@@ -59,6 +59,21 @@ FM_CREATE_PATH_CTX     rs.w 3
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FM_READ_DIR     rs.w 3
+
+;____________________________________________________________
+;
+; FATReadFileSector
+;
+; Read next sector from a file into a buffer
+;
+; A0: directory context as created by FATCreatePathContext
+; A1: 512 byte sector buffer
+;
+; Return: D0 = 0: end of file reached
+;         D0 > 0: number of bytes read
+;         D0 < 0: not ok
+;____________________________________________________________
+FM_READ_FILE_SECTOR rs.w 3
 FM_UNPADDED_SIZE rs.b 0
 FM_PADDING      rs.b 64-FM_UNPADDED_SIZE
 FM_SIZE         rs.b 0
@@ -140,6 +155,8 @@ FMRegisterDevice:
     move.l #FATCreatePathContext,2+FM_CREATE_PATH_CTX(a5)
     move.w d0,FM_READ_DIR(a5)
     move.l #FATReadDir,2+FM_READ_DIR(a5)   
+    move.w d0,FM_READ_FILE_SECTOR(a5)
+    move.l #FATReadFileSector,2+FM_READ_FILE_SECTOR(a5)   
     moveq #0,d0
     move.l #5,DebugDebug
     rts 
@@ -345,10 +362,10 @@ PrintTheFilenames:
 ;____________________________________________________________
 FMCreateContext:
     movem.l d2/d7/a3-a6,-(sp)
-    bsr.s .fmOpenDirInt
+    bsr.s .fmCreateContextInt
     movem.l (sp)+,d2/d7/a3-a6
     rts    
-.fmOpenDirInt:  
+.fmCreateContextInt:  
     lea DOSLibScratch,a3   ; Temporary variables for process - TODO fix this dynamically
     move.l a0,a4    ; Target context
     move.l a1,a5    ; Path
@@ -408,6 +425,7 @@ FMCreateContext:
 .nextEntryOk:
     lea DOSINFO_DIRENT(a3),a0
     move.b DIRENT_ATTR(a0),PCTX_ATTR(a4)
+    move.l DIRENT_FSIZE(a0),PCTX_BYTES_REM(a4)
 
     lea DOSINFO_PATHENT(a3),a1
     bsr CompareFilenames
@@ -422,7 +440,7 @@ FMCreateContext:
 ;
 ; Read next directory entry
 ;
-; A0: directory context as created by FMOpenDir
+; A0: path context as created by FMCreateContext
 ; A1: pointer to target 32 byte directory entry
 ;
 ; Return: D0 = 0: ok, no more entries (entry is invalid)
@@ -441,3 +459,22 @@ FMReadDir:
     include partman.asm
     include storagedevice.asm
 
+;____________________________________________________________
+;
+; Read from file
+;
+; A0: path context as created by FMCreateContext
+; A1: pointer to target buffer
+; D0: number of bytes to read
+;
+; Return: D0 = 0: end of file
+;         D0 > 0: number of bytes read
+;         D0 < 0: not ok
+;____________________________________________________________
+FMReadFile:
+    movem.l d2/d7/a3-a6,-(sp)
+    bsr.s .fmReadFileInt
+    movem.l (sp)+,d2/d7/a3-a6
+    rts    
+.fmReadFileInt:    
+    moveq #0,d0

@@ -192,6 +192,7 @@ FATCreatePathContext:
     blo.s .badCluster
     cmp.l #$ffff,d1
     bhi.s .badCluster
+    move.l d1,PCTX_CURR_BLOCK(a1)
     bsr FATClusterToSectorInt
 .dirSectorOk:    
     move.l FAT_PART_ID(a5),d0
@@ -209,7 +210,7 @@ FATCreatePathContext:
 ;
 ; Read next dir entry from dir context
 ;
-; A0: directory context as created by FATOpenDir
+; A0: directory context as created by FATCreatePathContext
 ; A1: pointer to target 32 byte directory entry
 ;
 ; Return: D0 = 0: ok, no more entries (entry is invalid)
@@ -222,8 +223,8 @@ FATReadDir:
     movem.l (sp)+,d2-d7/a4-a6
     rts
 .fatReadDirInt:
-    move.l a0,a5
-    move.l a1,a4
+    move.l a0,a5    ; Directory context in A5
+    move.l a1,a4    ; Directory entry in A4
     moveq #7,d7
 .fillEntry:
     clr.l (a1)+
@@ -319,6 +320,31 @@ FATClusterToSectorInt:
     move.b FAT_SECT_PER_CLUST(a5),d0
     mulu d0,d1
     add.l FAT_DATA_START(a5),d1
+    rts
+
+;____________________________________________________________
+;
+; FATReadFileSector
+;
+; Read next sector from a file into a buffer
+;
+; A0: directory context as created by FATCreatePathContext
+; A1: 512 byte sector buffer
+;
+; Return: D0 = 0: end of file reached
+;         D0 > 0: number of bytes read
+;         D0 < 0: not ok
+;____________________________________________________________
+FATReadFileSector:
+    movem.l d2-d7/a4-a6,-(sp)
+    bsr.s .fatReadFileInt
+    movem.l (sp)+,d2-d7/a4-a6
+    rts
+.fatReadFileInt:
+    move.l a0,a5    ; Path context in A5
+    move.l PCTX_PART_ID(a5),d0
+    move.l PCTX_NEXT_SEC(a5),d1
+    bsr PMReadSector
     rts
 
     include dirent.i

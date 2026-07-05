@@ -21,9 +21,10 @@ PCTX_PART_ID    rs.l 1
 ; Pointer to 512 byte sector buffer
 PCTX_SECBUF_PTR rs.l 1
 PCTX_FIRST_SEC  rs.l 1
-PCTX_PARENT_SEC rs.l 1
+PCTX_CURR_BLOCK rs.l 1
 PCTX_NEXT_SEC   rs.l 1
 PCTX_CURR_ENT   rs.w 1
+PCTX_BYTES_REM  rs.l 1
 PCTX_ATTR       rs.b 1
-PCTX_RESERVED   rs.b 5
+PCTX_RESERVED   rs.b 1
 PCTX_SIZEOF     rs.b 0

@@ -177,13 +177,6 @@ PrintTime:
     and.w #63,d0
     bsr PrintTwoDigitsDateWord
 
-    ;bsr PrintColon
-    ;rol.w #5,d2
-    ;move.w d2,d0
-    ;and.w #31,d0
-    ;lsr.w #1,d0
-    ;bsr PrintTwoDigitsDateWord
-
     rts
 PrintTwoDigitsDateWord:
     lea DecBuffer,a0    
@@ -248,7 +241,7 @@ PrintErrorCode:
     jmp PUTS(a6)
 
 MsgPrompt:
-    dc.b 13,10,"[/]$ ",0
+    dc.b "[/]$ ",0
     even
 
 InitStorageDevices:
@@ -290,9 +283,9 @@ DosLoadingMsg:
 DirTextMsg:
     dc.b "<DIR>      ",0
 NotDirectoryMsg:
-    dc.b "Not a directory",0    
+    dc.b "Not a directory",13,10,0    
 CommandError:
-    dc.b 13,10,"Command return error:",0
+    dc.b "Command return error:",0
 InitStorageErrorMsg:
     dc.b 13,10,"Failed to initialize boot device: ",0
 PathErrorMsg:
