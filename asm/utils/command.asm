@@ -15,6 +15,8 @@ TESTSECTOR equ $800000
 
 START equ $10000
     org START
+    bsr MemInit
+
     move.l $4.w,a6 
     
     lea DosLoadingMsg,a1
@@ -338,6 +340,7 @@ MmcStorageDevice:
     include fat16.asm
     include fileman.asm
     include decimal.asm
+    include memman.asm
 
 DecBuffer:
     dc.b 11,0
