@@ -5,15 +5,15 @@
 ; Abstraction layer containing basic file i/o features
 ;____________________________________________________________
 
-FM_OPCODE_JMP_ABSOLUTE equ $4ef9
-FM_MAX_DEVICE_COUNT  equ PM_PART_MAX_COUNT
+    include "fat16.i"
+
+FM_OPCODE_JMP_ABSOLUTE     equ $4ef9
 
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH        equ $88020000
 FM_ERR_PATH_NOT_FOUND      equ $88030000
 FM_ERR_NOT_A_DIRECTORY     equ $88040000
 FM_ERR_NOT_A_FILE          equ $88050000
-
 ;____________________________________________________________
 ;
 ; DOSLibScratch
@@ -22,80 +22,20 @@ FM_ERR_NOT_A_FILE          equ $88050000
 DOSINFO_DIRENT  rs.b 32
 DOSINFO_PATHENT rs.b 16
 DOSINFO_RBUF    rs.b 512
-
-;____________________________________________________________
-;
-; FMDeviceList
-;____________________________________________________________
-    rsreset
-FM_DEVICE_NAME  rs.b 4
-FM_PM_PART_ID   rs.l 1
-FM_FS_DATA      rs.b FAT_SIZE
-;____________________________________________________________
-;
-; FM_CREATE_PATH_CTX
-;
-; Create a path context based on a specific dir identifier
-;
-; D0: File system context from initialization
-; D1: directory first cluster or 0 for root directory
-; A0: pointer to target 512 byte sector buffer, must be valid
-;     as long as the context is used
-; A1: pointer to target 32 byte directory context
-;
-; Return: D0 = 0: ok
-;         D0 ! 0: not ok
-;____________________________________________________________
-FM_CREATE_PATH_CTX     rs.w 3
-;____________________________________________________________
-;
-; FM_READ_DIR
-;
-; Read next dir entry from path context
-;
-; A0: directory context as created by FATOpenDir
-; A1: pointer to target 32 byte directory entry
-;
-; Return: D0 = 0: ok, no more entries (entry is invalid)
-;         D0 > 0: ok, end 
-;         D0 < 0: not ok
-;____________________________________________________________
-FM_READ_DIR     rs.w 3
-
-;____________________________________________________________
-;
-; FATReadFileSector
-;
-; Read next sector from a file into a buffer
-;
-; A0: directory context as created by FATCreatePathContext
-; A1: 512 byte sector buffer
-;
-; Return: D0 = 0: end of file reached
-;         D0 > 0: number of bytes read
-;         D0 < 0: not ok
-;____________________________________________________________
-FM_READ_FILE_SECTOR rs.w 3
-FM_UNPADDED_SIZE rs.b 0
-FM_PADDING      rs.b 64-FM_UNPADDED_SIZE
-FM_SIZE         rs.b 0
-    if FM_UNPADDED_SIZE > 64
-        fail "FM structure exceeds 64 bytes"
-    endif
-    PRINTV FM_SIZE
 ;____________________________________________________________
 ;
 ; Initialize the File system manager
 ;____________________________________________________________
 FMInit:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .fmInitInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .fmInitInt:
     bsr SDInit    
     bsr PMInit 
-    lea FMDeviceList,a0
+    lea OSVARS_BASE,a6
+    lea OsVolumeList(a6),a0
     moveq #FM_SIZE*FM_MAX_DEVICE_COUNT/4-1,d7
 .nextLong:
     clr.l (a0)+
@@ -139,7 +79,7 @@ FMRegisterDevice:
 .hasPartitions:    
     ; For now just register the first partition
     moveq #0,d0
-    lea FMDeviceList,a5
+    lea OsVolumeList(a6),a5
     lea FM_FS_DATA(a5),a1
     lea OsSectorBuffer(a6),a0
     bsr FATInitPartition
@@ -338,7 +278,8 @@ FMCreateContext:
     bsr GetCurrentProcess
     move.l a0,a3    ; Process context
 
-    lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
+    lea OSVARS_BASE,a6
+    lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition
     move.b #PATTR_DIR,PCTX_ATTR(a4)
     moveq #0,d2     ; Current directory, for now always root
     move.b (a5),d0
@@ -454,7 +395,8 @@ FMReadFile:
 .isFile:
     bsr GetCurrentProcess
     move.l a0,a3    ; Process context
-    lea FMDeviceList,a6 ; TODO scan for correct device, for now just first partition
+    lea OSVARS_BASE,a6
+    lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition
 
     move.l a1,a5    ; Read buffer
     move.l d0,d7    ; Bytes to read

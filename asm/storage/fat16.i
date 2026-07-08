@@ -1,0 +1,10 @@
+        rsreset
+FAT_PART_ID    rs.l 1
+FAT_PART_SIZE  rs.l 1
+FAT_FAT1_START rs.l 1
+FAT_FAT2_START rs.l 1
+FAT_ROOT_START rs.l 1
+FAT_DATA_START rs.l 1
+FAT_SECT_PER_CLUST rs.b 1
+FAT_RESERVED   rs.b 7
+FAT_SIZEOF     rs.b 0

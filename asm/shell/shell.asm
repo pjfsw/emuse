@@ -341,12 +341,11 @@ DecBuffer:
     ds.b 12,0
 
 CommandLine  EQU *
-;PMPartList   EQU CommandLine+MAX_CMDLINE_LENGTH
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
 MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU TestPartitionInfo+32
 DirEntry     EQU DirectoryCtx+32
-FMDeviceList EQU DirEntry+32
-DOSLibScratch EQU FMDeviceList+256
+xFMDeviceList EQU DirEntry+32
+DOSLibScratch EQU xFMDeviceList+256
 TestBuf     EQU $20000
