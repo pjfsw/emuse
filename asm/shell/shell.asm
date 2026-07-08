@@ -4,8 +4,6 @@
     include hardware.i
     include rootlib.i
 
-UART_RTS_ENABLE_THRESHOLD EQU $c0
-UART_RTS_DISABLE_THRESHOLD EQU $e0
 MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
 
@@ -13,7 +11,7 @@ START equ $10000
     org START
     bsr MemInit
 
-    move.l $4.w,a6 
+    move.l ROOTLIB_BASE,a6 
     
     lea DosLoadingMsg,a1
     jsr CONPUTS(a6)
@@ -73,6 +71,7 @@ MainLoop:
     bra .waitForChar
 
 ParseCommandLine:
+
     lea DirEntry,a3
     lea DirectoryCtx,a0
     lea CommandLine,a1    
@@ -339,12 +338,12 @@ MmcStorageDevice:
     include memman.asm
 
 DecBuffer:
-    dc.b 11,0
+    ds.b 12,0
 
-SectorBuffer EQU SYSTEM_BSS_BASE+4
+;XSectorBuffer EQU SYSTEM_BSS_BASE+4
 CommandLine  EQU *
-SDDeviceList EQU CommandLine+MAX_CMDLINE_LENGTH
-PMPartList   EQU SDDeviceList+256
+;SDDeviceList EQU CommandLine+MAX_CMDLINE_LENGTH
+PMPartList   EQU CommandLine+MAX_CMDLINE_LENGTH
 MmcStatus    EQU PMPartList+512
 MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4

@@ -11,21 +11,11 @@
 ;
 ;____________________________________________________________
 
-    rsreset
-SD_ID       rs.w 1
-SD_READ     rs.l 1
-SD_WRITE    rs.l 1
-SD_RESERVED rs.w 11
-SD_SIZE     rs.b 0
-
-SD_SIZE_SHIFT       equ 5   ; 32 bytes
-SD_DEVICE_LIST_SIZE equ 128
-SD_DEVICE_LIMIT     equ 4
+    include "osvars.i"
 
 SD_ERR_DEVICE_LIST_FULL equ $80010000
 SD_ERR_DEVICE_NOT_FOUND equ $80020000
 SD_ERR_DEVICE_IO_ERROR  equ $800f0000
-
 
 ;____________________________________________________________
 ; SDInit
@@ -33,12 +23,13 @@ SD_ERR_DEVICE_IO_ERROR  equ $800f0000
 ; Initialize Storage device module
 ;____________________________________________________________
 SDInit:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .sdInitInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .sdInitInt:    
-    lea SDDeviceList,a1
+    lea OSVARS_BASE,a6
+    lea OsDeviceList(a6),a1
     moveq #SD_DEVICE_LIST_SIZE/4-1,d7
 .loop:    
     clr.l (a1)+
@@ -54,24 +45,25 @@ SDInit:
 ; Return: D0 - device ID > 0 if successful, < 0 if unable to add
 ;____________________________________________________________
 SDRegisterDevice:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .sdRegisterInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .sdRegisterInt:
-    lea SDDeviceList,a1
+    lea OSVARS_BASE,a6
+    lea OsDeviceList(a6),a1
     moveq #1,d0
-    moveq #SD_DEVICE_LIMIT-1,d7
+    moveq #SD_DEVICE_MAX_COUNT-1,d7
 .checkFreeSlot:
     tst.w SD_ID(a1)
     beq.s .foundSlot
     addq.l #1,d0
-    lea SD_SIZE(a1),a1
+    lea SD_SIZEOF(a1),a1
     dbra d7,.checkFreeSlot
     move.l #SD_ERR_DEVICE_LIST_FULL,d0
     rts
 .foundSlot:    
-    moveq #SD_SIZE/4-1,d7
+    moveq #SD_SIZEOF/4-1,d7
 .copyDevice:
     move.l (a0)+,(a1)+
     dbra d7,.copyDevice
@@ -86,19 +78,20 @@ SDRegisterDevice:
 ; Return: D0 > 0: device handle, D0 < 0: device not found
 ;____________________________________________________________
 SDFindDevice:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .sdFindInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .sdFindInt:    
-    lea SDDeviceList,a1
-    moveq #SD_DEVICE_LIMIT-1,d7
+    lea OSVARS_BASE,a6
+    lea OsDeviceList(a6),a1
+    moveq #SD_DEVICE_MAX_COUNT-1,d7
     moveq.l #1,d1
 .nextDevice:
     cmp.w SD_ID(a1),d0
     beq.s .deviceFound
     addq.l #1,d1
-    lea SD_SIZE(a1),a1
+    lea SD_SIZEOF(a1),a1
     dbra d7,.nextDevice
     move.l #SD_ERR_DEVICE_NOT_FOUND,d0
     rts
@@ -117,10 +110,10 @@ SDDeviceNumberToStructInA1:
     subq.l #1,d0
     tst.l d0
     bmi.s .invalidDevice
-    cmpi.l #SD_DEVICE_LIMIT,d0
+    cmpi.l #SD_DEVICE_MAX_COUNT,d0
     bcc.s .invalidDevice
-    lsl.l #SD_SIZE_SHIFT,d0 
-    lea SDDeviceList,a1
+    lsl.l #SD_SIZE_SHIFT,d0    
+    lea OsDeviceList(a6),a1
     lea (a1,d0.l),a1
     tst.l SD_ID(a1)
     beq.s .invalidDevice
@@ -141,6 +134,12 @@ SDDeviceNumberToStructInA1:
 ; Return: D0 = 0: OK, D0 != 0: Error 
 ;____________________________________________________________
 SDReadSector:
+    move.l a6,-(sp)
+    bsr.s .sdReadSectorInt
+    move.l (sp)+,a6
+    rts
+.sdReadSectorInt:
+    lea OSVARS_BASE,a6
     bsr SDDeviceNumberToStructInA1
     cmp.l #0,a1
     beq .invalidDevice
@@ -168,11 +167,12 @@ SDReadSector:
 ; Return: D0 = 0: OK, D0 != 0: Error 
 ;____________________________________________________________
 SDWriteSector:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .sdWriteSector
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .sdWriteSector:
+    lea OSVARS_BASE,a6
     bsr SDDeviceNumberToStructInA1
     cmp.l #0,a1
     beq .invalidDevice

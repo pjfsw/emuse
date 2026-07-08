@@ -110,13 +110,14 @@ FMInit:
 ; D0: 0 on success, < 0 on error
 ;____________________________________________________________
 FMRegisterDevice:       
-    movem.l d5-d7/a5-a6,-(sp)
+    movem.l d5-d7/a4-a6,-(sp)
     bsr.s .fmRegisterDeviceInt
-    movem.l (sp)+,d5-d7/a5-a6
+    movem.l (sp)+,d5-d7/a4-a6
     rts
 .fmRegisterDeviceInt:    
+    lea OSVARS_BASE,a6
     clr.l DebugDebug
-    move.l a0,a6
+    move.l a0,a4
     bsr SDRegisterDevice         
     cmp.l #0,d0
     bhi.s .registerSDOk    
@@ -140,6 +141,7 @@ FMRegisterDevice:
     moveq #0,d0
     lea FMDeviceList,a5
     lea FM_FS_DATA(a5),a1
+    lea OsSectorBuffer(a6),a0
     bsr FATInitPartition
     tst.l d0
     beq.s .fatOk
@@ -147,7 +149,7 @@ FMRegisterDevice:
     rts
 .fatOk:    
     ; Setup partition id, i.e. SD0
-    move.w SD_ID(a6),FM_DEVICE_NAME(a5)
+    move.w SD_ID(a4),FM_DEVICE_NAME(a5)
     move.b d6,d0
     add.b #'0',d0
     move.b d0,2+FM_DEVICE_NAME(a5)
@@ -285,19 +287,6 @@ ExtractNextPathElement:
     moveq #0,d0
     rts
 
-PrintFilename:
-    movem.l d7/a1,-(sp)
-    moveq #10,d7
-.nextChar:
-    move.b (a1)+,d0
-    cmp.b #31,d0
-    bhi.s .ok
-    move.b #'X',d0
-.ok:
-    jsr CONPUTC(a6)
-    dbra d7,.nextChar
-    movem.l (sp)+,d7/a1
-    rts
 ;____________________________________________________________
 ;
 ; A0 - an 8.3 formatted filename
@@ -309,7 +298,6 @@ CompareFilenames:
     movem.l (sp)+,d7/a0-a6
     rts
  .compareFileNamesInt:    
-    ;bsr PrintTheFilenames
     moveq #10,d7
 .compareFilenameChar:
     move.b (a1)+,d0
@@ -321,37 +309,6 @@ CompareFilenames:
 .noMatch:
     moveq #-1,d0
     rts
-PrintTheFilenames:
-    move.l a1,a2
-    move.l a0,a3
-    
-    move.l $4.w,a6
-    move.b #'"',d0
-    jsr CONPUTC(a6)
-    lea .st1,a1
-    jsr CONPUTS(a6)
-    move.l a3,a1
-    bsr PrintFilename
-    move.b #'"',d0
-    jsr CONPUTC(a6)
-    lea .st2,a1
-    jsr CONPUTS(a6)
-    move.b #'"',d0
-    jsr CONPUTC(a6)
-    move.l a2,a1
-    bsr PrintFilename
-    move.b #'"',d0
-    jsr CONPUTC(a6)
-    ; Compare filenames
-    move.l a2,a1
-    move.l a3,a0
-    rts
-
-.st1:    
-    dc.b 13,10,"A0:",0
-.st2:    
-    dc.b "A1:",0
-    even
 
 ;____________________________________________________________
 ;

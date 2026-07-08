@@ -48,6 +48,7 @@ FAT_ERR_INVALID_CLUSTER EQU $81000000
 ; Initialize partition if it is a valid FAT16 partition
 ;
 ; D0: partition number
+; A0: pointer to 512 byte sector buffer
 ; A1: 32-byte FAT partition context to fill if successful
 ;
 ; Return: D0 = 0: is valid FAT16
@@ -61,8 +62,9 @@ FATInitPartition:
 .fatCheckPartitionInt:
     move.l d0,FAT_PART_ID(a1)
     move.l a1,-(sp)
-    lea SectorBuffer,a5
-    move.l a5,a0
+    move.l a0,a5
+    ;lea SectorBuffer,a5
+    ;move.l a5,a0
     moveq #0,d1
     bsr PMReadSector
     move.l (sp)+,a1

@@ -53,21 +53,22 @@ PMInit:
 ;         D0 < 0: an error occured
 ;____________________________________________________________
 PMRegisterDevice:
-    movem.l d2-d3/d6-d7/a2,-(sp)
+    movem.l d2-d3/d6-d7/a2/a6,-(sp)
     bsr.s .pmRegisterDeviceInt
-    movem.l (sp)+,d2-d3/d6-d7/a2
+    movem.l (sp)+,d2-d3/d6-d7/a2/a6
     rts
 .pmRegisterDeviceInt:    
+    lea OSVARS_BASE,a6
     move.l d0,d2
     moveq #0,d1    
-    lea SectorBuffer,a0
+    lea OsSectorBuffer(a6),a0
     bsr SDReadSector
     tst.l d0
     beq.s .readOk
     or.l #PM_ERR_DEVICE_IO_ERROR,d0
     rts
 .readOk:    
-    lea SectorBuffer,a1
+    lea OsSectorBuffer(a6),a1
     cmp.w #$55aa,$1fe(a1)    ; Sanity check
     beq.s .isValidMbr
     move.l #PM_ERR_INVALID_MBR,d0    
@@ -114,11 +115,12 @@ PMRegisterDevice:
 ; Return the number of registered partitions in D0
 ;____________________________________________________________
 PMGetPartitionCount:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .pmGetPartitionCountInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .pmGetPartitionCountInt:
+    lea OSVARS_BASE,a6
     lea PMPartList,a1
     moveq #0,d0
     moveq #PM_PART_LIMIT-1,d7
