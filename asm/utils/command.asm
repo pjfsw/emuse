@@ -1,15 +1,11 @@
     incdir ..
     incdir ../storage
+    incdir ../lib
     include hardware.i
+    include rootlib.i
 
 UART_RTS_ENABLE_THRESHOLD EQU $c0
 UART_RTS_DISABLE_THRESHOLD EQU $e0
-GETC equ -52
-PUTHEX8 equ -40
-PUTHEX16 equ -34
-PUTHEX32 equ -28
-PUTS equ -22
-PUTC equ -16
 MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
 
@@ -20,14 +16,14 @@ START equ $10000
     move.l $4.w,a6 
     
     lea DosLoadingMsg,a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
 
     bsr InitStorageDevices    
     tst.l d0
     beq.s .storageOk
     move.l d0,d7
     lea InitStorageErrorMsg(pc),a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     move.l d7,d0
     bsr PrintErrorCode
     rts
@@ -36,9 +32,9 @@ START equ $10000
     lea CommandLine,a5  ; Command line buffer
 MainLoop:    
     lea MsgPrompt(pc),a1
-    jsr PUTS(a6) ; Puts
+    jsr CONPUTS(a6) ; CONPUTS
 .waitForChar:    
-    jsr GETC(a6)
+    jsr CONGETC(a6)
     tst.l d0
     bmi.s .waitForChar    
     cmp.b #$7f,d0
@@ -53,13 +49,13 @@ MainLoop:
     bhi.s .waitForChar
     move.b d0,(a5,d6.w)    
     addq.w #1,d6
-    jsr PUTC(a6) ; Putc
+    jsr CONPUTC(a6) ; CONPUTC
     bra.s .waitForChar
 .lineBreak:
     lea LineBreakMsg,a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     ;lea CommandLine,a1
-    ;jsr PUTS(a6)    
+    ;jsr CONPUTS(a6)    
     bsr ParseCommandLine
     bsr ClearCommandLine
     bra MainLoop    
@@ -69,11 +65,11 @@ MainLoop:
     subq.w #1,d6
     clr.b (a5,d6.w)
     move.b #8,d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     move.b #32,d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     move.b #8,d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     bra .waitForChar
 
 ParseCommandLine:
@@ -106,7 +102,7 @@ ParseCommandLine:
 PrintCommandError:
     move.l d0,d7
     lea CommandError,a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     move.l d7,d0
     bra PrintErrorCode
 
@@ -115,12 +111,12 @@ PrintDirEntry:
     bsr PrintEightChars
     bsr PrintSpace
     lea 8(a3),a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     bsr PrintSpace
     tst.b DIRENT_ATTR(a3)
     beq.s .isFile
     lea DirTextMsg,a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     bra.s .printDate
 .isFile:    
     move.l DIRENT_FSIZE(a3),d0
@@ -137,10 +133,10 @@ PrintDirEntry:
     bsr PrintSpace
     bsr PrintSpace
     move.l DIRENT_BLOCK(a3),d0
-    jsr PUTHEX32(a6)
+    jsr CONPUTHEX32(a6)
 
     lea LineBreakMsg,a1   
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     rts
 PrintDate:
     move.w DIRENT_MOD_DATE(a3),d2
@@ -188,29 +184,29 @@ PrintTwoDigitsDateWord:
     bmi.s .print
 .pad:
     move.b #'0',d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     dbra d7,.pad
 .print:    
     lea DecBuffer,a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 
 PrintDateWord:
     lea DecBuffer,a0
     bsr PrintU16Decimal
     lea DecBuffer,a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 PrintDash:
     move.b #'-',d0
-    jmp PUTC(a6)
+    jmp CONPUTC(a6)
 PrintColon:
     move.b #':',d0
-    jmp PUTC(a6)
+    jmp CONPUTC(a6)
 
 PrintDecimalWord:
     lea DecBuffer,a0    
     bsr PrintU16Decimal
     lea DecBuffer,a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 
 PrintDecimalLong:
     lea DecBuffer,a0    
@@ -223,7 +219,7 @@ PrintDecimalLong:
     bsr PrintSpace
     dbra d7,.pad
     lea DecBuffer,a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 
 ClearCommandLine:
     moveq #MAX_CMDLINE_LENGTH/4-1,d7
@@ -261,18 +257,18 @@ PrintChar:
     beq.s .printLineBreak
     cmp.b #32,d0
     blo.s .printSpace
-    jmp PUTC(a6)
+    jmp CONPUTC(a6)
 .printLineBreak:
     lea LineBreakMsg,a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 .printSpace:
     move.b #' ',d0
-    jmp PUTC(a6) 
+    jmp CONPUTC(a6) 
 
 PrintErrorCode:
-    jsr PUTHEX32(a6)
+    jsr CONPUTHEX32(a6)
     lea LineBreakMsg(pc),a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 
 MsgPrompt:
     dc.b "[/]$ ",0
@@ -292,25 +288,25 @@ InitStorageDevices:
     
 PrintSpace:
     move.b #' ',d0
-    jmp PUTC(a6)
+    jmp CONPUTC(a6)
 
 PrintEightChars:
     moveq #7,d7
 .nextChar:
     move.b (a1)+,d0
     move.l a1,-(sp)
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     move.l (sp)+,a1
     dbra d7,.nextChar
     rts
 
 PrintTextAndNumber:
     move.l d0,-(sp)
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     move.l (sp)+,d0
-    jsr PUTHEX32(a6)
+    jsr CONPUTHEX32(a6)
     lea LineBreakMsg(pc),a1
-    jmp PUTS(a6)
+    jmp CONPUTS(a6)
 
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0

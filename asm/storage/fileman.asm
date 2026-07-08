@@ -294,7 +294,7 @@ PrintFilename:
     bhi.s .ok
     move.b #'X',d0
 .ok:
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     dbra d7,.nextChar
     movem.l (sp)+,d7/a1
     rts
@@ -327,21 +327,21 @@ PrintTheFilenames:
     
     move.l $4.w,a6
     move.b #'"',d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     lea .st1,a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     move.l a3,a1
     bsr PrintFilename
     move.b #'"',d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     lea .st2,a1
-    jsr PUTS(a6)
+    jsr CONPUTS(a6)
     move.b #'"',d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     move.l a2,a1
     bsr PrintFilename
     move.b #'"',d0
-    jsr PUTC(a6)
+    jsr CONPUTC(a6)
     ; Compare filenames
     move.l a2,a1
     move.l a3,a0

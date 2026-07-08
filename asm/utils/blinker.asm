@@ -11,8 +11,10 @@ loop\@:
 GETC equ -52
 
 
-START equ $10000
-    org START
+;START equ $10000
+    ;org START
+    code
+
     move.w sr,OldSR
     move.w #$2700,sr          ; disable while configuring    
     lea DummyISR,a0
@@ -62,9 +64,14 @@ TimerISR:
 DummyISR:
     rte    
 
-OldSR:
-    dc.w 0
+    data
+    
 BlinkState:
     dc.b 0
 BlinkCount:
     dc.b 75
+
+    bss
+
+OldSR:
+    ds.w 1
