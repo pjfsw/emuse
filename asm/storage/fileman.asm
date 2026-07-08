@@ -5,7 +5,7 @@
 ; Abstraction layer containing basic file i/o features
 ;____________________________________________________________
 
-    include "fat16.i"
+    include "osvars.i"
 
 FM_OPCODE_JMP_ABSOLUTE     equ $4ef9
 
@@ -14,14 +14,7 @@ FM_ERR_INVALID_PATH        equ $88020000
 FM_ERR_PATH_NOT_FOUND      equ $88030000
 FM_ERR_NOT_A_DIRECTORY     equ $88040000
 FM_ERR_NOT_A_FILE          equ $88050000
-;____________________________________________________________
-;
-; DOSLibScratch
-;____________________________________________________________
-    rsreset
-DOSINFO_DIRENT  rs.b 32
-DOSINFO_PATHENT rs.b 16
-DOSINFO_RBUF    rs.b 512
+
 ;____________________________________________________________
 ;
 ; Initialize the File system manager
@@ -255,7 +248,9 @@ CompareFilenames:
 ; GetCurrentProcess - store pointer to context in A0
 ;____________________________________________________________
 GetCurrentProcess:
-    lea DOSLibScratch,a0
+    lea OSVARS_BASE,a0
+    move.l OsProcesses(a0),a0
+    lea ProcDosState(a0),a0
     rts
 
 ;____________________________________________________________
@@ -293,7 +288,7 @@ FMCreateContext:
     move.l a0,d0
     move.l a4,a1    ; Use target context directly
     move.l d2,d1    ; Directory to scan
-    lea DOSINFO_RBUF(a3),a0            
+    lea DOSINFO_BUFFER(a3),a0            
     jsr FM_CREATE_PATH_CTX(a6)
     tst.l d0
     beq.s .createPathCtxOk
@@ -429,7 +424,7 @@ FMReadFile:
     bra.s .aligned
 .readPartial:
     move.l a4,a0
-    lea DOSINFO_RBUF(a3),a1
+    lea DOSINFO_BUFFER(a3),a1
     jsr FM_READ_FILE_SECTOR(a6)
     tst.l d0
     beq.s .eof
@@ -440,7 +435,7 @@ FMReadFile:
     add.w d0,PCTX_OFFSET(a4)
     move.w d7,d5
     subq.w #1,d5
-    lea DOSINFO_RBUF(a3),a1
+    lea DOSINFO_BUFFER(a3),a1
 .copyBytes:
     move.b (a1)+,(a5)+
     dbra d5,.copyBytes

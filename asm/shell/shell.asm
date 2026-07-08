@@ -3,6 +3,7 @@
     incdir ../lib
     include hardware.i
     include rootlib.i
+    include osvars.i
 
 MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
@@ -10,8 +11,9 @@ TESTSECTOR equ $800000
 START equ $10000
     org START
     bsr MemInit
-
+    lea OSVARS_BASE,a5
     move.l ROOTLIB_BASE,a6 
+    bsr CreateFakeProcess    
     
     lea DosLoadingMsg,a1
     jsr CONPUTS(a6)
@@ -27,7 +29,7 @@ START equ $10000
     rts
 .storageOk:
     bsr ClearCommandLine
-    lea CommandLine,a5  ; Command line buffer
+    lea CommandLine,a4  ; Command line buffer
 MainLoop:    
     lea MsgPrompt(pc),a1
     jsr CONPUTS(a6) ; CONPUTS
@@ -45,7 +47,7 @@ MainLoop:
     blo.s .waitForChar
     cmp.b #127,d0
     bhi.s .waitForChar
-    move.b d0,(a5,d6.w)    
+    move.b d0,(a4,d6.w)    
     addq.w #1,d6
     jsr CONPUTC(a6) ; CONPUTC
     bra.s .waitForChar
@@ -61,7 +63,7 @@ MainLoop:
     tst.w d6
     beq.s .waitForChar
     subq.w #1,d6
-    clr.b (a5,d6.w)
+    clr.b (a4,d6.w)
     move.b #8,d0
     jsr CONPUTC(a6)
     move.b #32,d0
@@ -71,7 +73,6 @@ MainLoop:
     bra .waitForChar
 
 ParseCommandLine:
-
     lea DirEntry,a3
     lea DirectoryCtx,a0
     lea CommandLine,a1    
@@ -307,6 +308,15 @@ PrintTextAndNumber:
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 
+CreateFakeProcess:
+    move.l #ProcSizeOf,d0
+    bsr MemAlloc
+    move.l a0,OsProcesses(a5)   ; Setup a fake process for now
+    clr.l OsCurrentProcess(a5)
+    move.l a0,d0
+    jsr CONPUTHEX32(a6)
+    rts
+
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 DirTextMsg:
@@ -346,6 +356,4 @@ MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU TestPartitionInfo+32
 DirEntry     EQU DirectoryCtx+32
-xFMDeviceList EQU DirEntry+32
-DOSLibScratch EQU xFMDeviceList+256
-TestBuf     EQU $20000
+TestBuf     EQU DirEntry+32
