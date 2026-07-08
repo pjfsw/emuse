@@ -340,11 +340,9 @@ MmcStorageDevice:
 DecBuffer:
     ds.b 12,0
 
-;XSectorBuffer EQU SYSTEM_BSS_BASE+4
 CommandLine  EQU *
-;SDDeviceList EQU CommandLine+MAX_CMDLINE_LENGTH
-PMPartList   EQU CommandLine+MAX_CMDLINE_LENGTH
-MmcStatus    EQU PMPartList+512
+;PMPartList   EQU CommandLine+MAX_CMDLINE_LENGTH
+MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
 MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU TestPartitionInfo+32

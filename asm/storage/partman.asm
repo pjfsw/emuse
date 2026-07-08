@@ -1,23 +1,9 @@
+    include "osvars.i"
 ;____________________________________________________________
 ;
 ; Partition manager - Partition abstraction layer
 ; 
 ;____________________________________________________________
-    rsreset
-PM_DEVICE    rs.l 1
-PM_INDEX     rs.w 1
-PM_TYPE      rs.b 1
-PM_FLAGS     rs.b 1
-PM_PSTART    rs.l 1
-PM_PSIZE     rs.l 1
-PM_READ      rs.l 1
-PM_WRITE     rs.l 1
-PM_RESERVED  rs.l 2
-PM_SIZE      rs.b 0
-
-PM_SIZE_SHIFT       equ 5   ; 32 bytes
-PM_PART_LIST_SIZE   equ 128
-PM_PART_LIMIT       equ 4
 
 PM_ERR_DEVICE_LIST_FULL equ $80100000
 PM_ERR_DEVICE_NOT_FOUND equ $80200000
@@ -30,12 +16,13 @@ PM_ERR_DEVICE_IO_ERROR  equ $80f00000
 ; PMInit - initialize the partion manager
 ;____________________________________________________________
 PMInit:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .pmInitInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .pmInitInt:    
-    lea PMPartList,a1
+    lea OSVARS_BASE,a6
+    lea OsPartitionList(a6),a1
     moveq #PM_PART_LIST_SIZE/4-1,d7
 .loop:    
     clr.l (a1)+
@@ -80,12 +67,12 @@ PMRegisterDevice:
 .nextPartition:
     tst.b $04(a1)
     beq.s .thisPartitionEnd
-    moveq #PM_PART_LIMIT-1,d6
-    lea PMPartList,a2
+    moveq #PM_PART_MAX_COUNT-1,d6
+    lea OsPartitionList(a6),a2
 .findNextFreeEntry:
     tst.l PM_DEVICE(a2)
     beq.s .foundFreeEntry
-    lea PM_SIZE(a2),a2
+    lea PM_SIZEOF(a2),a2
     dbra d6,.findNextFreeEntry
     move.l #PM_ERR_DEVICE_LIST_FULL,d0
     rts  
@@ -121,25 +108,25 @@ PMGetPartitionCount:
     rts
 .pmGetPartitionCountInt:
     lea OSVARS_BASE,a6
-    lea PMPartList,a1
+    lea OsPartitionList(a6),a1
     moveq #0,d0
-    moveq #PM_PART_LIMIT-1,d7
+    moveq #PM_PART_MAX_COUNT-1,d7
 .nextEntry:
     tst.l PM_DEVICE(a1)
     beq.s .countDone
     addq.l #1,d0
-    lea PM_SIZE(a1),a1
+    lea PM_SIZEOF(a1),a1
     dbra d7,.nextEntry
 .countDone:
     rts    
 
 ; Copy Partition structure into memory pointed to by A1
 findPartitionFromIndex:
-    cmp.l #PM_PART_LIMIT,d0
+    cmp.l #PM_PART_MAX_COUNT,d0
     bhs.s .notFound          ; unsigned d0 >= limit
 
     lsl.l #5,d0              ; index * 32
-    lea PMPartList,a1    
+    lea OsPartitionList(a6),a1    
     add.l d0,a1
 
     tst.l PM_DEVICE(a1)
@@ -161,17 +148,18 @@ findPartitionFromIndex:
 ; Return: D0: 0 = OK
 ;____________________________________________________________
 PMGetPartitionInfo:
-    move.l d7,-(sp)
+    movem.l d7/a6,-(sp)
     bsr.s .pmGetPartitionInfoInt
-    move.l (sp)+,d7
+    movem.l (sp)+,d7/a6
     rts
 .pmGetPartitionInfoInt:
+    lea OSVARS_BASE,a6
     bsr findPartitionFromIndex
     tst.l d0
     beq.s .foundPartition
     rts
 .foundPartition:
-    moveq #PM_SIZE/4-1,d7
+    moveq #PM_SIZEOF/4-1,d7
 .copyPart:
     move.l (a1)+,(a0)+
     dbra d7,.copyPart
@@ -191,6 +179,12 @@ PMGetPartitionInfo:
 ; Return: D0 = 0: OK, D0 != 0: Error 
 ;____________________________________________________________
 PMReadSector:
+    move.l a6,-(sp)
+    bsr.s .pmReadSectorInt
+    move.l (sp)+,a6
+    rts
+.pmReadSectorInt:
+    lea OSVARS_BASE,a6    
     bsr findPartitionFromIndex
     tst.l d0
     beq.s .foundPartition

@@ -6,7 +6,7 @@
 ;____________________________________________________________
 
 FM_OPCODE_JMP_ABSOLUTE equ $4ef9
-FM_MAX_DEVICE_COUNT  equ PM_PART_LIMIT
+FM_MAX_DEVICE_COUNT  equ PM_PART_MAX_COUNT
 
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH        equ $88020000
