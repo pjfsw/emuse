@@ -41,7 +41,6 @@ DOSINFO_SIZEOF  rs.b 0
     rsreset
 ProcId:         rs.l 1
 ProcDosState:   rs.b DOSINFO_SIZEOF
-
 ProcUSizeOf:    rs.b 0
 ProcPadding:    rs.b 1008-ProcUSizeOf
 ProcSizeOf:     rs.b 0

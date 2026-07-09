@@ -311,10 +311,9 @@ PrintTextAndNumber:
 CreateFakeProcess:
     move.l #ProcSizeOf,d0
     bsr MemAlloc
-    move.l a0,OsProcesses(a5)   ; Setup a fake process for now
-    clr.l OsCurrentProcess(a5)
-    move.l a0,d0
-    jsr CONPUTHEX32(a6)
+    lea OSVARS_BASE,a5    
+    move.l d0,OsProcesses(a5)   ; Setup a fake process for now
+    clr.l OsCurrentProcess(a5)       
     rts
 
 DosLoadingMsg:

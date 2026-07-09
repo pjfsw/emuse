@@ -245,11 +245,14 @@ CompareFilenames:
 
 ;____________________________________________________________
 ;
-; GetCurrentProcess - store pointer to context in A0
+; § - store pointer to context in A0
 ;____________________________________________________________
-GetCurrentProcess:
+GetProcDosState:
     lea OSVARS_BASE,a0
-    move.l OsProcesses(a0),a0
+    move.l OsCurrentProcess(a0),d0
+    lsl.w #2,d0 
+    lea OsProcesses(a0),a0    
+    move.l (a0,d0),a0
     lea ProcDosState(a0),a0
     rts
 
@@ -270,7 +273,7 @@ FMCreateContext:
 .fmCreateContextInt:  
     move.l a0,a4    ; Path context (target)
     move.l a1,a5    ; Path
-    bsr GetCurrentProcess
+    bsr GetProcDosState
     move.l a0,a3    ; Process context
 
     lea OSVARS_BASE,a6
@@ -318,7 +321,6 @@ FMCreateContext:
     move.l a4,a0
     lea DOSINFO_DIRENT(a3),a1
     jsr FM_READ_DIR(a6)
-    ;jsr FATReadDir
     cmp.l #0,d0
     bgt.s .nextEntryOk
     beq.s .pathNotFound
@@ -388,13 +390,14 @@ FMReadFile:
     move.l #FM_ERR_NOT_A_FILE,d0
     rts
 .isFile:
-    bsr GetCurrentProcess
+    move.l d0,d2    ; Save bytes to read
+    bsr GetProcDosState
     move.l a0,a3    ; Process context
     lea OSVARS_BASE,a6
     lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition
 
+    move.l d2,d7    ; Bytes to read
     move.l a1,a5    ; Read buffer
-    move.l d0,d7    ; Bytes to read
     move.l PCTX_BYTES_REM(a4),d0
     cmp.l d0,d7
     bls.s .useD7  ; D7 <= file remaining
