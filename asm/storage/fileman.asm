@@ -6,14 +6,12 @@
 ;____________________________________________________________
 
     include "osvars.i"
+    include "errcode.i"
 
 FM_OPCODE_JMP_ABSOLUTE     equ $4ef9
 
 FM_ERR_NO_PARTITIONS_FOUND equ $88010000
 FM_ERR_INVALID_PATH        equ $88020000
-FM_ERR_PATH_NOT_FOUND      equ $88030000
-FM_ERR_NOT_A_DIRECTORY     equ $88040000
-FM_ERR_NOT_A_FILE          equ $88050000
 
 ;____________________________________________________________
 ;
@@ -323,7 +321,7 @@ FMCreateContext:
     ; Some other error
     rts
 .pathNotFound:
-    move.l #FM_ERR_PATH_NOT_FOUND,d0
+    moveq #DOS_ERR_PATH_NOT_FOUND,d0
     rts
 .nextEntryOk:
     lea DosDirEntry(a3),a0
@@ -355,7 +353,7 @@ FMReadDir:
     beq.s .notDirectory
     jmp FATReadDir
 .notDirectory:
-    move.l #FM_ERR_NOT_A_DIRECTORY,d0
+    moveq #DOS_ERR_NOT_DIRECTORY,d0
     rts
 
     include fat16.asm
@@ -383,7 +381,7 @@ FMReadFile:
     move.l a0,a4    ; Path context
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a4)
     beq.s .isFile
-    move.l #FM_ERR_NOT_A_FILE,d0
+    moveq #DOS_ERR_NOT_FILE,d0
     rts
 .isFile:
     move.l d0,d2    ; Save bytes to read

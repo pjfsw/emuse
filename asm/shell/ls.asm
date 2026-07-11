@@ -22,7 +22,7 @@ ExecuteLs:
     lea DirectoryCtx,a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     bne.s .isDir
-    move.l #SHELL_ERR_MASK|SHELL_ERR_NOT_DIRECTORY,d0
+    moveq #DOS_ERR_NOT_DIRECTORY,d0
     rts
 .isDir:
 .nextEntry:    
@@ -32,19 +32,13 @@ ExecuteLs:
     cmp.l #0,d0
     beq.s .endOfDir
     bpl.s .dirEntryOk
-    bra PrintCommandError
+    rts
 .dirEntryOk:    
     bsr PrintDirEntry
     bra.s .nextEntry
 .endOfDir:
     moveq #0,d0
     rts
-PrintCommandError:
-    move.l d0,d7
-    lea CommandError,a1
-    jsr CONPUTS(a6)
-    move.l d7,d0
-    bra PrintErrorCode
 
 PrintDirEntry:
     move.l a3,a1
@@ -160,3 +154,10 @@ PrintDecimalLong:
     dbra d7,.pad
     lea DecBuffer,a1
     jmp CONPUTS(a6)
+
+DirTextMsg:
+    dc.b "<DIR>      ",0
+    even
+
+DecBuffer:
+    ds.b 12,0

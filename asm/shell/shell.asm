@@ -7,6 +7,7 @@ START equ $10000
     include hardware.i
     include rootlib.i
     include osvars.i
+    include errcode.i
 
 MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
@@ -36,6 +37,8 @@ TESTSECTOR equ $800000
     bsr MemAlloc
     move.l d0,ReadBufferPtr
 
+    lea LineBreakMsg,a1
+    jsr CONPUTS(a6)
     bsr ClearCommandLine
     lea CommandLine,a4  ; Command line buffer
 MainLoop:    
@@ -126,12 +129,14 @@ ParseCommandLine:
     lea 4(a2),a2
     bra.s .nextCommand
 .notBuiltInCommand:
-    lea NotAnExecutable,a1
-    jmp CONPUTS(a6)
+    moveq #DOS_ERR_COMMAND_NOT_FOUND,d0
+    bra PrintError
 .internalCommandFound:
     bsr TrimLeadingSpaces
     move.l 4(a2),a2 ; Jump vector
     jsr (a2)
+    tst.l d0
+    bne PrintError
     rts
 
 ; Move pointer A1 to first non space character
@@ -221,14 +226,6 @@ CommandCat:
     dc.b "cat",0
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
-DirTextMsg:
-    dc.b "<DIR>      ",0
-NotDirectoryMsg:
-    dc.b "Not a directory",13,10,0    
-NotAnExecutable:
-    dc.b "Not an executable",13,10,0
-CommandError:
-    dc.b "Command return error:",0
 InitStorageErrorMsg:
     dc.b 13,10,"Failed to initialize boot device: ",0
 PathErrorMsg:
@@ -265,9 +262,7 @@ JT_DOS_LIB_BASE:
     include cd.asm
     include ls.asm
     include cat.asm
-
-DecBuffer:
-    ds.b 12,0
+    include errcode.asm
 
 CommandLine  EQU *
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH

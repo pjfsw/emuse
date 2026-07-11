@@ -2,6 +2,7 @@
     incdir ../lib
     include dirent.i
     include doslib.i
+    include errcode.i
 
 ; A1 Command line
 ExecuteCat:
@@ -27,7 +28,7 @@ ExecuteCat:
     lea DirectoryCtx,a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     beq.s .readFileContents
-    moveq #-1,d0
+    moveq #DOS_ERR_NOT_FILE,d0
     rts
 .readFileContents:
     lea DirectoryCtx,a0
