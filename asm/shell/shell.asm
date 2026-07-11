@@ -15,10 +15,10 @@ TESTSECTOR equ $800000
     bsr InstallExceptionHandlers
 
     bsr MemInit
-
+    bsr InitDosVars
     lea OSVARS_BASE,a5
     move.l ROOTLIB_BASE,a6 
-    move.l #JT_DOS_LIB_BASE,DosLibBase    
+    move.l #JT_DOS_LIB_BASE,DosLibBase   
         
     lea DosLoadingMsg,a1
     jsr CONPUTS(a6)
@@ -42,6 +42,11 @@ TESTSECTOR equ $800000
     bsr ClearCommandLine
     lea CommandLine,a4  ; Command line buffer
 MainLoop:    
+    ;lea OSVARS_BASE,a0
+    ;lea OsDosState(a0),a0
+    ;move.l DosCurrentDir(a0),d0
+    ;jsr CONPUTHEX32(a6)
+
     lea MsgPrompt(pc),a1
     jsr CONPUTS(a6) ; CONPUTS
 .waitForChar:    
@@ -65,8 +70,6 @@ MainLoop:
 .lineBreak:
     lea LineBreakMsg,a1
     jsr CONPUTS(a6)
-    ;lea CommandLine,a1
-    ;jsr CONPUTS(a6)    
     bsr ParseCommandLine
     bsr ClearCommandLine
     bra MainLoop    
@@ -212,6 +215,11 @@ InstallExceptionHandlers:
     move.l a0,$00000010    
     rts
 
+InitDosVars:
+    lea OSVARS_BASE,a0
+    lea OsDosState(a0),a0
+    clr.l DosCurrentDir(a0)
+    rts
 
 BuiltInCommands:
     dc.l CommandLs,ExecuteLs

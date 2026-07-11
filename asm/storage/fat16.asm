@@ -179,6 +179,7 @@ FATCreatePathContext:
     move.l a0,PCTX_SECBUF_PTR(a1)
     tst.l d1
     bne.s .isSubDir  ; TODO Check what d1 is when non-zero !!!
+    clr.l PCTX_CURR_BLOCK(a1)
     move.l FAT_ROOT_START(a5),d1    
     bra.s .dirSectorOk
 .isSubDir:    

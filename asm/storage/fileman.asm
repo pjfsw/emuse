@@ -273,10 +273,12 @@ FMCreateContext:
     lea OSVARS_BASE,a6
     lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition
     move.b #PATTR_DIR,PCTX_ATTR(a4)
-    moveq #0,d2     ; Current directory, for now always root
+
+    move.l DosCurrentDir(a3),d2
     move.b (a5),d0
     cmp.b #'/',d0
     bne.s .noLeadingSlash
+    moveq #0,d2     ; Set Root as base directory
     lea 1(a5),a5
 .noLeadingSlash:
     ; TODO Get current directory
