@@ -13,7 +13,6 @@ START equ $10000
     bsr MemInit
     lea OSVARS_BASE,a5
     move.l ROOTLIB_BASE,a6 
-    bsr CreateFakeProcess    
     
     lea DosLoadingMsg,a1
     jsr CONPUTS(a6)
@@ -308,13 +307,6 @@ PrintTextAndNumber:
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 
-CreateFakeProcess:
-    move.l #ProcSizeOf,d0
-    bsr MemAlloc
-    lea OSVARS_BASE,a5    
-    move.l d0,OsProcesses(a5)   ; Setup a fake process for now
-    clr.l OsCurrentProcess(a5)       
-    rts
 
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0

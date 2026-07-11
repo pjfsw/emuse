@@ -5,6 +5,23 @@
 
 ;____________________________________________________________
 ;
+; DOS State data
+;____________________________________________________________
+
+DOS_MAX_HUNKS   EQU 4
+
+    rsreset
+DosDirEntry     rs.b 32
+DosPathEntry    rs.b 16
+DosBuffer       rs.b 512
+DosStreamOffset rs.w 0
+DosHunkStart:   rs.l DOS_MAX_HUNKS
+DosHunkSize:    rs.l DOS_MAX_HUNKS
+DosEntry:       rs.l 1
+DosSizeof       rs.b 0
+
+;____________________________________________________________
+;
 ; Operating system variables
 ;____________________________________________________________
 OSVARS_BASE equ SYSTEM_BSS_BASE
@@ -20,31 +37,7 @@ OsUartRdPtr:        rs.b 1
 OsDeviceList:       rs.b SD_DEVICE_LIST_SIZE
 OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
-OsCurrentProcess:   rs.l 1
-OsProcesses:        rs.l OS_MAX_PROCESS_COUNT
+OsDosState:         rs.b DosSizeof
 OsSizeof:           rs.b 0
 
-;____________________________________________________________
-;
-; DOS State data
-;____________________________________________________________
-    rsreset
-DOSINFO_DIRENT  rs.b 32
-DOSINFO_PATHENT rs.b 16
-DOSINFO_BUFFER  rs.b 512
-DOSINFO_SIZEOF  rs.b 0
-
-;____________________________________________________________
-;
-; Process data
-;____________________________________________________________
-    rsreset
-ProcId:         rs.l 1
-ProcDosState:   rs.b DOSINFO_SIZEOF
-ProcUSizeOf:    rs.b 0
-ProcPadding:    rs.b 1008-ProcUSizeOf
-ProcSizeOf:     rs.b 0
-    if ProcUSizeOf > 1008
-        fail "Process structure exceeds 1 KB bytes"
-    endif
-    PRINTV ProcSizeOf
+Process:

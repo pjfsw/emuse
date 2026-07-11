@@ -249,11 +249,7 @@ CompareFilenames:
 ;____________________________________________________________
 GetProcDosState:
     lea OSVARS_BASE,a0
-    move.l OsCurrentProcess(a0),d0
-    lsl.w #2,d0 
-    lea OsProcesses(a0),a0    
-    move.l (a0,d0),a0
-    lea ProcDosState(a0),a0
+    lea OsDosState(a0),a0
     rts
 
 ;____________________________________________________________
@@ -291,7 +287,7 @@ FMCreateContext:
     move.l a0,d0
     move.l a4,a1    ; Use target context directly
     move.l d2,d1    ; Directory to scan
-    lea DOSINFO_BUFFER(a3),a0            
+    lea DosBuffer(a3),a0            
     jsr FM_CREATE_PATH_CTX(a6)
     tst.l d0
     beq.s .createPathCtxOk
@@ -302,7 +298,7 @@ FMCreateContext:
     rts ; ALL DONE
 .openNextPath:      
     move.l a5,a0
-    lea DOSINFO_PATHENT(a3),a1
+    lea DosPathEntry(a3),a1
     bsr ExtractNextPathElement
     tst.l d0
     beq.s .scanDirectory
@@ -311,7 +307,7 @@ FMCreateContext:
     move.l a0,a5
     tst.l d2    ; Root directory ?
     bne.s .scanNormally
-    lea DOSINFO_PATHENT(a3),a1
+    lea DosPathEntry(a3),a1
     cmp.b #'.',(a1)
     bne.s .scanNormally
     cmp.b #' ',1(a1)
@@ -319,7 +315,7 @@ FMCreateContext:
 .scanNormally:    
 .findNextEntry:
     move.l a4,a0
-    lea DOSINFO_DIRENT(a3),a1
+    lea DosDirEntry(a3),a1
     jsr FM_READ_DIR(a6)
     cmp.l #0,d0
     bgt.s .nextEntryOk
@@ -330,16 +326,16 @@ FMCreateContext:
     move.l #FM_ERR_PATH_NOT_FOUND,d0
     rts
 .nextEntryOk:
-    lea DOSINFO_DIRENT(a3),a0
+    lea DosDirEntry(a3),a0
     move.b DIRENT_ATTR(a0),PCTX_ATTR(a4)
     move.l DIRENT_FSIZE(a0),PCTX_BYTES_REM(a4)
 
-    lea DOSINFO_PATHENT(a3),a1
+    lea DosPathEntry(a3),a1
     bsr CompareFilenames
     tst.l d0
     bne.s .findNextEntry
 
-    lea DOSINFO_DIRENT(a3),a0
+    lea DosDirEntry(a3),a0
     move.l DIRENT_BLOCK(a0),d2  ; New directory
     bra .readCurrentDir
 
@@ -427,7 +423,7 @@ FMReadFile:
     bra.s .aligned
 .readPartial:
     move.l a4,a0
-    lea DOSINFO_BUFFER(a3),a1
+    lea DosBuffer(a3),a1
     jsr FM_READ_FILE_SECTOR(a6)
     tst.l d0
     beq.s .eof
@@ -438,7 +434,7 @@ FMReadFile:
     add.w d0,PCTX_OFFSET(a4)
     move.w d7,d5
     subq.w #1,d5
-    lea DOSINFO_BUFFER(a3),a1
+    lea DosBuffer(a3),a1
 .copyBytes:
     move.b (a1)+,(a5)+
     dbra d5,.copyBytes
