@@ -2,10 +2,8 @@
     incdir ../lib
     include dirent.i
     include doslib.i
-;
-; A0 Read buffer pointer
+
 ; A1 Command line
-; D0 Read buffer size
 ExecuteCat:
     movem.l d2/d7/a4-a6,-(sp)
     bsr.s .executeCat
@@ -17,12 +15,11 @@ ExecuteCat:
     rts
 .hasArgument:
     move.l ROOTLIB_BASE,a6
-    move.l d0,d2    ; Read buffer size
-    move.l a0,a5    ; Read buffer
+    move.l #READBUFFER_SIZE,d2    ; Read buffer size
+    move.l ReadBufferPtr,a5     ; Read buffer
     move.l DosLibBase,a4
     lea DirectoryCtx,a0
-    bsr FMCreateContext
-    ;jsr DOS_CREATE_CONTEXT(a4)
+    jsr DOS_CREATE_CONTEXT(a4)
     tst.l d0
     beq.s .resolveOk
     rts
@@ -36,8 +33,7 @@ ExecuteCat:
     lea DirectoryCtx,a0
     move.l a5,a1
     move.l d2,d0
-    bsr FMReadFile
-    ;jsr DOS_READ_FILE(a4)
+    jsr DOS_READ_FILE(a4)
     tst.l d0
     beq.s .readDone
     bpl.s .readOk
