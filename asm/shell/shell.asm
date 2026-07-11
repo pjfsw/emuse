@@ -46,9 +46,7 @@ MainLoop:
     ;lea OsDosState(a0),a0
     ;move.l DosCurrentDir(a0),d0
     ;jsr CONPUTHEX32(a6)
-
-    lea MsgPrompt(pc),a1
-    jsr CONPUTS(a6) ; CONPUTS
+    bsr PrintPrompt
 .waitForChar:    
     jsr CONGETC(a6)
     tst.l d0
@@ -153,6 +151,15 @@ TrimLeadingSpaces:
 .endOfString:
     rts
 
+PrintPrompt:
+    lea MsgPrompt1(pc),a1
+    jsr CONPUTS(a6)
+    lea OsDosState(a5),a0
+    lea DosCurDirName(a0),a1
+    jsr CONPUTS(a6)
+    lea MsgPrompt2(pc),a1
+    jmp CONPUTS(a6) ; CONPUTS
+
 
 ClearCommandLine:
     moveq #MAX_CMDLINE_LENGTH/4-1,d7
@@ -170,8 +177,10 @@ PrintErrorCode:
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 
-MsgPrompt:
-    dc.b "[/]$ ",0
+MsgPrompt1:
+    dc.b "[",0
+MsgPrompt2:
+    dc.b "]$ ",0
     even
 
 InitStorageDevices:
@@ -219,6 +228,8 @@ InitDosVars:
     lea OSVARS_BASE,a0
     lea OsDosState(a0),a0
     clr.l DosCurrentDir(a0)
+    move.b #'/',DosCurDirName(a0)
+    clr.b 1+DosCurDirName(a0)
     rts
 
 BuiltInCommands:

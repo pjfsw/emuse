@@ -12,6 +12,7 @@ DOS_MAX_HUNKS   EQU 4
 
     rsreset
 DosCurrentDir:  rs.l 1
+DosCurDirName:  rs.b 16
 DosDirEntry     rs.b 32
 DosPathEntry    rs.b 16
 DosBuffer       rs.b 512
