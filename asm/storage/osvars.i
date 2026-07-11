@@ -39,5 +39,4 @@ OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
 OsSizeof:           rs.b 0
-
-Process:
+s

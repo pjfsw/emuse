@@ -1,3 +1,6 @@
+START equ $10000
+    org START
+
     incdir ..
     incdir ../storage
     incdir ../lib
@@ -7,9 +10,9 @@
 
 MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
+    ; Install error handlers
+    bsr InstallExceptionHandlers
 
-START equ $10000
-    org START
     bsr MemInit
     lea OSVARS_BASE,a5
     move.l ROOTLIB_BASE,a6 
@@ -71,7 +74,71 @@ MainLoop:
     jsr CONPUTC(a6)
     bra .waitForChar
 
+; Check internal command as provided in A0 with the command line provided in A1
+CheckInternalCommand:
+.compare:
+    move.b (a0)+,d0
+    beq.s .commandNameEnd
+    
+    cmp.b (a1)+,d0
+    bne.s .noMatch
+    bra.s .compare
+.commandNameEnd:
+    move.b (a1),d0
+    beq.s .match
+    cmp.b #' ',d0
+    bne.s .noMatch
+.match:
+    moveq #0,d0
+    rts
+.noMatch:
+    moveq #-1,d0
+    rts
+
 ParseCommandLine:
+    movem.l a2/a3,-(sp)
+    bsr.s .parseCommandLine
+    movem.l (sp)+,a2/a3
+    rts
+.parseCommandLine:    
+    lea CommandLine,a1
+    bsr TrimLeadingSpaces
+    tst.b (a1)
+    bne.s .cmdLineNotEmpty
+    rts
+.cmdLineNotEmpty:
+    move.l a1,a3
+    lea BuiltInCommands,a2
+.nextCommand:
+    tst.l (a2)
+    beq.s .notBuiltInCommand
+    move.l (a2),a0
+    move.l a3,a1
+    bsr CheckInternalCommand
+    tst.l d0
+    beq.s .internalCommandFound
+    lea 4(a2),a2
+    bra.s .nextCommand
+.notBuiltInCommand:
+    lea NotAnExecutable,a1
+    jmp CONPUTS(a6)
+.internalCommandFound:
+    bsr TrimLeadingSpaces
+    move.l 4(a2),a2 ; Jump vector
+    jsr (a2)
+    rts
+
+; Move pointer A1 to first non space character
+TrimLeadingSpaces:
+    move.b (a1),d0
+    beq.s .endOfString
+    cmp.b #' ',d0
+    bne.s .endOfString
+    adda.l #1,a1
+    bra.s TrimLeadingSpaces    
+.endOfString:
+    rts
+
     lea DirEntry,a3
     lea DirectoryCtx,a0
     lea CommandLine,a1    
@@ -307,13 +374,33 @@ PrintTextAndNumber:
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 
+InstallExceptionHandlers:
+    lea ExceptionAddressError,a0
+    move.l a0,$0000000C
+    lea ExceptionIllegalInstruction,a0
+    move.l a0,$00000010    
+    rts
 
+
+BuiltInCommands:
+    dc.l CommandLs,ExecuteLs
+    dc.l CommandCd,ExecuteCd
+    dc.l CommandCat,ExecuteCat
+    dc.l 0,0
+CommandLs:
+    dc.b "ls",0
+CommandCd:
+    dc.b "cd",0
+CommandCat:
+    dc.b "cat",0
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 DirTextMsg:
     dc.b "<DIR>      ",0
 NotDirectoryMsg:
     dc.b "Not a directory",13,10,0    
+NotAnExecutable:
+    dc.b "Not an executable",13,10,0
 CommandError:
     dc.b "Command return error:",0
 InitStorageErrorMsg:
@@ -330,6 +417,7 @@ MmcStorageDevice:
     dc.l MMCWriteSector
     blk.w 10,0
 
+    include exceptions.asm
     include mmc.asm
     include storagedevice.asm
     include partman.asm
@@ -337,6 +425,9 @@ MmcStorageDevice:
     include fileman.asm
     include decimal.asm
     include memman.asm
+    include cd.asm
+    include ls.asm
+    include cat.asm
 
 DecBuffer:
     ds.b 12,0
