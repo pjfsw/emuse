@@ -14,12 +14,14 @@ TESTSECTOR equ $800000
     bsr InstallExceptionHandlers
 
     bsr MemInit
+
     lea OSVARS_BASE,a5
     move.l ROOTLIB_BASE,a6 
-    
+    move.l #JT_DOS_LIB_BASE,DosLibBase    
+        
     lea DosLoadingMsg,a1
     jsr CONPUTS(a6)
-
+    
     bsr InitStorageDevices    
     tst.l d0
     beq.s .storageOk
@@ -30,6 +32,10 @@ TESTSECTOR equ $800000
     bsr PrintErrorCode
     rts
 .storageOk:
+    move.l #READBUFFER_SIZE,d0
+    bsr MemAlloc
+    move.l d0,ReadBufferPtr
+
     bsr ClearCommandLine
     lea CommandLine,a4  ; Command line buffer
 MainLoop:    
@@ -150,7 +156,7 @@ TrimLeadingSpaces:
     lea DirectoryCtx,a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     bne.s .isDir
-    bra ReadFileContents
+    rts
 .isDir:
 .nextEntry:    
     lea DirectoryCtx,a0
@@ -297,39 +303,6 @@ ClearCommandLine:
 
     rts
 
-ReadFileContents:
-    lea DirectoryCtx,a0
-    lea TestBuf,a1
-    move.l #1024,d0
-    bsr FMReadFile
-    tst.l d0
-    beq.s .readDone
-    bpl.s .readOk
-    bra PrintErrorCode
-.readOk:
-    move.l d0,d7
-    subq.l #1,d7
-    lea TestBuf,a2
-.printChar:
-    move.b (a2)+,d0
-    bsr PrintChar
-    dbra d7,.printChar
-    bra ReadFileContents
-.readDone:
-    rts
-
-PrintChar:
-    cmp.b #10,d0
-    beq.s .printLineBreak
-    cmp.b #32,d0
-    blo.s .printSpace
-    jmp CONPUTC(a6)
-.printLineBreak:
-    lea LineBreakMsg,a1
-    jmp CONPUTS(a6)
-.printSpace:
-    move.b #' ',d0
-    jmp CONPUTC(a6) 
 
 PrintErrorCode:
     jsr CONPUTHEX32(a6)
@@ -416,6 +389,17 @@ MmcStorageDevice:
     dc.l MMCReadSector
     dc.l MMCWriteSector
     blk.w 10,0
+DosLibBase:
+    dc.l 0
+READBUFFER_SIZE EQU 2048
+ReadBufferPtr:
+    dc.l 0
+JT_DOS_READ_FILE:   jmp FMReadFile
+JT_DOS_READ_DIR:    jmp FMReadDir
+JT_DOS_CREATE_CTX:  jmp FMCreateContext
+JT_DOS_VERSION:     dc.l 1
+JT_DOS_LIB_BASE:    
+
 
     include exceptions.asm
     include mmc.asm
@@ -438,4 +422,3 @@ MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU TestPartitionInfo+32
 DirEntry     EQU DirectoryCtx+32
-TestBuf     EQU DirEntry+32
