@@ -1,6 +1,7 @@
-EXE_NOT_AN_EXECUTABLE equ $ffff0000
 HUNK_HEADER equ $3f3
 
+    include "osvars.i"
+    include "errcode.i"
 
 ;____________________________________________________________
 ;
@@ -15,31 +16,34 @@ StreamGetLong:
 ; Return: D0: 0 upon success, otherwise error code
 ;         A0: pointer to first code entry
 ;____________________________________________________________
-LoadExe:
+FMLoadExecutable:
     movem.l a3-a6/d7,-(sp)
-    bsr .loadExeInt
-    move.l (sp)+,a3-a6/d7
-.loadExeInt:
-    lea OSVARS_BASE,a6
+    bsr .loadExecutableInt
+    movem.l (sp)+,a3-a6/d7
+    rts
+.loadExecutableInt:
+    move.l DosLibBase,a6
     move.l a0,a4    ; Path context
     jsr GetProcDosState
     move.l a0,a5    ; DOS context
-    clr.l DOSINFO_STREAM_OFS(a5)
-
+    clr.w DosStreamOffset(a5)
+    move.l a4,a0
     lea DosBuffer(a5),a1
     move.l #512,d0
-    bsr FMReadFile
-    tst.l d0
+    jsr DOS_READ_FILE(a6)
+    tst.l d0    
     beq.s .invalidExe
+    bpl.s .fileOk
+    rts
+.fileOk:
     cmp.l #31,d0    ; Sanity check
-    bhi.s .bigEnough
-    beq.s .invalidExe    
+    bhi.s .bigEnough   
 .invalidExe:    
     suba.l a0,a0
-    move.l #EXE_NOT_AN_EXECUTABLE,d0
+    move.l #DOS_ERR_NOT_EXECUTABLE,d0
     rts
 .bigEnough:
-    move.l a3,a0
+    lea DosBuffer(a5),a0
     cmp.l #HUNK_HEADER,(a0)+
     bne.s .invalidExe
     tst.l (a0)+ ; Check string list, we only support empty list
@@ -53,11 +57,10 @@ LoadExe:
     move.l a0,a3        ; Hunk size
     moveq #0,d0
 .calcHunks:
-    move.l (a0)+,d0
-    
-
-    moveq #0,d0
+    add.l (a0)+,d0
+    dbra d7,.calcHunks   
     rts
 
+File
     include fileman.asm
 

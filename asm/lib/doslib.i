@@ -1,3 +1,13 @@
+
+;____________________________________________________________
+;
+; Load executable
+;
+; A0: pointer to path context 
+; Return: D0: 0 upon success, otherwise error code
+;         A0: pointer to first code entry
+;____________________________________________________________
+DOS_LOAD_EXE equ -28
 ;____________________________________________________________
 ;
 ; Read from file

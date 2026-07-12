@@ -375,9 +375,9 @@ FMReadDir:
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FMReadFile:
-    movem.l d5-d7/a3-a6,-(sp)
+    movem.l d2/d5-d7/a3-a6,-(sp)
     bsr.s .fmReadFileInt
-    movem.l (sp)+,d5-d7/a3-a6
+    movem.l (sp)+,d2/d5-d7/a3-a6
     rts    
 .fmReadFileInt:    
     move.l a0,a4    ; Path context

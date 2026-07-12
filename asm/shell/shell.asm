@@ -143,8 +143,12 @@ ParseCommandLine:
     lea 4(a2),a2
     bra.s .nextCommand
 .notBuiltInCommand:
-    moveq #DOS_ERR_COMMAND_NOT_FOUND,d0
-    bra PrintError
+    move.l a3,a1
+    bsr ExecuteCommand
+    tst.l d0
+    bne PrintError
+    rts
+
 .internalCommandFound:
     bsr TrimLeadingSpaces
     move.l 4(a2),a2 ; Jump vector
@@ -276,6 +280,7 @@ DosLibBase:
 READBUFFER_SIZE EQU 2048
 ReadBufferPtr:
     dc.l 0
+JT_DOS_LOAD_EXE:    jmp FMLoadExecutable
 JT_DOS_READ_FILE:   jmp FMReadFile
 JT_DOS_READ_DIR:    jmp FMReadDir
 JT_DOS_CREATE_CTX:  jmp FMCreateContext
@@ -289,12 +294,14 @@ JT_DOS_LIB_BASE:
     include partman.asm
     include fat16.asm
     include fileman.asm
+    include exeloader.asm
     include decimal.asm
     include memman.asm
     include cd.asm
     include ls.asm
     include cat.asm
     include errcode.asm
+    include exec.asm
 
 CommandLine  EQU *
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
