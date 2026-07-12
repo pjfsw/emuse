@@ -26,6 +26,28 @@ ExecuteCommand:
 .resolveOk:
     lea DirectoryCtx,a0
     move.l DosLibBase,a6
-    jmp DOS_LOAD_EXE(a6)
+    jsr DOS_LOAD_EXE(a6)
+    move.l a0,a3    
+    move.l ROOTLIB_BASE,a6
+
+    move.w ProcHunkCount(a3),d7
+    subq.w #1,d7
+    moveq #0,d2
+.printHunks:
+    move.l ProcHunkStart(a3,d2.w),d0
+    bsr PrintNum
+
+    move.l ProcHunkSize(a3,d2.w),d0
+    bsr PrintNum
+
+    addq.w #4,d2
+    dbra d7,.printHunks
+    moveq #0,d0
+    rts
+
+PrintNum:
+    jsr CONPUTHEX32(a6)
+    lea LineBreakMsg,a1
+    jmp CONPUTS(a6)
 
     incdir "../storage"

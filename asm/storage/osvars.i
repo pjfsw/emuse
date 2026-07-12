@@ -8,18 +8,12 @@
 ; DOS State data
 ;____________________________________________________________
 
-DOS_MAX_HUNKS   EQU 4
-
     rsreset
 DosCurrentDir:  rs.l 1
 DosCurDirName:  rs.b 16
 DosDirEntry     rs.b 32
 DosPathEntry    rs.b 16
 DosBuffer       rs.b 512
-DosStreamOffset rs.w 0
-DosHunkStart:   rs.l DOS_MAX_HUNKS
-DosHunkSize:    rs.l DOS_MAX_HUNKS
-DosEntry:       rs.l 1
 DosSizeof       rs.b 0
 
 ;____________________________________________________________
@@ -41,3 +35,13 @@ OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
 OsSizeof:           rs.b 0
+
+PROC_MAX_HUNKS   EQU 4
+
+    rsreset
+ProcStreamOffset rs.w 1
+ProcHunkCount:   rs.w 1
+ProcHunkStart:   rs.l PROC_MAX_HUNKS
+ProcHunkSize:    rs.l PROC_MAX_HUNKS
+ProcEntry:       rs.l 1
+ProcSizeof:      rs.b 0

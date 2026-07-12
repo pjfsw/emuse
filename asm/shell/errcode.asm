@@ -38,6 +38,7 @@ PrintError:
     dc.l DOS_ERR_NOT_FILE,.notRegularFileMsg
     dc.l DOS_ERR_PATH_NOT_FOUND,.pathNotFoundMsg
     dc.l DOS_ERR_COMMAND_NOT_FOUND,.cmdNotFoundMsg
+    dc.l DOS_ERR_OUT_OF_MEMORY,.outOfMemoryMsg
     dc.l 0,0
 .genericErrorMsg:
     dc.b "Code ",0
@@ -53,6 +54,8 @@ PrintError:
     dc.b "No such file or directory",0
 .cmdNotFoundMsg:
     dc.b "Command not found",0
+.outOfMemoryMsg:
+    dc.b "Not enough memory",0
 ;LineBreakMsg:
     ;dc.b 13,10,0
     even
