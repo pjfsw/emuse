@@ -16,9 +16,9 @@ StreamGetLong:
 ;         A0: pointer to first code entry
 ;____________________________________________________________
 LoadExe:
-    movem.l a3-a6/d6-d7,-(sp)
+    movem.l a3-a6/d7,-(sp)
     bsr .loadExeInt
-    move.l (sp)+,a3-a6/d6-d7
+    move.l (sp)+,a3-a6/d7
 .loadExeInt:
     lea OSVARS_BASE,a6
     move.l a0,a4    ; Path context
@@ -44,8 +44,7 @@ LoadExe:
     bne.s .invalidExe
     tst.l (a0)+ ; Check string list, we only support empty list
     bne.s .invalidExe
-    move.l (a0)+,d6 ; Table size
-    move.l d6,d7
+    move.l (a0)+,d7 ; Table size
     subq.l #1,d7
     tst.l (a0)+
     bne.s .invalidExe   ; Only support first hunk=0
@@ -54,8 +53,8 @@ LoadExe:
     move.l a0,a3        ; Hunk size
     moveq #0,d0
 .calcHunks:
-    add.l (a0)+,d0
-    dbra d7,.calcHunks            
+    move.l (a0)+,d0
+    
 
     moveq #0,d0
     rts
