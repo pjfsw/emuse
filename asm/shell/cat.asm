@@ -6,9 +6,9 @@
 
 ; A1 Command line
 ExecuteCat:
-    movem.l d2-d7/a4-a6,-(sp)
+    movem.l d2/d7/a4-a6,-(sp)
     bsr.s .executeCat
-    movem.l (sp)+,d2-d7/a4-a6
+    movem.l (sp)+,d2/d7/a4-a6
     rts
 .executeCat:
     tst.b (a1)
@@ -28,13 +28,6 @@ ExecuteCat:
     lea DirectoryCtx,a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     beq.s .readFileContents
-    move.l a6,d0
-    move.l #$f00434,a0
-    jsr CONPUTHEX32(a0)
-    move.l PCTX_CURR_BLOCK(a0),d0
-    jsr CONPUTHEX32(a6)
-    lea LineBreakMsg,a1
-    jsr CONPUTS(a6)    
     moveq #DOS_ERR_NOT_FILE,d0
     rts
 .readFileContents:

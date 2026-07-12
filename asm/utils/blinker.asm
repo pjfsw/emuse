@@ -26,7 +26,7 @@ GETC equ -52
     move.b #1,OREG+TIMER_ACT  ; Enable timer
     move.w  #$2200,sr        ; mask level 2, accepts 3–7    
 
-    move.l ROOTLIB_BASE,a6
+    move.l $4.w,a6
 .flushChars:
     jsr GETC(a6)
     bpl.s .flushChars

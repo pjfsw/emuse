@@ -138,7 +138,7 @@ MMCInit:
     RestoreRegisters
     rts
 MMCInitInt:
-    move.l ROOTLIB_BASE,a4
+    move.l $4.w,a4
     MmcDeselect    
     MmcMosiClockA5MisoA6
     bsr.s .sendDummyClocksInt
@@ -242,7 +242,7 @@ MMCReadSector:
     MmcDeselect
     rts
 MMCReadSectorInt:
-    move.l ROOTLIB_BASE,a4
+    move.l $4.w,a4
     MmcMosiClockA5MisoA6
 
     move.l a0,-(sp)
@@ -295,7 +295,7 @@ MMCWriteSector:
     MmcDeselect
     rts
 .writeSectorInt:
-    move.l ROOTLIB_BASE,a4
+    move.l $4.w,a4
     MmcMosiClockA5MisoA6
     move.l a0,-(sp)
     lea Cmd24(pc),a0
