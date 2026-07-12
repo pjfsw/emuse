@@ -3,7 +3,7 @@
 ; Memory manager
 ;____________________________________________________________
 
-MEMMAN_BLOCK_SIZE equ 256
+MEMMAN_BLOCK_SIZE equ 16
 MEMMAN_BLOCK_MASK equ (MEMMAN_BLOCK_SIZE-1)
 MEMMAN_CEILING    equ $400      ; Pointer containing amount of RAM
 

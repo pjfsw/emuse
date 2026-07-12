@@ -4,7 +4,7 @@
     include doslib.i
     include errcode.i
 
-; A1 Command line
+; A1 Command line argument
 ExecuteLs:
     movem.l d2/d7/a4-a6,-(sp)
     bsr.s .executeLs

@@ -13,7 +13,6 @@ MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
     ; Install error handlers
     bsr InstallExceptionHandlers
-
     bsr MemInit
     bsr InitDosVars
     lea OSVARS_BASE,a5
@@ -42,10 +41,6 @@ TESTSECTOR equ $800000
     bsr ClearCommandLine
     lea CommandLine,a4  ; Command line buffer
 MainLoop:    
-    ;lea OSVARS_BASE,a0
-    ;lea OsDosState(a0),a0
-    ;move.l DosCurrentDir(a0),d0
-    ;jsr CONPUTHEX32(a6)
     bsr PrintPrompt
 .waitForChar:    
     jsr CONGETC(a6)
@@ -105,35 +100,85 @@ CheckInternalCommand:
     moveq #-1,d0
     rts
 
+SkipSpaces:
+    move.b (a1),d0
+    beq.s .done
+    cmp.b #' ',d0
+    bne.s .done
+    clr.b (a1)  ; Fill with zeroes
+    adda.l #1,a1
+    bra.s SkipSpaces
+.done:
+    rts
+FindSpaces:
+    move.b (a1),d0
+    beq.s .done    
+    cmp.b #' ',d0
+    beq.s .done
+    adda.l #1,a1
+    bra.s FindSpaces
+.done:
+    rts
+
+SplitArg:
+    lea CommandLine,a1
+    bsr SkipSpaces
+    move.l a1,CmdPtr
+    bsr FindSpaces        
+    tst.b (a1)
+    beq.s .noSpacesAfterCommand
+    clr.b (a1)
+    adda.l #1,a1
+    bsr SkipSpaces
+.noSpacesAfterCommand:
+    move.l a1,CmdArgPtr
+    move.l a1,a0
+.findEnd:
+    move.b (a1),d0
+    beq.s .done
+    adda.l #1,a1
+    cmp.b #' ',d0
+    beq.s .isSpace
+    move.l a1,a0
+.isSpace:
+    bra.s .findEnd    
+.done:
+    clr.b (a0)
+    rts
+
 ParseCommandLine:
     movem.l a2/a3,-(sp)
     bsr.s .parseCommandLine
     movem.l (sp)+,a2/a3
-    rts
+    rts    
 .parseCommandLine:    
-    lea CommandLine,a1
-    bsr TrimLeadingSpaces
+    bsr SplitArg
+    ;bsr PrintCmdAndArg
+
+    move.l CmdPtr,a1
     tst.b (a1)
     bne.s .cmdLineNotEmpty
     rts
 .cmdLineNotEmpty:
-    move.l a1,a3
     lea BuiltInCommands,a2
 .nextCommand:
     tst.l (a2)
     beq.s .notBuiltInCommand
     move.l (a2),a0
-    move.l a3,a1
+    move.l CmdPtr,a1
     bsr CheckInternalCommand
     tst.l d0
     beq.s .internalCommandFound
     lea 4(a2),a2
     bra.s .nextCommand
 .notBuiltInCommand:
+    move.l CmdPtr,a1
     moveq #DOS_ERR_COMMAND_NOT_FOUND,d0
+
     bra PrintError
 .internalCommandFound:
-    bsr TrimLeadingSpaces
+    bsr PrintCmdAndArg
+    move.l CmdArgPtr,a1
     move.l 4(a2),a2 ; Jump vector
     jsr (a2)
     tst.l d0
@@ -151,6 +196,28 @@ TrimLeadingSpaces:
 .endOfString:
     rts
 
+PrintCmdAndArg:
+    move.b #'"',d0
+    jsr CONPUTC(a6)
+    move.l CmdPtr,a1
+    jsr CONPUTS(a6)
+    move.b #'"',d0
+    jsr CONPUTC(a6)
+    lea LineBreakMsg,a1
+    jsr CONPUTS(a6)
+
+    move.b #'"',d0
+    jsr CONPUTC(a6)
+    move.l CmdArgPtr,a1
+    jsr CONPUTS(a6)
+    move.b #'"',d0
+    jsr CONPUTC(a6)
+    lea LineBreakMsg,a1
+    jsr CONPUTS(a6)
+
+    rts
+
+
 PrintPrompt:
     lea MsgPrompt1(pc),a1
     jsr CONPUTS(a6)
@@ -164,13 +231,14 @@ PrintPrompt:
 ClearCommandLine:
     moveq #MAX_CMDLINE_LENGTH/4-1,d7
     lea CommandLine,a0
+    lea CommandArg,a1
 .clearCmdLine:
     clr.l (a0)+
+    clr.l (a1)+
     dbra d7,.clearCmdLine
     moveq #0,d6     ; Command line position    
 
     rts
-
 
 PrintErrorCode:
     jsr CONPUTHEX32(a6)
@@ -253,6 +321,10 @@ LineBreakMsg:
     dc.b 13,10,0    
     even
 
+CmdPtr:
+    dc.l 0
+CmdArgPtr:
+    dc.l 0
 MmcStorageDevice:
     dc.b "SD"
     dc.l MMCReadSector
@@ -281,10 +353,12 @@ JT_DOS_LIB_BASE:
     include cd.asm
     include ls.asm
     include cat.asm
+    include run.asm
     include errcode.asm
 
 CommandLine  EQU *
-MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
+CommandArg   EQU CommandLine+MAX_CMDLINE_LENGTH
+MmcStatus    EQU CommandArg+MAX_CMDLINE_LENGTH
 MmcCmdArg    EQU MmcStatus+4
 TestPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU TestPartitionInfo+32
