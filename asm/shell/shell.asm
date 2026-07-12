@@ -118,6 +118,19 @@ ParseCommandLine:
     rts
 .cmdLineNotEmpty:
     move.l a1,a3
+.findEnd:
+    move.b (a1),d0
+    beq.s .endOfCmdLine
+    lea 1(a1),a1
+    bra .findEnd
+.endOfCmdLine:
+    move.b -1(a1),d0
+    cmp.b #' ',d0
+    bne.s .trimmed
+    clr.b -1(a1)
+    lea -1(a1),a1
+    bra .endOfCmdLine
+.trimmed:    
     lea BuiltInCommands,a2
 .nextCommand:
     tst.l (a2)
