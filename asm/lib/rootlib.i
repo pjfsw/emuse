@@ -1,4 +1,4 @@
-ROOTLIB_BASE equ $4
+ROOTLIB_BASE equ $F00004
 ;____________________________________________________________
 ;
 ; CONGETC - Read character from console

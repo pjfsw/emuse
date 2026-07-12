@@ -162,9 +162,10 @@ ExtractNextPathElement:
 .normalCase:    
     moveq #7,d7    ; Max path element size
 .nextBaseChar:
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'/',d0            
     beq.s .subPathFound
     cmp.b #'.',d0
@@ -174,9 +175,10 @@ ExtractNextPathElement:
     bmi.s .invalidPath 
     move.b d0,(a1)+
     dbra d7,.nextBaseChar
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'.',d0
     beq.s .parseExtChar    
 .invalidPath:    
@@ -188,9 +190,10 @@ ExtractNextPathElement:
 .parseExtChar:
     moveq #2,d7
 .nextExtChar:
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'/',d0            
     beq.s .subPathFound
     bsr NormalizeChar
@@ -198,9 +201,10 @@ ExtractNextPathElement:
     bmi.s .invalidPath 
     move.b d0,(a1)+
     dbra d7,.nextExtChar
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'/',d0
     beq.s .subPathFound
     move.l #FM_ERR_INVALID_PATH,d0
@@ -267,6 +271,9 @@ FMCreateContext:
 .fmCreateContextInt:  
     move.l a0,a4    ; Path context (target)
     move.l a1,a5    ; Path
+
+
+    move.l a5,a1
     bsr GetProcDosState
     move.l a0,a3    ; Process context
 
@@ -375,9 +382,9 @@ FMReadDir:
 ;         D0 < 0: not ok
 ;____________________________________________________________
 FMReadFile:
-    movem.l d5-d7/a3-a6,-(sp)
+    movem.l d2-d7/a3-a6,-(sp)
     bsr.s .fmReadFileInt
-    movem.l (sp)+,d5-d7/a3-a6
+    movem.l (sp)+,d2-d7/a3-a6
     rts    
 .fmReadFileInt:    
     move.l a0,a4    ; Path context

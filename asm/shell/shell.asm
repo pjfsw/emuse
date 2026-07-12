@@ -35,7 +35,10 @@ TESTSECTOR equ $800000
     move.l #READBUFFER_SIZE,d0
     bsr MemAlloc
     move.l d0,ReadBufferPtr
-
+    bne .allocOk
+    lea NotEnoughMemoryMsg,a1
+    jmp CONPUTS(a6)
+.allocOk:
     lea LineBreakMsg,a1
     jsr CONPUTS(a6)
     bsr ClearCommandLine
@@ -153,7 +156,6 @@ ParseCommandLine:
     rts    
 .parseCommandLine:    
     bsr SplitArg
-    ;bsr PrintCmdAndArg
 
     move.l CmdPtr,a1
     tst.b (a1)
@@ -165,7 +167,7 @@ ParseCommandLine:
     tst.l (a2)
     beq.s .notBuiltInCommand
     move.l (a2),a0
-    move.l CmdPtr,a1
+    move.l CmdPtr(pc),a1
     bsr CheckInternalCommand
     tst.l d0
     beq.s .internalCommandFound
@@ -177,24 +179,14 @@ ParseCommandLine:
 
     bra PrintError
 .internalCommandFound:
-    bsr PrintCmdAndArg
-    move.l CmdArgPtr,a1
+    ;bsr PrintCmdAndArg
+    move.l CmdArgPtr(pc),a1
     move.l 4(a2),a2 ; Jump vector
     jsr (a2)
     tst.l d0
     bne PrintError
     rts
 
-; Move pointer A1 to first non space character
-TrimLeadingSpaces:
-    move.b (a1),d0
-    beq.s .endOfString
-    cmp.b #' ',d0
-    bne.s .endOfString
-    adda.l #1,a1
-    bra.s TrimLeadingSpaces    
-.endOfString:
-    rts
 
 PrintCmdAndArg:
     move.b #'"',d0
@@ -304,6 +296,7 @@ BuiltInCommands:
     dc.l CommandLs,ExecuteLs
     dc.l CommandCd,ExecuteCd
     dc.l CommandCat,ExecuteCat
+    dc.l CommandResolve,ExecuteResolve
     dc.l 0,0
 CommandLs:
     dc.b "ls",0
@@ -311,6 +304,10 @@ CommandCd:
     dc.b "cd",0
 CommandCat:
     dc.b "cat",0
+CommandResolve:
+    dc.b "r",0
+NotEnoughMemoryMsg:
+    dc.b 13,10,"Out of memory",0
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 InitStorageErrorMsg:
@@ -355,6 +352,7 @@ JT_DOS_LIB_BASE:
     include cat.asm
     include run.asm
     include errcode.asm
+    include resolv.asm
 
 CommandLine  EQU *
 CommandArg   EQU CommandLine+MAX_CMDLINE_LENGTH

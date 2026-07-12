@@ -6,7 +6,6 @@ IRQV_UART   equ $000074 ; Level 5
 IRQV_LVL6   equ $000078 ; Level 6
 IRQV_LVL7   equ $00007c ; Level 7
 
-EXEC_BASE   equ $4
 RAM_LIMIT   equ $800000
 OREG        equ $d00000
 OVR         equ 9
