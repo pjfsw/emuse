@@ -27,6 +27,10 @@ ExecuteCommand:
     lea DirectoryCtx,a0
     move.l DosLibBase,a6
     jsr DOS_LOAD_EXE(a6)
+    tst.l d0 
+    beq.s .loadOk1
+    rts
+.loadOk1:
     move.l a0,a3    
     move.l ROOTLIB_BASE,a6
 
