@@ -252,11 +252,12 @@ static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *
 
 static void disassembleDbcc(DecodedInstruction *di, uint32_t pc, Instruction *instruction) {
     addPadding(instruction);
-    char s[100];
+    char s[100];    
+    addDisassembly(instruction, " ", SYM_SYMBOL);
     disassembleEa(instruction, &di->src, di->size);
 
     addDisassembly(instruction, ",", SYM_SYMBOL);
-    sprintf(s, " $%06X", pc + (int32_t)di->displacement);
+    sprintf(s, "$%06X", pc + (int32_t)di->displacement);
     addDisassembly(instruction, s, SYM_CONSTANT);
 }
 
