@@ -107,7 +107,11 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
             addDisassembly(instruction, s, SYM_CONSTANT);            
         } else if (ea->xn == AM_EXT_ABS_LONG) {
             sprintf(s, "$%X", ea->address);
-            addDisassembly(instruction, s, SYM_CONSTANT);            
+            addDisassembly(instruction, s, SYM_CONSTANT);      
+        } else if (ea->xn == AM_EXT_ABS_SHORT) {
+            sprintf(s, "$%X", ea->address);
+            addDisassembly(instruction, s, SYM_CONSTANT);      
+            addDisassembly(instruction, ".W", SYM_SYMBOL);
         } else if (ea->xn == AM_EXT_PC_DISP) {
             sprintf(s, "$%X", ea->address);
             addDisassembly(instruction, s, SYM_CONSTANT);
@@ -246,10 +250,20 @@ static void disassembleBranch(DecodedInstruction *di, uint32_t pc, Instruction *
     addDisassembly(instruction, s, SYM_CONSTANT);
 }
 
+static void disassembleDbcc(DecodedInstruction *di, uint32_t pc, Instruction *instruction) {
+    addPadding(instruction);
+    char s[100];
+    disassembleEa(instruction, &di->src, di->size);
+
+    addDisassembly(instruction, ",", SYM_SYMBOL);
+    sprintf(s, " $%06X", pc + (int32_t)di->displacement);
+    addDisassembly(instruction, s, SYM_CONSTANT);
+}
+
 static void disassembleJump(DecodedInstruction *di, uint32_t pc, Instruction *instruction) {
     addPadding(instruction);
     addDisassembly(instruction, " ", SYM_SYMBOL);
-    disassembleEa(instruction, &di->dst, di->size);    
+    disassembleEa(instruction, &di->dst, di->size);
 }
 
 static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instruction *instruction) {
@@ -287,6 +301,9 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
             break;
         case IF_BRANCH:
             disassembleBranch(&di, regs->pc, instruction);
+            break;
+        case IF_DBCC:
+            disassembleDbcc(&di, regs->pc, instruction);
             break;
         case IF_JUMP:
             disassembleJump(&di, regs->pc, instruction);

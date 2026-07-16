@@ -22,6 +22,8 @@ static const int LSR_DR = 0x01;
 static const int LSR_THRE = 0x20;
 static const int LSR_TEMT = 0x40;
 
+static const int MCR_RTS = 2;
+
 #define UART_FIFO_SIZE 16
 #define UART_FIFO_SIZE_MASK (UART_FIFO_SIZE-1)
 
@@ -50,6 +52,7 @@ struct Uart {
     uint8_t iir;
     uint8_t dlab;
     uint8_t lsr;
+    uint8_t mcr;
     uint8_t scratch;
     uint8_t fifo_enabled;
     uint8_t fifo_trigger;
@@ -94,6 +97,14 @@ static void writeDlab(Uart *uart, uint8_t offset, uint8_t byte) {
         uart->dlm = byte;
         //printf("DLM = %02x\n", byte);
         updateBaudRate(uart);
+    }
+}
+
+static void setMcr(Uart *uart) {
+    if (uart->mcr & MCR_RTS) {
+        ptsSetRts(uart->pts, true);
+    } else {
+        ptsSetRts(uart->pts, false);
     }
 }
 
@@ -182,8 +193,10 @@ static void writeByteToUart(Uart *uart, uint8_t offset, uint8_t byte) {
     } else if (offset == FCR) {
         setFcr(uart, byte);
     } else if (offset == SCR) {
-        printf("Write scratch\n");
         uart->scratch = byte;
+    } else if (offset == MCR) {
+        uart->mcr = byte;
+        setMcr(uart);
     }
 }
 
@@ -220,6 +233,8 @@ static uint8_t readByteFromUart(Uart *uart, uint8_t offset) {
     } else if (offset == SCR) {
         printf("Read scratch\n");
         return uart->scratch;
+    } else if (offset == MCR) {
+        return uart->mcr;
     }
     return 0x00;
 }

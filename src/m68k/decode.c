@@ -14,6 +14,7 @@
 #include "shift.h"
 #include "sourcedest.h"
 #include "tst.h"
+#include "dbcc.h"
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
@@ -81,6 +82,10 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
             ea->address |= (uint32_t)readWordFunc(readWriteUserdata, registers->pc);
             increasePc(registers);
             return 8;
+        } else if (reg == AM_EXT_ABS_SHORT) {
+            ea->address = (uint32_t)readWordFunc(readWriteUserdata, registers->pc);
+            increasePc(registers);
+            return 4;
         } else if (reg == AM_EXT_PC_DISP) {
             int16_t displacement = (int16_t)readWordFunc(readWriteUserdata, registers->pc);
             ea->address = registers->pc + (int32_t)displacement;
@@ -135,6 +140,7 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xb1c0, decodeCmpa, IF_MOVE }, // CMPA.L
     { 0xf130, 0xd100, decodeAddx, IF_MOVE },
     { 0xf130, 0xd108, decodeAddx, IF_MOVE },
+    { 0xf0c8, 0x50c8, decodeDbcc, IF_DBCC },
     { 0xf0c0, 0x5000, decodeAddqSubq, IF_MOVE }, // size 00
     { 0xf0c0, 0x5040, decodeAddqSubq, IF_MOVE }, // size 01
     { 0xf0c0, 0x5080, decodeAddqSubq, IF_MOVE }, // size 10        

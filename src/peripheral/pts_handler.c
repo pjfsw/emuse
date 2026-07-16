@@ -22,6 +22,7 @@ typedef struct {
     uint8_t read_ptr;
     uint8_t write_ptr;    
     uint16_t headroom;    
+    volatile bool rts;
 } Reader;
 
 struct PtsHandler {
@@ -43,26 +44,20 @@ static void *read_thread(void *user_data) {
         }
         reader->headroom = headroom;
 
-        bool buffer_available = headroom > 3;
-        if (buffer_available) {
-            int n = read(reader->fdm, &reader->buffer[reader->write_ptr], 1);
-            if (n > 0) {
-                /*char c = data->buffer[data->write_ptr];
-                if (c == 10) {
-                    fprintf(stderr, "\033[36m<10>\n");
-                } else if (c == 13) {
-                    fprintf(stderr, "\033[36m<13>\n");
-                } else {
-                    fprintf(stderr, "\033[36m%c", c);
-                }*/
-                reader->write_ptr++;
-            } 
-        } else {
-            fprintf(stderr,
-                "Buffer not available (read %d, write %d), dropping bytes\n",
-                reader->read_ptr,
-                reader->write_ptr);
-        }
+        if (reader->rts) {
+            bool buffer_available = headroom > 3;
+            if (buffer_available) {
+                int n = read(reader->fdm, &reader->buffer[reader->write_ptr], 1);
+                if (n > 0) {
+                    reader->write_ptr++;
+                } 
+            } else {
+                /*fprintf(stderr,
+                    "Buffer not available (read %d, write %d), dropping bytes\n",
+                    reader->read_ptr,
+                    reader->write_ptr);*/
+            }
+        } 
         nanosleep(&delay, NULL);
     }
     return NULL;
@@ -136,4 +131,8 @@ bool ptsReadByte(PtsHandler *pts, uint8_t *byte) {
         return true;
     }
     return false;
+}
+
+void ptsSetRts(PtsHandler *pts, bool rts) {
+    pts->reader.rts = rts;    
 }

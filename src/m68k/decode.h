@@ -40,6 +40,7 @@ typedef enum {
     IF_MOVE,
     IF_MOVE_TO_SR,
     IF_BRANCH,
+    IF_DBCC,
     IF_IMPLIED,
     IF_SINGLE_DEST,
     IF_SINGLE_SRC,
