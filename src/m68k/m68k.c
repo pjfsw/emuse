@@ -425,6 +425,7 @@ static uint32_t readLong(M68k *m68k, uint32_t address) {
 
 static void postReset(M68k *m68k) {
     m68k->registers.ssp = readLong(m68k, 0);
+    m68k->registers.a[7] = m68k->registers.ssp;
     m68k->registers.pc = readLong(m68k, 4);
     setSupervisor(m68k);
 }
@@ -434,15 +435,17 @@ static int handleInterrupt(M68k *cpu, uint8_t level) {
     RwFunc *rw = &cpu->rwFunc;    
     void *readWriteUserdata = cpu->readWriteUserdata;
 
-    push(cpu, regs->pc & 0xffff);
-    push(cpu, (regs->pc >> 16) & 0xffff);
-    push(cpu, regs->sr);       
-
+    uint16_t oldSr = regs->sr;
     if (!isSupervisor(cpu)) {
         regs->usp = regs->a[7];
         setSupervisor(cpu);
         regs->a[7] = regs->ssp;
     }
+
+    push(cpu, regs->pc & 0xffff);
+    push(cpu, (regs->pc >> 16) & 0xffff);
+    push(cpu, oldSr);       
+
 
     regs->sr &= ~0x0700;        // Clear interrupt level
     regs->sr |= level << 8;     // Set current level
