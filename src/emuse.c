@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
     }
     size_t romFileSize = loadFile(args.romFile, rom.data, rom.size);
     if (romFileSize > 0) {
-        printf("Loading ROM file \"%s\" (%d bytes)\n", args.romFile, romFileSize);
+        printf("Loading ROM file \"%s\" (%d bytes)\n", args.romFile, (uint32_t)romFileSize);
     } else {
         fprintf(stderr, "ROM file empty or not found: \"%s\"\n", args.romFile);
         return 1;
