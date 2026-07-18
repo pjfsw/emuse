@@ -1,4 +1,6 @@
 HUNK_HEADER equ $3f3
+HUNK_CODE   equ $3e9
+HUNK_DATA   equ $3ea
 
     include "osvars.i"
     include "errcode.i"
@@ -82,9 +84,21 @@ FMLoadExecutable:
     adda.l d1,a1
     addq.w #4,d0
     dbra d7,.updateProcessHunks
-    
-    move.l a2,a0
-    moveq #0,d0
+
+    move.l a0,a1
+    lea DosBuffer(a5),a0    
+    suba.l a0,a1
+    move.l a1,d0
+    lsr.l #2,d0
+    move.w d0,ProcStreamOffset(a2)  ; Starting now we poll long words until EOF or unexpected hunk
+    clr.w ProcCurrentHunk(a2)
+.nextLong:
+    bsr StreamGetNextLong
+    tst.l d0
+    bmi .invalidExe
+    rts
+    cmp.l #HUNK_CODE,
+
     rts
 
 File

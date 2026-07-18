@@ -40,6 +40,7 @@ PROC_MAX_HUNKS   EQU 4
 
     rsreset
 ProcStreamOffset rs.w 1
+ProcCurrentHunk: rs.w 1
 ProcHunkCount:   rs.w 1
 ProcHunkStart:   rs.l PROC_MAX_HUNKS
 ProcHunkSize:    rs.l PROC_MAX_HUNKS
