@@ -1,5 +1,6 @@
 #include "shift.h"
 #include "sourcedest.h"
+#include <stdio.h>
 
 typedef void (*ShiftFunc)(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count);
 
@@ -220,6 +221,15 @@ int decodeLsl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
     di->execFunc = executeLsl;
     setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
     setShiftTargetRegister(opcode, &di->dst);    
+/*
+    printf(
+        "Decode LSL opcode=%04x sizeBits=%u size=%d count=%u dst=D%d\n",
+        opcode,
+        (opcode >> 6) & 3,
+        di->size,
+        di->src.immediate,
+        di->dst.xn
+    );    */
     return 0;
 }
 
