@@ -1,2 +1,4 @@
 build
 asm/.source.txt
+*.bin
+

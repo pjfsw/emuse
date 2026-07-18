@@ -239,6 +239,36 @@ int decodeCmpm(
     return -1;
 }
 
+int decodeCmpi(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    ReadWordFunc readWordFunc = rwFunc->rw;
+    int cycles = 0;
+
+    di->execFunc = executeCmp;
+    uint16_t mode = (opcode >> 3) & 7;
+    uint16_t dstReg = opcode & 7;
+    di->mnemonic = "CMPI";
+    uint16_t size = (opcode >> 6) & 3;
+    di->size = size;
+
+    di->src.mode = AM_EXT;
+    di->src.xn = AM_EXT_IMMEDIATE;
+    di->aluFunc = aluSub;
+    int eaCycles = getEffectiveAddress(registers, AM_EXT, AM_EXT_IMMEDIATE, di->size, &di->src, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
+        return -1;
+    }
+    cycles += eaCycles;
+
+    eaCycles = getEffectiveAddress(registers, mode, dstReg, di->size, &di->dst, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
+        return -1;
+    }
+    cycles += eaCycles;
+    return cycles;
+}
+
+
 static int decodeAluImmediate(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;

@@ -116,6 +116,8 @@ typedef struct {
     InstructionFamily family;
 } DecodeRule;
 
+// LSL !
+
 static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},
@@ -129,6 +131,7 @@ static const DecodeRule rules[] = {
     { 0xff00, 0x0001, decodeAndi, IF_MOVE},
     { 0xff00, 0x4200, decodeClr, IF_SINGLE_DEST},
     { 0xff00, 0x4a00, decodeTst, IF_SINGLE_SRC},
+    { 0xff00, 0x0c00, decodeCmpi, IF_MOVE },
     { 0xfb80, 0x4880, decodeMovem, IF_MOVEM}, 
     { 0xf118, 0xe010, decodeRoxr, IF_MOVE},
     { 0xf118, 0xe110, decodeRoxl, IF_MOVE},

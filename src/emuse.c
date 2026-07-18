@@ -8,6 +8,8 @@
 #include "memory.h"
 #include "addressable_latch.h"
 #include "uart.h"
+#include "mmc.h"
+#include "input_reg.h"
 
 typedef struct {
     uint32_t cpuFreq;
@@ -149,6 +151,19 @@ int main(int argc, char* argv[]) {
     mappingKey.conditionFuncUserdata = &outReg;
     busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
     busAddWriteFunc(&bus, memoryWriteByte, memoryWriteWord, mappingKey);
+
+    Mmc mmc;
+    mmcInit(&mmc);
+    busAddClockFunc(&bus, mmcClock, &mmc);
+    
+    Ireg ireg;
+    iregInit(&ireg, &mmc);
+    mappingKey.start = 0xe00000;
+    mappingKey.end = 0xf00000;
+    mappingKey.userdata = &ireg;
+    mappingKey.conditionFunc = NULL;
+    mappingKey.conditionFuncUserdata = NULL;
+    busAddReadFunc(&bus, iregReadByte, iregReadWord, mappingKey);
 
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;

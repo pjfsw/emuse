@@ -93,11 +93,11 @@ FMLoadExecutable:
     move.w d0,ProcStreamOffset(a2)  ; Starting now we poll long words until EOF or unexpected hunk
     clr.w ProcCurrentHunk(a2)
 .nextLong:
-    bsr StreamGetNextLong
-    tst.l d0
-    bmi .invalidExe
+    ;bsr StreamGetNextLong
+    ;tst.l d0
+    ;bmi .invalidExe
     rts
-    cmp.l #HUNK_CODE,
+    ;cmp.l #HUNK_CODE,
 
     rts
 
