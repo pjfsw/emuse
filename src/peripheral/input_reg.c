@@ -12,9 +12,9 @@ uint8_t iregReadByte(void *userdata, uint32_t address) {
     if ((address & 1) == 0) {
         return 0xff;
     }
-    return readByte((Ireg*)userdata);
+    return readByte((Ireg *)userdata);
 }
 
 uint16_t iregReadWord(void *userdata, uint32_t address) {
-    return (uint16_t)readByte((Ireg*)userdata);
+    return (uint16_t)readByte((Ireg *)userdata);
 }

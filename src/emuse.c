@@ -50,6 +50,8 @@ static const uint32_t UART_BASE = 0xb00000;
 static const uint32_t AREG_BASE = 0xd00000;
 static const uint32_t OVR_ADDRESS = AREG_BASE + 9;
 static const uint32_t SPI_CS_ADDRESS = AREG_BASE + 13;
+static const uint32_t SPI_MOSI_CLK_ADDRESS = AREG_BASE + 15;
+
 static const uint16_t OVR_BIT_VALUE = 2;
 
 static bool isRomOverlay(void *userdata) {
@@ -64,6 +66,21 @@ static bool isNotRomOverlay(void *userdata) {
 static bool isLedActive(void *userdata) {
     AddrLatch *latch = (AddrLatch*)userdata;
     return addrLatchGetValue(latch, SPI_CS_ADDRESS) != 0;
+}
+
+static bool getMmcClk(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return (addrLatchGetValue(latch, SPI_MOSI_CLK_ADDRESS) & 1) == 1;
+}
+
+static bool getMmcCs(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return addrLatchGetValue(latch, SPI_CS_ADDRESS) == 1;
+}
+
+static bool getMmcSi(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return (addrLatchGetValue(latch, SPI_MOSI_CLK_ADDRESS) & 2) == 2;
 }
 
 int main(int argc, char* argv[]) {
@@ -152,8 +169,14 @@ int main(int argc, char* argv[]) {
     busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
     busAddWriteFunc(&bus, memoryWriteByte, memoryWriteWord, mappingKey);
 
+    Spi spi = {
+        .clkFunc = getMmcClk,
+        .csFunc = getMmcCs,
+        .siFunc = getMmcSi,
+        .funcUserdata = &outReg
+    };
     Mmc mmc;
-    mmcInit(&mmc);
+    mmcInit(&mmc, &spi);
     busAddClockFunc(&bus, mmcClock, &mmc);
     
     Ireg ireg;
