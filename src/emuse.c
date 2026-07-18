@@ -10,10 +10,12 @@
 #include "uart.h"
 #include "mmc.h"
 #include "input_reg.h"
+#include "sector_storage.h"
 
 typedef struct {
     uint32_t cpuFreq;
     char romFile[1024];
+    char mmcFile[1024];
 } Args;
 
 void readArgs(Args *args, int argc, char *argv[]) {
@@ -21,13 +23,16 @@ void readArgs(Args *args, int argc, char *argv[]) {
     args->cpuFreq = 12000000;
 
     int c;
-    while ((c = getopt(argc, argv, "z:r:")) != -1) {
+    while ((c = getopt(argc, argv, "z:r:m:")) != -1) {
         switch(c) {
             case 'z':
                 args->cpuFreq = atoi(optarg);
                 break;
             case 'r':
                 strcpy(args->romFile, optarg);
+                break;
+            case 'm':
+                strcpy(args->mmcFile, optarg);
                 break;
         }
     }
@@ -116,6 +121,16 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "ROM file empty or not found: \"%s\"\n", args.romFile);
         return 1;
     }
+
+    uint32_t mmcCapacity = 64 * 1024 * 1024;
+    SectorStorage storage;
+    sectorStorageInit(&storage, mmcCapacity);
+
+    if (strlen(args.mmcFile) > 0) {
+        printf("Loading MMC file \"%s\"\n", args.mmcFile);
+        loadFile(args.mmcFile, storage.data, mmcCapacity);
+    }
+
     ReadWriteMappingKey mappingKey;
     memset(&mappingKey, 0, sizeof(ReadWriteMappingKey));
 
@@ -125,6 +140,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Failed to initialize UART\n");
         return 1;
     }
+    
 
     mappingKey.start = UART_BASE;
     mappingKey.end = UART_BASE + 0x100000;
@@ -169,14 +185,10 @@ int main(int argc, char* argv[]) {
     busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
     busAddWriteFunc(&bus, memoryWriteByte, memoryWriteWord, mappingKey);
 
-    Spi spi = {
-        .clkFunc = getMmcClk,
-        .csFunc = getMmcCs,
-        .siFunc = getMmcSi,
-        .funcUserdata = &outReg
-    };
+    Spi spi;
+    spiInit(&spi, getMmcCs, getMmcSi, getMmcClk, &outReg);
     Mmc mmc;
-    mmcInit(&mmc, &spi);
+    mmcInit(&mmc, &spi, sectorStorageReadSector, sectorStorageWriteSector, &storage);
     busAddClockFunc(&bus, mmcClock, &mmc);
     
     Ireg ireg;
@@ -195,5 +207,6 @@ int main(int argc, char* argv[]) {
     }
     appRun(&app);
     appDestroy(&app);
+    sectorStorageFree(&storage);
     return 0;
 }
