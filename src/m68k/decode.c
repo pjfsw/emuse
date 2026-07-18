@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "decode.h"
+#include "adda.h"
 #include "alu.h"
 #include "branch.h"
 #include "btst.h"
@@ -15,6 +16,7 @@
 #include "sourcedest.h"
 #include "tst.h"
 #include "dbcc.h"
+#include "div.h"
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
@@ -127,6 +129,7 @@ static const DecodeRule rules[] = {
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
     { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
     { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},
+    { 0xff00, 0x0600, decodeAddi, IF_MOVE },
     { 0xff00, 0x0000, decodeOri, IF_MOVE},
     { 0xff00, 0x0001, decodeAndi, IF_MOVE},
     { 0xff00, 0x4200, decodeClr, IF_SINGLE_DEST},
@@ -143,9 +146,12 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xb108, decodeCmpm, IF_MOVE },  // CMPM
     { 0xf1c0, 0xb0c0, decodeCmpa, IF_MOVE }, // CMPA.W
     { 0xf1c0, 0xb1c0, decodeCmpa, IF_MOVE }, // CMPA.L
+    { 0xf1c0, 0x80c0, decodeDivu, IF_MOVE },
+    { 0xf1c0, 0x81c0, decodeDivs, IF_MOVE },
     { 0xf130, 0xd100, decodeAddx, IF_MOVE },
     { 0xf130, 0xd108, decodeAddx, IF_MOVE },
     { 0xf0c8, 0x50c8, decodeDbcc, IF_DBCC },
+    { 0xf0c0, 0xd0c0, decodeAdda, IF_MOVE },
     { 0xf0c0, 0x5000, decodeAddqSubq, IF_MOVE }, // size 00
     { 0xf0c0, 0x5040, decodeAddqSubq, IF_MOVE }, // size 01
     { 0xf0c0, 0x5080, decodeAddqSubq, IF_MOVE }, // size 10        

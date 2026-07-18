@@ -373,3 +373,11 @@ int decodeOri(
 
     return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
 }
+
+int decodeAddi(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ADDI";
+    di->aluFunc = aluAdd;
+
+    return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
+}

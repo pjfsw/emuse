@@ -221,15 +221,6 @@ int decodeLsl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
     di->execFunc = executeLsl;
     setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
     setShiftTargetRegister(opcode, &di->dst);    
-/*
-    printf(
-        "Decode LSL opcode=%04x sizeBits=%u size=%d count=%u dst=D%d\n",
-        opcode,
-        (opcode >> 6) & 3,
-        di->size,
-        di->src.immediate,
-        di->dst.xn
-    );    */
     return 0;
 }
 

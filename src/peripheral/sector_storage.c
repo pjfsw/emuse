@@ -23,6 +23,14 @@ bool sectorStorageReadSector(uint32_t sector, uint8_t *buffer, void *userdata) {
         for (int j = 0; j < 16; j++) {
             printf("%02X ", buffer[i + j]);
         }
+        for (int j = 0; j < 16; j++) {
+            char c = buffer[i+j];
+            if ((c < 32) || (c>127)) {
+                printf(".");
+            } else {
+                printf("%c",c);
+            }
+        }
         printf("\n");
     }*/
 
