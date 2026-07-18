@@ -14,4 +14,6 @@ int decodeRor(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
 
 int decodeRol(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
 
+int decodeLsl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
 
+int decodeLsr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata);
