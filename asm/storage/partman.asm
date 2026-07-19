@@ -40,13 +40,20 @@ PMInit:
 ;         D0 < 0: an error occured
 ;____________________________________________________________
 PMRegisterDevice:
-    movem.l d2-d3/d6-d7/a2/a6,-(sp)
+    movem.l d2-d4/d6-d7/a2/a6,-(sp)
     bsr.s .pmRegisterDeviceInt
-    movem.l (sp)+,d2-d3/d6-d7/a2/a6
+    movem.l (sp)+,d2-d4/d6-d7/a2/a6
     rts
 .pmRegisterDeviceInt:    
     lea OSVARS_BASE,a6
     move.l d0,d2
+    lea OsDeviceList(a6),a0
+    move.l d0,d1
+    subq.l #1,d1
+    lsl.l #SD_SIZE_SHIFT,d1
+    lea (a0,d1),a0
+    move.w SD_ID(a0),d4 ; Device name in d4!
+    
     moveq #0,d1    
     lea OsSectorBuffer(a6),a0
     bsr SDReadSector
@@ -77,7 +84,7 @@ PMRegisterDevice:
     move.l #PM_ERR_DEVICE_LIST_FULL,d0
     rts  
 .foundFreeEntry:   
-    ; Copy stuff     
+    ; Copy stuff        
     move.b $04(a1),PM_TYPE(a2)
     move.l d2,PM_DEVICE(a2)
     move.w d3,PM_INDEX(a2)
@@ -86,8 +93,12 @@ PMRegisterDevice:
     move.l d0,PM_PSTART(a2)
     lea $0c(a1),a0
     bsr ReadLe32
-    move.l d0,PM_PSIZE(a2)
-        
+    move.l d0,PM_PSIZE(a2)    
+    move.w d4,PM_NAME(a2)
+    move.l d3,d0
+    add.b #'0',d0
+    move.b d0,2+PM_NAME(a2)
+    clr.b 3+PM_NAME(a2)        
     addq.l #1,d3
 .thisPartitionEnd:    
     lea $10(a1),a1

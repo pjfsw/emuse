@@ -254,6 +254,7 @@ BuiltInCommands:
     dc.l CommandCd,ExecuteCd
     dc.l CommandCat,ExecuteCat
     dc.l CommandFree,ExecuteFree
+    dc.l CommandPart,ExecutePart
     dc.l 0,0
 CommandLs:
     dc.b "ls",0
@@ -263,6 +264,8 @@ CommandCat:
     dc.b "cat",0
 CommandFree:
     dc.b "free",0
+CommandPart:
+    dc.b "part",0
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 InitStorageErrorMsg:
@@ -283,6 +286,10 @@ DosLibBase:
 READBUFFER_SIZE EQU 2048
 ReadBufferPtr:
     dc.l 0
+
+DecBuffer:
+    ds.b 12,0
+
 JT_DOS_LOAD_EXE:    jmp FMLoadExecutable
 JT_DOS_READ_FILE:   jmp FMReadFile
 JT_DOS_READ_DIR:    jmp FMReadDir
@@ -306,10 +313,12 @@ JT_DOS_LIB_BASE:
     include errcode.asm
     include exec.asm
     include free.asm
+    include part.asm
+    include printutil.asm
 
 CommandLine  EQU *
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
 MmcCmdArg    EQU MmcStatus+4
-TestPartitionInfo EQU MmcCmdArg+4
-DirectoryCtx EQU TestPartitionInfo+32
+ShellPartitionInfo EQU MmcCmdArg+4
+DirectoryCtx EQU ShellPartitionInfo+32
 DirEntry     EQU DirectoryCtx+32

@@ -136,28 +136,7 @@ PrintColon:
     move.b #':',d0
     jmp CONPUTC(a6)
 
-PrintDecimalWord:
-    lea DecBuffer,a0    
-    bsr PrintU16Decimal
-    lea DecBuffer,a1
-    jmp CONPUTS(a6)
-
-PrintDecimalLong:
-    lea DecBuffer,a0    
-    bsr PrintU32Decimal
-    move.l a0,d0
-    sub.l #DecBuffer,a0
-    moveq #11,d7
-    sub.l a0,d7
-.pad:
-    bsr PrintSpace
-    dbra d7,.pad
-    lea DecBuffer,a1
-    jmp CONPUTS(a6)
 
 DirTextMsg:
     dc.b "<DIR>      ",0
     even
-
-DecBuffer:
-    ds.b 12,0
