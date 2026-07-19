@@ -77,8 +77,32 @@ MemAlloc:
     move.l a0,d0
     rts
     
-
-
+;____________________________________________________________
+;
+; MemAvail - Get free RAM memory
+; Returns number of bytes RAM free in D0
+;
+;____________________________________________________________
+MemAvail:
+    lea OSVARS_BASE,a0
+    move.l OsRamSize(a0),d0     ; Max RAM amount
+    lea MEMMAN_BASE,a0
+.findLastAllocation:
+    tst.l MEMMAN_NEXT(a0)
+    beq.s .lastSlotFound
+    move.l MEMMAN_NEXT(a0),a0
+    move.l a0,d1
+    cmp.l d0,d1
+    bhs.s .noMemory
+    bra.s .findLastAllocation
+.lastSlotFound:
+    move.l a0,d1
+    add.l MEMMAN_SIZE(a0),d1
+    sub.l d1,d0
+    rts    
+.noMemory:
+    moveq #0,d0
+    rts
 
 
 

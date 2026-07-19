@@ -253,6 +253,7 @@ BuiltInCommands:
     dc.l CommandLs,ExecuteLs
     dc.l CommandCd,ExecuteCd
     dc.l CommandCat,ExecuteCat
+    dc.l CommandFree,ExecuteFree
     dc.l 0,0
 CommandLs:
     dc.b "ls",0
@@ -260,6 +261,8 @@ CommandCd:
     dc.b "cd",0
 CommandCat:
     dc.b "cat",0
+CommandFree:
+    dc.b "free",0
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
 InitStorageErrorMsg:
@@ -302,6 +305,7 @@ JT_DOS_LIB_BASE:
     include cat.asm
     include errcode.asm
     include exec.asm
+    include free.asm
 
 CommandLine  EQU *
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
