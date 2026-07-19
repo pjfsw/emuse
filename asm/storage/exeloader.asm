@@ -1,6 +1,9 @@
 HUNK_HEADER equ $3f3
 HUNK_CODE   equ $3e9
 HUNK_DATA   equ $3ea
+HUNK_BSS    equ $3eb
+HUNK_DREL32 equ $3f7
+HUNK_RELOC32SHORT equ $3fC
 
     include "osvars.i"
     include "errcode.i"
@@ -75,7 +78,7 @@ FMLoadExecutable:
     move.l d6,d7
     subq.l #1,d7
     tst.l 4(a5)
-    bne.s .invalidExe   ; Only support first hunk=0
+    bne .invalidExe   ; Only support first hunk=0
     cmp.l 8(a5),d7
     bne.s .invalidExe   ; Only support last hunk=size-1
 
@@ -112,11 +115,70 @@ FMLoadExecutable:
     add.l d1,d0
     move.l d0,(a1)+
     dbra d7,.updateHunkOffsets      
-    move.l a2,a0
+    lea ProcHunkStart(a2),a3    ; HUNK start in a3!
+    moveq #0,d5                 ; Currnet hunk offset in d5
+.readNextHunk:
+    moveq #4,d0
+    bsr FMStreamRead
+    bne.s .invalidExe
+
+    cmp.l #HUNK_CODE,(a5)
+    beq.s .readCodeOrData
+    cmp.l #HUNK_DATA,(a5)
+    beq.s .readCodeOrData
+    cmp.l #HUNK_DREL32,(a5)
+    beq.s .relocateShort
+    ;move.l (a5),d0
     moveq #0,d0
+    move.l a2,a0
     rts
 .invalidExe:
     moveq #DOS_ERR_NOT_EXECUTABLE,d0
     rts
+.readCodeOrData:
+    moveq #4,d0
+    bsr FMStreamRead
+    bne.s .invalidExe
+    move.l (a5),d0 ; Number of long words to read
+    lsl.l #2,d0    
+    move.l a4,a0
+    move.l (a3,d5.w),a1
+    jsr DOS_READ_FILE(a6)    
+    tst.l d0
+    bpl.s .readNextHunk
+    rts
+.relocateShort:
+    move.l a4,-(sp)
+    bsr.s .relocateShort2
+    move.l (sp)+,a4
+    rts
+.relocateShort2:
+    moveq #2,d0
+    bsr FMStreamRead
+    bne.s .invalidExe
+    move.w (a5),d7  ; Number of words
+    beq.s .readNextHunk
+    moveq #2,d0
+    bsr FMStreamRead
+    bne.s .invalidExe
+    moveq #0,d0
+    move.w (a5),d0     ; Get hunk that is referenced for reallocation
+    lsl.l #2,d0        ; Scale it by 4 
+    move.l (a3,d0.l),d6  ; Base address of referenced hunk and store in D6
+
+    subq.w #1,d7
+.nextWord:
+    moveq #2,d0
+    bsr FMStreamRead
+    bne.s .invalidExe
+    move.l (a3,d5.w),a0    ; A3 is the pointer to the current hunk 
+    moveq #0,d0
+    move.w (a5),d0    ; Offset in current hunk
+    move.l (a0,d0.w),d1 ; Value to change
+    add.l d6,d1
+    move.l d1,(a0,d0.w)
+    dbra d7,.nextWord
+    bra.s .relocateShort
+    bra .readNextHunk
 
     include fileman.asm

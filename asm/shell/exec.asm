@@ -33,6 +33,9 @@ ExecuteCommand:
 .loadOk1:
     move.l a0,a3    
     move.l ROOTLIB_BASE,a6
+    move.l #512,d0
+    move.l ProcHunkStart(a3),a0
+    bsr DumpMemory
 
     move.l a3,d0
     bsr PrintNum
@@ -58,3 +61,4 @@ PrintNum:
     jmp CONPUTS(a6)
 
     incdir "../storage"
+    include "dumpmemory.asm"
