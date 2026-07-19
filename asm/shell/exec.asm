@@ -34,18 +34,9 @@ ExecuteCommand:
     move.l a0,a3    
     move.l ROOTLIB_BASE,a6
 
-    move.w ProcHunkCount(a3),d7
-    subq.w #1,d7
-    moveq #0,d2
-.printHunks:
-    move.l ProcHunkStart(a3,d2.w),d0
+    moveq #0,d7
+    move.w ProcHunkCount(a3),d0
     bsr PrintNum
-
-    move.l ProcHunkSize(a3,d2.w),d0
-    bsr PrintNum
-
-    addq.w #4,d2
-    dbra d7,.printHunks
     moveq #0,d0
     rts
 

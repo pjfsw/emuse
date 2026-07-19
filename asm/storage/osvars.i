@@ -14,6 +14,7 @@ DosCurDirName:  rs.b 16
 DosDirEntry     rs.b 32
 DosPathEntry    rs.b 16
 DosBuffer       rs.b 512
+DosTemp:        rs.l 4
 DosSizeof       rs.b 0
 
 ;____________________________________________________________
