@@ -24,17 +24,21 @@ ExecutePart:
     lea ShellPartitionInfo,a2
     
     lea PM_NAME(a2),a1
-    jsr CONPUTS(a6)
-    
+    jsr CONPUTS(a6)   
    
     move.l PM_PSTART(a2),d0
     bsr PrintDecimalLong
 
-    move.l PM_PSIZE(a2),d0
-    bsr PrintDecimalLong
+    bsr.s .printSpace
+    bsr.s .printSpace
 
-    bsr.s .printSpace
-    bsr.s .printSpace
+    move.l PM_PSIZE(a2),d0
+    lsr.l #6,d0
+    lsr.l #5,d0
+    bsr PrintDecimalWord
+
+    lea .MBMsg(pc),a1
+    jsr CONPUTS(a6)
 
     lea .unsupportedMsg(pc),a1
     cmp.b #$0e,PM_TYPE(a2)
@@ -55,7 +59,9 @@ ExecutePart:
     jmp CONPUTC(a6)
 
 .hdrMsg:
-    dc.b "Id       Start       Size  Type",13,10,0
+    dc.b "Id       Start   Size  Type",13,10,0
+.MBMsg:
+    dc.b "M  ",0    
 .fat16Msg:
     dc.b "FAT16(LBA) ",0
 .unsupportedMsg:
