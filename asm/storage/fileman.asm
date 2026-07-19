@@ -403,8 +403,35 @@ FMReadFile:
     beq .eof       ; EOF, nothing to do
     tst.w PCTX_OFFSET(a4)
     beq.s .aligned
-    moveq #-1,d0     ; for now error
-    rts
+    
+    ; A0 = current position in cached sector
+    lea DosBuffer(a3),a0
+    moveq #0,d0
+    move.w PCTX_OFFSET(a4),d0
+    adda.l d0,a0
+    ; D1 = bytes remaining in cached sector
+    move.l #512,d1
+    sub.l d0,d1    
+    cmp.l d7,d1
+    bls.s .copyBuffered
+    move.l d7,d1
+.copyBuffered:
+    move.l d1,d2
+    subq.l #1,d1
+.copyBufferedLoop:
+    move.b (a0)+,(a5)+
+    dbra d1,.copyBufferedLoop
+    sub.l d2,d7
+    add.w d2,PCTX_OFFSET(a4)
+    
+    cmp.w #512,PCTX_OFFSET(a4)
+    bne.s .bufferStillPartial
+    clr.w PCTX_OFFSET(a4)    
+    
+.bufferStillPartial:        
+    tst.l d7
+    beq.s .eof
+    clr.w PCTX_OFFSET(a4)
 .aligned:
     tst.l d7
     beq.s .eof    
