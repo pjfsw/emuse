@@ -3,6 +3,8 @@
     include "partman.i"
     include "fileman.i"
 
+PROC_MAX_HUNKS      equ 4
+DOS_TEMP_AREA_SIZE  equ 16
 ;____________________________________________________________
 ;
 ; DOS State data
@@ -14,7 +16,8 @@ DosCurDirName:  rs.b 16
 DosDirEntry     rs.b 32
 DosPathEntry    rs.b 16
 DosBuffer       rs.b 512
-DosTemp:        rs.l 4
+DosTemp:        rs.b DOS_TEMP_AREA_SIZE
+DosHunkStart:   rs.l PROC_MAX_HUNKS
 DosSizeof       rs.b 0
 
 ;____________________________________________________________
@@ -37,12 +40,12 @@ OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
 OsSizeof:           rs.b 0
 
-PROC_MAX_HUNKS   EQU 4
 
     rsreset
 ProcStreamOffset rs.w 1
 ProcCurrentHunk: rs.w 1
 ProcHunkCount:   rs.w 1
+ProcReserved1:   rs.w 1
 ProcHunkStart:   rs.l PROC_MAX_HUNKS
 ProcHunkSize:    rs.l PROC_MAX_HUNKS
 ProcEntry:       rs.l 1

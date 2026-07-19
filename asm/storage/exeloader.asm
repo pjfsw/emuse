@@ -69,6 +69,9 @@ FMLoadExecutable:
     rts
 .ok4:
     move.l (a5),d6     ; Table size
+    cmp.l #PROC_MAX_HUNKS,d6
+    bhi .invalidExe    ; We only support 3 hunks
+
     move.l d6,d7
     subq.l #1,d7
     tst.l 4(a5)
@@ -76,12 +79,14 @@ FMLoadExecutable:
     cmp.l 8(a5),d7
     bne.s .invalidExe   ; Only support last hunk=size-1
 
+    lea DOS_TEMP_AREA_SIZE(a5),a2   ; Hunk offset temp storage
     moveq #0,d5
 .calcAllocSize:
-    moveq #4,d0
+    moveq #4,d0    
     bsr FMStreamRead
     bne.s .invalidExe
-    add.l (a5),d5               ; TODO WE NEED TO KEEP TRACK OF EACH HUNK START FOR the relocation later
+    move.l d5,(a2)+             ; Store zero based offset of hunks
+    add.l (a5),d5               
     dbra d7,.calcAllocSize
 
     move.l d5,d0
@@ -93,16 +98,25 @@ FMLoadExecutable:
     moveq #DOS_ERR_OUT_OF_MEMORY,d0
     rts
 .memoryOk:
-    move.l d0,a2        ; PROCESS NOW IN A2!!
-    move.w d6,ProcHunkCount(a2)
+    move.l d0,a2                ; PROCESS NOW IN A2!!
+    move.w d6,ProcHunkCount(a2)  
+    lea ProcSizeof(a2),a1     ; Start of hunks
+    move.l a1,d1
+    lea ProcHunkStart(a2),a1
     move.l d6,d7
     subq.w #1,d7
-    lea ProcSizeof(a2),a1
+    lea DOS_TEMP_AREA_SIZE(a5),a0    
+.updateHunkOffsets:
+    move.l (a0)+,d0  ; Zero based start of this hunk
+    lsl.l #2,d0
+    add.l d1,d0
+    move.l d0,(a1)+
+    dbra d7,.updateHunkOffsets      
+    move.l a2,a0
     moveq #0,d0
     rts
 .invalidExe:
     moveq #DOS_ERR_NOT_EXECUTABLE,d0
     rts
-File
-    include fileman.asm
 
+    include fileman.asm
