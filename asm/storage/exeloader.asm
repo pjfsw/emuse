@@ -1,3 +1,4 @@
+HUNK_END    equ $3f2
 HUNK_HEADER equ $3f3
 HUNK_CODE   equ $3e9
 HUNK_DATA   equ $3ea
@@ -80,14 +81,14 @@ FMLoadExecutable:
     tst.l 4(a5)
     bne .invalidExe   ; Only support first hunk=0
     cmp.l 8(a5),d7
-    bne.s .invalidExe   ; Only support last hunk=size-1
+    bne .invalidExe   ; Only support last hunk=size-1
 
     lea DOS_TEMP_AREA_SIZE(a5),a2   ; Hunk offset temp storage
     moveq #0,d5
 .calcAllocSize:
     moveq #4,d0    
     bsr FMStreamRead
-    bne.s .invalidExe
+    bne .invalidExe
     move.l d5,(a2)+             ; Store zero based offset of hunks
     add.l (a5),d5               
     dbra d7,.calcAllocSize
@@ -116,21 +117,29 @@ FMLoadExecutable:
     move.l d0,(a1)+
     dbra d7,.updateHunkOffsets      
     lea ProcHunkStart(a2),a3    ; HUNK start in a3!
-    moveq #0,d5                 ; Currnet hunk offset in d5
+    moveq #0,d5                 ; Current hunk offset in d5
 .readNextHunk:
     moveq #4,d0
     bsr FMStreamRead
     bne.s .invalidExe
-
-    cmp.l #HUNK_CODE,(a5)
+    move.l (a5),d0
+    cmp.l #HUNK_CODE,d0
     beq.s .readCodeOrData
-    cmp.l #HUNK_DATA,(a5)
+    cmp.l #HUNK_DATA,d0
     beq.s .readCodeOrData
-    cmp.l #HUNK_DREL32,(a5)
+    cmp.l #HUNK_DREL32,d0
     beq.s .relocateShort
-    ;move.l (a5),d0
-    moveq #0,d0
+    cmp.l #HUNK_END,d0
+    beq .hunkEnd
+    cmp.l #HUNK_BSS,d0
+    beq .hunkBss
+    move.l (a5),d0
+    ;moveq #0,d0
     move.l a2,a0
+    rts
+.success:
+    move.l a2,a0
+    moveq #0,d0
     rts
 .invalidExe:
     moveq #DOS_ERR_NOT_EXECUTABLE,d0
@@ -147,6 +156,7 @@ FMLoadExecutable:
     tst.l d0
     bpl.s .readNextHunk
     rts
+
 .relocateShort:
     move.l a4,-(sp)
     bsr.s .relocateShort2
@@ -171,7 +181,7 @@ FMLoadExecutable:
     moveq #2,d0
     bsr FMStreamRead
     bne.s .invalidExe
-    move.l (a3,d5.w),a0    ; A3 is the pointer to the current hunk 
+    move.l (a3,d5.w),a0    ; A3+D5 is the pointer to the current hunk
     moveq #0,d0
     move.w (a5),d0    ; Offset in current hunk
     move.l (a0,d0.w),d1 ; Value to change
@@ -180,5 +190,29 @@ FMLoadExecutable:
     dbra d7,.nextWord
     bra.s .relocateShort
     bra .readNextHunk
+
+.hunkEnd:
+    moveq #0,d0
+    move.w ProcHunkCount(a2),d0
+    lsl.l #2,d0
+    addq.w #4,d5
+    cmp.w d0,d5
+    beq.s .success
+    bra .readNextHunk
+
+.hunkBss:
+    moveq #4,d0
+    bsr FMStreamRead
+    bne .invalidExe
+
+    move.l (a5),d7                 ; Number of longwords
+    move.l (a3,d5.w),a0
+.clearBss:
+    tst.l d7
+    beq .readNextHunk
+
+    clr.l (a0)+
+    subq.l #1,d7
+    bra.s .clearBss
 
     include fileman.asm

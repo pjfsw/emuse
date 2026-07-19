@@ -40,6 +40,7 @@ GETC equ -52
     move.b #0,OREG+TIMER_ACT  ; disable timer
     tst.b TIMERACK            ; Acknowledge interrupt    
     move.w OldSR,sr           ; restore interrupt
+    move.b #0,OREG+SPI_CS     ; turn off led
     moveq #0,d0
     rts
 
