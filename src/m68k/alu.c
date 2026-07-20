@@ -279,12 +279,15 @@ static int decodeAluImmediate(
     uint16_t size = (opcode >> 6) & 3;
 
     di->size = size;
-    int eaCycles = getEffectiveAddress(registers, mode, xn, size, &di->dst, readWordFunc, readWriteUserdata);
-    if (eaCycles < 0) {
-        return -1;
-    }
+
     int eaCycles2 = getEffectiveAddress(registers, AM_EXT, AM_EXT_IMMEDIATE, size, &di->src, readWordFunc, readWriteUserdata);
     if (eaCycles2 < 0) {
+        return -1;
+    }
+
+
+    int eaCycles = getEffectiveAddress(registers, mode, xn, size, &di->dst, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
         return -1;
     }
 
