@@ -147,6 +147,15 @@ static void disassembleMoveToSr(DecodedInstruction *di, Instruction *instruction
     addDisassembly(instruction, "SR", SYM_REGISTER);
 }
 
+static void disassembleMoveFromSr(DecodedInstruction *di, Instruction *instruction) {
+    addDisassembly(instruction, ".W", SYM_MNEMONIC);
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    addDisassembly(instruction, "SR", SYM_REGISTER);
+    addDisassembly(instruction, ",", SYM_SYMBOL);
+    disassembleEa(instruction, &di->dst, di->size);
+}
+
 static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
     disassembleSize(di, instruction);
     addPadding(instruction);
@@ -290,6 +299,9 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
             break;
         case IF_MOVE_TO_SR:
             disassembleMoveToSr(&di, instruction);
+            break;
+        case IF_MOVE_FROM_SR:
+            disassembleMoveFromSr(&di, instruction);
             break;
         case IF_LEA:
             disassembleLea(&di,instruction);

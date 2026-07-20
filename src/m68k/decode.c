@@ -128,6 +128,7 @@ static const DecodeRule rules[] = {
     { 0xfff8, 0x4840, decodeSwap, IF_SINGLE_DEST },
     { 0xffc0, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x4ec0, decodeJmp, IF_JUMP},
+    { 0xffc0, 0x40c0, decodeMoveFromSr, IF_MOVE_FROM_SR },
     { 0xffc0, 0x46c0, decodeMoveToSr, IF_MOVE_TO_SR},
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
     { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
@@ -164,7 +165,7 @@ static const DecodeRule rules[] = {
 
     { 0xf0c0, 0xd0c0, decodeAdda, IF_MOVE },
     { 0xf0c0, 0x90c0, decodeSuba, IF_MOVE },
-        
+
     { 0xf0c8, 0x50c8, decodeDbcc, IF_DBCC },
     { 0xf0c0, 0x5000, decodeAddqSubq, IF_MOVE }, // size 00
     { 0xf0c0, 0x5040, decodeAddqSubq, IF_MOVE }, // size 01

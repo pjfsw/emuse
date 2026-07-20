@@ -93,3 +93,30 @@ int decodeMoveToSr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *regis
     }
     return eaCycles;
 }
+
+static int executeMoveFromSr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t value;
+
+    int cycleCount = writeDest(di, registers, rwFunc, readWriteUserdata, registers->sr);
+    if (cycleCount < 0) {
+        return -1;
+    }
+    return cycleCount + 12;
+}
+
+
+int decodeMoveFromSr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    ReadWordFunc readWordFunc = rwFunc->rw;
+    di->execFunc = executeMoveFromSr;
+    di->mnemonic = "MOVE";
+
+    uint16_t dstMode = (opcode >> 3) & 7;
+    uint16_t dstReg = opcode & 7;    
+    di->size = IS_WORD;
+
+    int eaCycles = getEffectiveAddress(registers, dstMode, dstReg, IS_WORD, &di->dst, readWordFunc, readWriteUserdata);
+    if (eaCycles < 0) {
+        return -1;
+    }
+    return eaCycles;
+}
