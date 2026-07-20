@@ -22,11 +22,16 @@ MEMMAN_BASE equ $020000-MEMMAN_SIZEOF   ; Set lower later
 ; MemInit - Initialize memory manager, making all memory free
 ;____________________________________________________________
 MemInit:
-    lea MEMMAN_BASE,a0
-    clr.l (a0)
-    clr.l 4(a0)
-    clr.l 8(a0)
-    clr.w 12(a0)    
+    lea MEMMAN_BASE,a1
+;____________________________________________________________
+;
+; MemClearEntry - Clear current memory entry in A1
+;____________________________________________________________
+MemClearEntry:
+    clr.l (a1)
+    clr.l 4(a1)
+    clr.l 8(a1)
+    clr.l 12(a1)    
     rts
 
 ;____________________________________________________________
@@ -79,9 +84,46 @@ MemAlloc:
     
 ;____________________________________________________________
 ;
+; MemFree - Free allocated space pointed to by A0
+; Returns D0>0 if successful
+;____________________________________________________________
+MemFree:
+    move.l a2,-(sp)
+    bsr.s .memFreeInt
+    movem.l (sp)+,a2
+    rts
+.memFreeInt:
+    suba.l #MEMMAN_SIZEOF,a0
+    lea MEMMAN_BASE,a1
+    suba.l a2,a2
+.findSlot:
+    move.l a1,d0
+    beq.s .notFound
+
+    cmpa.l a0,a1
+    beq.s .foundSlot
+
+    move.l a1,a2
+    move.l MEMMAN_NEXT(a1),a1
+    bra.s .findSlot
+
+.foundSlot:
+    move.l a2,d0
+    beq.s .notFound  ; No memory before, special case!
+
+    move.l MEMMAN_NEXT(a1),d0
+    move.l d0,MEMMAN_NEXT(a2)
+    move.l MEMMAN_SIZE(a1),d0
+    bsr MemClearEntry
+    rts
+.notFound:
+    moveq #-1,d0
+    rts
+
+;____________________________________________________________
+;
 ; MemAvail - Get free RAM memory
 ; Returns number of bytes RAM free in D0
-;
 ;____________________________________________________________
 MemAvail:
     lea OSVARS_BASE,a0
