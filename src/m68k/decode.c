@@ -152,11 +152,20 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xc0c0, decodeMulu, IF_MOVE },
     { 0xf1c0, 0x80c0, decodeDivu, IF_MOVE },
     { 0xf1c0, 0x81c0, decodeDivs, IF_MOVE },
-    { 0xf130, 0xd100, decodeAddx, IF_MOVE },
-    { 0xf130, 0xd108, decodeAddx, IF_MOVE },
-    { 0xf0c8, 0x50c8, decodeDbcc, IF_DBCC },
+
+    /* ADDX Dx,Dy */
+    { 0xf1f8, 0xd100, decodeAddx, IF_MOVE }, /* byte */
+    { 0xf1f8, 0xd140, decodeAddx, IF_MOVE }, /* word */
+    { 0xf1f8, 0xd180, decodeAddx, IF_MOVE }, /* long */
+    /* ADDX -(Ax),-(Ay) */
+    { 0xf1f8, 0xd108, decodeAddx, IF_MOVE }, /* byte */
+    { 0xf1f8, 0xd148, decodeAddx, IF_MOVE }, /* word */
+    { 0xf1f8, 0xd188, decodeAddx, IF_MOVE }, /* long */
+
     { 0xf0c0, 0xd0c0, decodeAdda, IF_MOVE },
-    { 0xf0c0, 0x90c0, decodeSuba, IF_MOVE },    
+    { 0xf0c0, 0x90c0, decodeSuba, IF_MOVE },
+        
+    { 0xf0c8, 0x50c8, decodeDbcc, IF_DBCC },
     { 0xf0c0, 0x5000, decodeAddqSubq, IF_MOVE }, // size 00
     { 0xf0c0, 0x5040, decodeAddqSubq, IF_MOVE }, // size 01
     { 0xf0c0, 0x5080, decodeAddqSubq, IF_MOVE }, // size 10        

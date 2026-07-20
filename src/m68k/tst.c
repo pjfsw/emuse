@@ -18,7 +18,7 @@ static int execTst(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwF
         setFlag(registers, SR_FLAGS_N, (src & 0x80000000) != 0);
     }
     setFlag(registers, SR_FLAGS_C, false);
-    setFlag(registers, SR_FLAGS_X, false);
+    setFlag(registers, SR_FLAGS_V, false);
     
     return cycleCount;
 }
