@@ -6,6 +6,8 @@
 #include "branch.h"
 #include "btst.h"
 #include "clr.h"
+#include "dbcc.h"
+#include "div.h"
 #include "jump.h"
 #include "lea.h"
 #include "move.h"
@@ -14,9 +16,8 @@
 #include "rts.h"
 #include "shift.h"
 #include "sourcedest.h"
+#include "swap.h"
 #include "tst.h"
-#include "dbcc.h"
-#include "div.h"
 
 int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, InstructionSize size,
     EffectiveAddress *ea, ReadWordFunc readWordFunc, void *readWriteUserdata) {
@@ -123,6 +124,7 @@ typedef struct {
 static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},
+    { 0xfff8, 0x4840, decodeSwap, IF_SINGLE_DEST },
     { 0xffc0, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x4ec0, decodeJmp, IF_JUMP},
     { 0xffc0, 0x46c0, decodeMoveToSr, IF_MOVE_TO_SR},
