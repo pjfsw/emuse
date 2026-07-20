@@ -23,7 +23,7 @@ int decodeBtstImmediate(
     uint16_t srcReg = opcode & 7;
     di->execFunc = executeBtst;
     di->mnemonic = "BTST";
-    uint16_t size = (srcMode == AM_DREG) ? IS_LONG : IS_BYTE;
+    uint16_t size = (srcMode == AM_DREG) ? IS_WORD : IS_BYTE;
     di->size = size;
     di->src.mode = AM_EXT;
     di->src.xn = AM_EXT_IMMEDIATE;

@@ -131,7 +131,7 @@ static const DecodeRule rules[] = {
     { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},
     { 0xff00, 0x0600, decodeAddi, IF_MOVE },
     { 0xff00, 0x0000, decodeOri, IF_MOVE},
-    { 0xff00, 0x0001, decodeAndi, IF_MOVE},
+    { 0xff00, 0x0200, decodeAndi, IF_MOVE},
     { 0xff00, 0x4200, decodeClr, IF_SINGLE_DEST},
     { 0xff00, 0x4a00, decodeTst, IF_SINGLE_SRC},
     { 0xff00, 0x0c00, decodeCmpi, IF_MOVE },
