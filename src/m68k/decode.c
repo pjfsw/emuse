@@ -154,6 +154,7 @@ static const DecodeRule rules[] = {
     { 0xf130, 0xd108, decodeAddx, IF_MOVE },
     { 0xf0c8, 0x50c8, decodeDbcc, IF_DBCC },
     { 0xf0c0, 0xd0c0, decodeAdda, IF_MOVE },
+    { 0xf0c0, 0x90c0, decodeSuba, IF_MOVE },    
     { 0xf0c0, 0x5000, decodeAddqSubq, IF_MOVE }, // size 00
     { 0xf0c0, 0x5040, decodeAddqSubq, IF_MOVE }, // size 01
     { 0xf0c0, 0x5080, decodeAddqSubq, IF_MOVE }, // size 10        

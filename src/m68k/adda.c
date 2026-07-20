@@ -1,7 +1,8 @@
 #include "adda.h"
 #include "sourcedest.h"
 
-static int executeAdda(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+static int executeAddaSuba(
+    DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata, bool isSub) {
     uint32_t src;
 
     int cycles = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &src);
@@ -10,20 +11,28 @@ static int executeAdda(DecodedInstruction *di, M68kRegisters *registers, RwFunc 
         return -1;
     }
 
-    /*
-     * ADDA.W sign-extends the 16-bit source.
-     * ADDA.L uses the full 32-bit source.
-     */
     if (di->size == IS_WORD) {
         src = (uint32_t)(int32_t)(int16_t)src;
     }
 
-    registers->a[di->dst.xn] += src;
+    if (isSub) {
+        registers->a[di->dst.xn] -= src;
+    } else {
+        registers->a[di->dst.xn] += src;
+    }
 
     return cycles;
 }
 
-int decodeAdda(
+static int executeAdda(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    return executeAddaSuba(di, registers, rwFunc, readWriteUserdata, false);
+}
+
+static int executeSuba(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    return executeAddaSuba(di, registers, rwFunc, readWriteUserdata, true);
+}
+
+static int decodeAddaSuba(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
 
@@ -31,9 +40,6 @@ int decodeAdda(
     uint16_t srcReg = opcode & 7;
     uint16_t opMode = (opcode >> 6) & 7;
     uint16_t dstReg = (opcode >> 9) & 7;
-
-    di->mnemonic = "ADDA";
-    di->execFunc = executeAdda;
 
     /*
      * ADDA opmodes:
@@ -67,4 +73,18 @@ int decodeAdda(
     }
 
     return eaCycles + 2;
+}
+
+int decodeAdda(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ADDA";
+    di->execFunc = executeAdda;
+    return decodeAddaSuba(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
+int decodeSuba(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "SUBA";
+    di->execFunc = executeSuba;
+    return decodeAddaSuba(opcode, di, registers, rwFunc, readWriteUserdata);
 }
