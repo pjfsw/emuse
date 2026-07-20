@@ -12,6 +12,7 @@
 #include "lea.h"
 #include "move.h"
 #include "movem.h"
+#include "mulu.h"
 #include "rte.h"
 #include "rts.h"
 #include "shift.h"
@@ -148,6 +149,7 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xb108, decodeCmpm, IF_MOVE },  // CMPM
     { 0xf1c0, 0xb0c0, decodeCmpa, IF_MOVE }, // CMPA.W
     { 0xf1c0, 0xb1c0, decodeCmpa, IF_MOVE }, // CMPA.L
+    { 0xf1c0, 0xc0c0, decodeMulu, IF_MOVE },
     { 0xf1c0, 0x80c0, decodeDivu, IF_MOVE },
     { 0xf1c0, 0x81c0, decodeDivs, IF_MOVE },
     { 0xf130, 0xd100, decodeAddx, IF_MOVE },
