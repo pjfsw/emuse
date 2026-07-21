@@ -56,6 +56,10 @@ add_custom_target(split_rom ALL
 # 3. Executable Setup
 file(GLOB_RECURSE SOURCES "src/*.c")
 
+list(REMOVE_ITEM SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/exetest.c"
+)
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 add_dependencies(${PROJECT_NAME} generate_boot_code)
 

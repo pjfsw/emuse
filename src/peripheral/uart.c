@@ -72,7 +72,7 @@ Uart *uartCreate(uint32_t cpuClockSpeed, uint32_t uartClockSpeed) {
 
 static inline void updateDlab(Uart *uart) {
     uart->dlab = ((uart->lcr & 0x80) > 0) ? 1 : 0;
-    printf("Set DLAB = %d\n", uart->dlab);
+    //printf("Set DLAB = %d\n", uart->dlab);
 }
 
 static void updateBaudRate(Uart *uart) {
@@ -185,11 +185,11 @@ static void writeByteToUart(Uart *uart, uint8_t offset, uint8_t byte) {
         transmitByte(uart, byte);
     } else if (offset == IER) {
         uart->ier = byte;
-        printf("IER = %02x\n", byte);
+        //printf("IER = %02x\n", byte);
     } else if (offset == LCR) {
         uart->lcr = byte;
         updateDlab(uart);
-        printf("LCR = %02x\n", byte);
+        //printf("LCR = %02x\n", byte);
     } else if (offset == FCR) {
         setFcr(uart, byte);
     } else if (offset == SCR) {
@@ -231,7 +231,7 @@ static uint8_t readByteFromUart(Uart *uart, uint8_t offset) {
     } else if (offset == LSR) {
         return uart->lsr;
     } else if (offset == SCR) {
-        printf("Read scratch\n");
+        //printf("Read scratch\n");
         return uart->scratch;
     } else if (offset == MCR) {
         return uart->mcr;

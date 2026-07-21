@@ -1,5 +1,7 @@
     incdir ..
+    incdir ../lib
     include hardware.i
+    include rootlib.i
 
     macro Delay
     move.l #$34000,d0
@@ -27,6 +29,10 @@ GETC equ -52
     move.w  #$2200,sr        ; mask level 2, accepts 3–7    
 
     move.l $4.w,a6
+
+    lea Msg,a1
+    jsr CONPUTS(a6)
+
 .flushChars:
     jsr GETC(a6)
     bpl.s .flushChars
@@ -66,6 +72,9 @@ DummyISR:
     rte    
 
     data
+
+Msg:
+    dc.b "Hello world",13,10,0    
     
 BlinkState:
     dc.b 0

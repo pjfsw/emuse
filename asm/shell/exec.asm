@@ -32,8 +32,7 @@ ExecuteCommand:
     rts
 .loadOk1:
     move.l a0,a3    
-    move.l ROOTLIB_BASE,a6
-    ;move.l #512,d0
+    ;bsr .debugPrint
     move.l ProcHunkStart(a3),a0
     movem.l a2-a6,-(sp)
     jsr (a0)
@@ -43,26 +42,22 @@ ExecuteCommand:
     bsr MemFree
     move.l d2,d0    
     rts
+.debugPrint:
+    move.l ROOTLIB_BASE,a6
+    move.l ProcHunkStart(a3),d0
+    bsr .printNum
+    move.l 4+ProcHunkStart(a3),d0
+    bsr .printNum
+    move.l 8+ProcHunkStart(a3),d0
+    bsr .printNum
+    move.l ProcHunkStart(a3),a0
+    move.l #512,d0
+    bsr DumpMemory
 
-;    bsr DumpMemory
-
-    ;move.l a3,d0
-    ;bsr PrintNum
-
-    ;moveq #0,d7
-    ;moveq #0,d0
-    ;move.w ProcHunkCount(a3),d0
-    ;move.w d0,d7
-    ;subq #1,d7
-    ;bsr PrintNum
-    ;lea ProcHunkStart(a3),a2
-;.printHunkOffsets:
-    ;move.l (a2)+,d0
-    ;bsr PrintNum
-    ;dbra d7,.printHunkOffsets
-
-;    moveq #0,d0
-    ;rts
+.printNum:
+    jsr CONPUTHEX32(a6)
+    move.b #' ',d0
+    jmp CONPUTC(a6)
 
 PrintNum:
     jsr CONPUTHEX32(a6)

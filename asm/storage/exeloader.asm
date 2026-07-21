@@ -45,9 +45,9 @@ FMStreamRead:
 ;         A0: pointer to process
 ;____________________________________________________________
 FMLoadExecutable:
-    movem.l a2-a6/d5-d7,-(sp)
+    movem.l a2-a6/d4-d7,-(sp)
     bsr.s .loadExecutableInt
-    movem.l (sp)+,a2-a6/d5-d7
+    movem.l (sp)+,a2-a6/d4-d7
     rts
 .loadExecutableInt:    
     move.l DosLibBase,a6
@@ -133,10 +133,7 @@ FMLoadExecutable:
     beq .hunkEnd
     cmp.l #HUNK_BSS,d0
     beq .hunkBss
-    move.l (a5),d0
-    ;moveq #0,d0
-    move.l a2,a0
-    rts
+    bra.s .invalidExe
 .success:
     move.l a2,a0
     moveq #0,d0
@@ -158,16 +155,25 @@ FMLoadExecutable:
     rts
 
 .relocateShort:
-    move.l a4,-(sp)
-    bsr.s .relocateShort2
-    move.l (sp)+,a4
-    rts
-.relocateShort2:
+    moveq #0,d4 ; Number of words
+.relocateShortNext:
     moveq #2,d0
     bsr FMStreamRead
     bne.s .invalidExe
-    move.w (a5),d7  ; Number of words
-    beq.s .readNextHunk
+    moveq #0,d7
+    move.w (a5),d7  ; Number of words 
+    move.l d7,d0
+    bne .moreRelocation
+    ; We are done, check if padding word needed
+    btst #0,d4
+    bne.s .readNextHunk
+    ; Uneven number of words relocated, read padding word
+    moveq #2,d0
+    bsr FMStreamRead
+    bne.s .invalidExe
+    bra .readNextHunk
+.moreRelocation:    
+    add.w d7,d4     ; Count words
     moveq #2,d0
     bsr FMStreamRead
     bne.s .invalidExe
@@ -188,7 +194,7 @@ FMLoadExecutable:
     add.l d6,d1
     move.l d1,(a0,d0.w)
     dbra d7,.nextWord
-    bra.s .relocateShort
+    bra.s .relocateShortNext
     bra .readNextHunk
 
 .hunkEnd:
@@ -197,7 +203,7 @@ FMLoadExecutable:
     lsl.l #2,d0
     addq.w #4,d5
     cmp.w d0,d5
-    beq.s .success
+    beq .success
     bra .readNextHunk
 
 .hunkBss:

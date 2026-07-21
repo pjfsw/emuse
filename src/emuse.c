@@ -11,6 +11,7 @@
 #include "mmc.h"
 #include "input_reg.h"
 #include "sector_storage.h"
+#include "file_inject.h"
 
 typedef struct {
     uint32_t cpuFreq;
@@ -129,6 +130,7 @@ int main(int argc, char* argv[]) {
     if (strlen(args.mmcFile) > 0) {
         printf("Loading MMC file \"%s\"\n", args.mmcFile);
         loadFile(args.mmcFile, storage.data, mmcCapacity);
+        inject_file(storage.data, "build/blinker.exe");
     }
 
     ReadWriteMappingKey mappingKey;
