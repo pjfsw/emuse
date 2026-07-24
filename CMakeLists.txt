@@ -27,7 +27,7 @@ set(ASM_SYM "${CMAKE_CURRENT_BINARY_DIR}/boot.sym")
 
 add_custom_command(
     OUTPUT ${ASM_BIN}
-    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces -L ${ASM_SYM} ${ASM_SRC} -o ${ASM_BIN}
+    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces -Iinclude -L ${ASM_SYM} ${ASM_SRC} -o ${ASM_BIN}
     DEPENDS ${ASM_SRC}
     COMMENT "Assembling 68k boot code with vasm"
 )

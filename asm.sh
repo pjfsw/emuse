@@ -25,6 +25,7 @@ vasmm68k_mot \
     -Lnf \
     -no-opt \
     -spaces \
+    -I"asm/include" \
     "$INPUT" \
     -o "$BINFILE"
 

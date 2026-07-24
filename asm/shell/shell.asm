@@ -1,9 +1,7 @@
 START equ $10000
     org START
 
-    incdir ../lib
     include rootlib.i
-    ;include osvars.i
     include errcode.i
 
 MAX_CMDLINE_LENGTH equ 128

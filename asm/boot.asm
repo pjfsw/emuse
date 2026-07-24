@@ -1,4 +1,6 @@
+    incdir "storage"
     include "hardware.i"
+    include "osvars.i"
 
 ; boot.asm - Minimal 68k Header
     org $f00000
@@ -50,7 +52,6 @@ Start:
     
     lea detectedMsg(pc),a1
     bsr ConPuts
-
 BootMenuLoop:
     lea menuMsg(pc),a1
     bsr ConPuts
@@ -123,6 +124,7 @@ Blink:
     Delay
     rts    
 
+    include memman.asm
     include bootloader.asm
     include uploader.asm
     include monitor.asm
