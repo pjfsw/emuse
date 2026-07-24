@@ -85,7 +85,7 @@ MemAlloc:
 ;____________________________________________________________
 ;
 ; MemFree - Free allocated space pointed to by A0
-; Returns D0>0 if successful
+; Returns D0=0 if successful, D0<0 if unsuccessful
 ;____________________________________________________________
 MemFree:
     move.l a2,-(sp)
@@ -115,6 +115,7 @@ MemFree:
     move.l d0,MEMMAN_NEXT(a2)
     move.l MEMMAN_SIZE(a1),d0
     bsr MemClearEntry
+    moveq #0,d0
     rts
 .notFound:
     moveq #-1,d0

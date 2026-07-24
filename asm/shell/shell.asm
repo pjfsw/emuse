@@ -11,6 +11,7 @@ START equ $10000
 
 MAX_CMDLINE_LENGTH equ 128
 TESTSECTOR equ $800000
+    bsr InstallFakeLibraries
     ; Install error handlers
     bsr InstallExceptionHandlers
 
@@ -18,7 +19,6 @@ TESTSECTOR equ $800000
     bsr InitDosVars
     lea OSVARS_BASE,a5
     move.l ROOTLIB_BASE,a6 
-    move.l #JT_DOS_LIB_BASE,DosLibBase   
         
     lea DosLoadingMsg,a1
     jsr CONPUTS(a6)
@@ -249,6 +249,21 @@ InitDosVars:
     clr.b 1+DosCurDirName(a0)
     rts
 
+InstallFakeLibraries:
+    move.l ROOTLIB_BASE,a5
+    lea -8(a5),a5
+    lea JT_ROOT_LIB_BASE-8,a6
+    moveq #7,d7
+.copyVectors:
+    move.l (a5),(a6)
+    lea -6(a5),a5
+    lea -6(a6),a6
+    dbra d7,.copyVectors
+    move.l #JT_ROOT_LIB_BASE,ROOTLIB_BASE
+    move.l #JT_DOS_LIB_BASE,DosLibBase   
+    rts
+
+
 BuiltInCommands:
     dc.l CommandLs,ExecuteLs
     dc.l CommandCd,ExecuteCd
@@ -297,6 +312,15 @@ JT_DOS_CREATE_CTX:  jmp FMCreateContext
 JT_DOS_VERSION:     dc.l 1
 JT_DOS_LIB_BASE:    
 
+ConPuts:
+ConPutc:
+ConPutHex32:
+ConPutHex16:
+ConPutHex8:
+ConGetChar:
+ConClr:
+    include jt_root.asm
+JT_ROOT_LIB_BASE:
 
     include exceptions.asm
     include mmc.asm

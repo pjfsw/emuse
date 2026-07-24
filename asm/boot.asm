@@ -23,23 +23,7 @@ loop\@:
 
     org $f00400        ; Move past the vector table    
 
-JT_ConGetChar: ; -52
-    jmp ConGetChar
-JT_ConReserved0 ; -46
-    blk.b 6,0
-JT_ConPutHex8:  ; -40
-    jmp ConPutHex8
-JT_ConPutHex16: ; -34
-    jmp ConPutHex16
-JT_ConPutHex32: ; -28
-    jmp ConPutHex32
-JT_ConPuts: ; -22
-    jmp ConPuts
-JT_ConPutc: ; -16
-    jmp ConPutc
-JT_ConClr: ; -10
-    jmp ConClr
-    dc.l 1             ; Version
+    include "jt_root.asm"
 Start:
     move.b #OVR_OFF,OVR_REG    
 
