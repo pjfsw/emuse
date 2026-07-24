@@ -51,8 +51,6 @@ InitDosVars:
     lea OSVARS_BASE,a0
     lea OsDosState(a0),a0
     clr.l DosCurrentDir(a0)
-    move.b #'/',DosCurDirName(a0)
-    clr.b 1+DosCurDirName(a0)
     rts
 
 InstallFakeLibraries:
@@ -69,7 +67,7 @@ InstallFakeLibraries:
     move.l #JT_DOS_LIB_BASE,DosLibBase   
     rts
 
-JT_DOS_GET_PROC_STATE:  jmp FMGetProcDosState
+JT_DOS_CHANGE_DIR:      jmp FMChangeDirectory
 JT_DOS_GET_PART_INFO:   jmp PMGetPartitionInfo
 JT_DOS_GET_PART_COUNT:  jmp PMGetPartitionCount
 JT_DOS_LOAD_EXE:        jmp FMLoadExecutable

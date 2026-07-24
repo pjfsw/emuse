@@ -153,8 +153,7 @@ TrimLeadingSpaces:
 PrintPrompt:
     lea MsgPrompt1(pc),a1
     jsr CONPUTS(a6)    
-    jsr DOS_GET_PROC_STATE(a5)
-    lea DosCurDirName(a0),a1
+    lea CurrentDir,a1
     jsr CONPUTS(a6)
     lea MsgPrompt2(pc),a1
     jmp CONPUTS(a6) ; CONPUTS
@@ -251,9 +250,14 @@ DecBuffer:
     include printutil.asm
     include shell_bios.asm
 
+CurrentDir:
+    dc.b "/",0
+    blk.b 10,0
+
 CommandLine  EQU *
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
 MmcCmdArg    EQU MmcStatus+4
 ShellPartitionInfo EQU MmcCmdArg+4
 DirectoryCtx EQU ShellPartitionInfo+32
-DirEntry     EQU DirectoryCtx+32
+DirEntry     EQU DirectoryCtx+PCTX_SIZEOF
+

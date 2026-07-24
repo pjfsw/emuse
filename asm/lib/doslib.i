@@ -24,14 +24,14 @@ PM_NAME      rs.l 1
 PM_RESERVED  rs.l 1
 PM_SIZEOF    rs.b 0
 
-
 ;____________________________________________________________
-; DOS_GET_PROC_STATE - Get current process DOS state
 ;
-; Input: 
-; Output: Pointer to the current state in A0
+; DOS_CHANGE_DIR - Change the current working directory 
+;
+; Input:  A0: pointer to path context 
+; Output: D0: 0 upon success, otherwise error code
 ;____________________________________________________________
-DOS_GET_PROC_STATE  equ -46
+DOS_CHANGE_DIR equ -46
 
 ;____________________________________________________________
 ;

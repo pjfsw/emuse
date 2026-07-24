@@ -270,6 +270,11 @@ FMCreateContext:
     bsr FMGetProcDosState
     move.l a0,a3    ; Process context
 
+    moveq #PCTX_SIZEOF-1,d7
+.clearCtx:
+    clr.b (a4,d7)
+    dbra d7,.clearCtx
+
     lea OSVARS_BASE,a6
     lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition
     move.b #PATTR_DIR,PCTX_ATTR(a4)
@@ -470,4 +475,28 @@ FMReadFile:
     move.l d6,d0 ; EOF
     sub.l d7,d0
     sub.l d0,PCTX_BYTES_REM(a4)
+    rts
+
+;____________________________________________________________
+;
+; Change the current process working directory
+; Input:  A0: path context as created by FMCreateContext
+; Output: D0: 0=OK, <0 on error
+;____________________________________________________________
+FMChangeDirectory:
+    movem.l d7/a4-a6,-(sp)
+    bsr.s .changeDirectoryInt
+    movem.l (sp)+,d7/a4-a6
+    rts
+.changeDirectoryInt:
+    btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
+    bne.s .isDir
+    moveq #DOS_ERR_NOT_DIRECTORY,d0
+    rts
+.isDir:
+    move.l a0,a4    ; Context in A4
+    bsr FMGetProcDosState
+    move.l a0,a5
+    move.l PCTX_CURR_BLOCK(a4),DosCurrentDir(a5)
+    moveq #0,d0
     rts
