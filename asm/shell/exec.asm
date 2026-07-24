@@ -39,7 +39,8 @@ ExecuteCommand:
     movem.l (sp)+,a2-a6
     move.l d0,d2
     move.l a3,a0
-    bsr MemFree
+    move.l ROOTLIB_BASE,a6
+    jsr MEMFREE(a6)
     move.l d2,d0    
     rts
 .debugPrint:

@@ -9,6 +9,8 @@ JT_LibClose:
     jmp 0
 JT_LibOpen:
     jmp 0
+JT_MemTotal:
+    jmp MemTotal
 JT_MemAvail:
     jmp MemAvail
 JT_MemFree:

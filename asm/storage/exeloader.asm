@@ -13,15 +13,16 @@ HUNK_RELOC32SHORT equ $3fC
 
 ;____________________________________________________________
 ; Requirements: A4 contains PathCtx, A5 contains temp long buffer, D0 number of bytes (max 16)
-FMStreamRead:
-    move.l d2,-(sp)
-    bsr .fmStreamReadInt
-    move.l (sp)+,d2
+ExeStreamRead:
+    movem.l d2/a6,-(sp)
+    bsr .ExeStreamReadInt
+    movem.l (sp)+,d2/a6
     rts
-.fmStreamReadInt:    
+.ExeStreamReadInt:    
     move.l d0,d2
     move.l a4,a0
     move.l a5,a1    
+    move.l DosLibBase,a6
     jsr DOS_READ_FILE(a6)
     tst.l d0
     bpl.s .notReadError
@@ -50,14 +51,13 @@ FMLoadExecutable:
     movem.l (sp)+,a2-a6/d4-d7
     rts
 .loadExecutableInt:    
-    move.l DosLibBase,a6
     move.l a0,a4    ; Path context
     jsr GetProcDosState
     move.l a0,a5    ; DOS context
     lea DosTemp(a5),a5  ; Temp long word
 
     moveq #8,d0       
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bpl.s .ok1
     rts
 .ok1:
@@ -68,7 +68,7 @@ FMLoadExecutable:
     bne .invalidExe
 
     moveq #12,d0
-    bsr FMStreamRead  ; Read hunk sizes
+    bsr ExeStreamRead  ; Read hunk sizes
     bpl.s .ok4
     rts
 .ok4:
@@ -87,7 +87,7 @@ FMLoadExecutable:
     moveq #0,d5
 .calcAllocSize:
     moveq #4,d0    
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne .invalidExe
     move.l d5,(a2)+             ; Store zero based offset of hunks
     add.l (a5),d5               
@@ -95,13 +95,15 @@ FMLoadExecutable:
 
     move.l d5,d0
     lsl.l #2,d0
-    add.l #ProcSizeof,d0
-    bsr MemAlloc
+    add.l #ProcSizeof,d0   
+    move.l ROOTLIB_BASE,a6
+    jsr MEMALLOC(a6)
     tst.l d0
     bne.s .memoryOk
     moveq #DOS_ERR_OUT_OF_MEMORY,d0
     rts
 .memoryOk:
+    move.l DosLibBase,a6
     move.l d0,a2                ; PROCESS NOW IN A2!!
     move.w d6,ProcHunkCount(a2)  
     lea ProcSizeof(a2),a1     ; Start of hunks
@@ -120,7 +122,7 @@ FMLoadExecutable:
     moveq #0,d5                 ; Current hunk offset in d5
 .readNextHunk:
     moveq #4,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne.s .invalidExe
     move.l (a5),d0
     cmp.l #HUNK_CODE,d0
@@ -143,7 +145,7 @@ FMLoadExecutable:
     rts
 .readCodeOrData:
     moveq #4,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne.s .invalidExe
     move.l (a5),d0 ; Number of long words to read
     lsl.l #2,d0    
@@ -158,7 +160,7 @@ FMLoadExecutable:
     moveq #0,d4 ; Number of words
 .relocateShortNext:
     moveq #2,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne.s .invalidExe
     moveq #0,d7
     move.w (a5),d7  ; Number of words 
@@ -169,13 +171,13 @@ FMLoadExecutable:
     bne.s .readNextHunk
     ; Uneven number of words relocated, read padding word
     moveq #2,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne.s .invalidExe
     bra .readNextHunk
 .moreRelocation:    
     add.w d7,d4     ; Count words
     moveq #2,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne.s .invalidExe
     moveq #0,d0
     move.w (a5),d0     ; Get hunk that is referenced for reallocation
@@ -185,7 +187,7 @@ FMLoadExecutable:
     subq.w #1,d7
 .nextWord:
     moveq #2,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne.s .invalidExe
     move.l (a3,d5.w),a0    ; A3+D5 is the pointer to the current hunk
     moveq #0,d0
@@ -208,7 +210,7 @@ FMLoadExecutable:
 
 .hunkBss:
     moveq #4,d0
-    bsr FMStreamRead
+    bsr ExeStreamRead
     bne .invalidExe
 
     move.l (a5),d7                 ; Number of longwords

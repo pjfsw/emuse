@@ -147,5 +147,12 @@ MemAvail:
     moveq #0,d0
     rts
 
-
-
+;____________________________________________________________
+;
+; MemTotal - Get total amount of RAM memory
+; Returns total number of bytes RAM in D0
+;____________________________________________________________
+MemTotal:
+    lea OSVARS_BASE,a0
+    move.l OsRamSize(a0),d0
+    rts

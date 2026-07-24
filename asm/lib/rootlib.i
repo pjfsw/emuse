@@ -6,7 +6,7 @@ ROOTLIB_VERSION equ -4
 ; Input: D0: 32-bit Library identifier
 ; 
 ;____________________________________________________________
-LIBADD      equ -88
+LIBADD      equ -94
 
 ;____________________________________________________________
 ;
@@ -14,7 +14,7 @@ LIBADD      equ -88
 ; Input:  D0: 32-bit Library identifier
 ; Output: D0: 0=OK
 ;____________________________________________________________
-LIBCLOSE    equ -82
+LIBCLOSE    equ -88
 
 ;____________________________________________________________
 ;
@@ -23,7 +23,15 @@ LIBCLOSE    equ -82
 ;         D1: Version
 ; Output: D0: Pointer to library base or -1 if unsuccessful
 ;____________________________________________________________
-LIBOPEN     equ -76
+LIBOPEN     equ -82
+
+;____________________________________________________________
+;
+; MEMTOTAL - Return the total amount of memory
+; Input:  
+; Output: D0: Total RAM in bytes
+;____________________________________________________________
+MEMTOTAL    equ -76
 
 ;____________________________________________________________
 ;
