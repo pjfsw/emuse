@@ -52,7 +52,7 @@ FMLoadExecutable:
     rts
 .loadExecutableInt:    
     move.l a0,a4    ; Path context
-    jsr GetProcDosState
+    bsr FMGetProcDosState
     move.l a0,a5    ; DOS context
     lea DosTemp(a5),a5  ; Temp long word
 

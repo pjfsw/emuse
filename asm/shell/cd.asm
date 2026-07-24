@@ -14,10 +14,10 @@ ExecuteCd:
     moveq #0,d0
     rts
 .pathProvided:
-    bsr GetProcDosState
+    move.l DosLibBase,a4
+    jsr DOS_GET_PROC_STATE(a4)
     move.l a0,a5
     move.l ROOTLIB_BASE,a6    
-    move.l DosLibBase,a4
     lea DirectoryCtx,a0
     jsr DOS_CREATE_CONTEXT(a4)
     tst.l d0

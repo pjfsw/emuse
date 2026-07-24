@@ -1,40 +1,26 @@
 START equ $10000
     org START
 
-    incdir ..
-    incdir ../storage
     incdir ../lib
-    include hardware.i
     include rootlib.i
-    include osvars.i
+    ;include osvars.i
     include errcode.i
 
 MAX_CMDLINE_LENGTH equ 128
-TESTSECTOR equ $800000
-    bsr InstallFakeLibraries
-    ; Install error handlers
-    bsr InstallExceptionHandlers
 
-    bsr MemInit
-    bsr InitDosVars
-    lea OSVARS_BASE,a5
-    move.l ROOTLIB_BASE,a6 
-        
-    lea DosLoadingMsg,a1
-    jsr CONPUTS(a6)
-    
-    bsr InitStorageDevices    
+    ; BIOS init code
+    bsr ShellBiosInit
     tst.l d0
-    beq.s .storageOk
-    move.l d0,d7
-    lea InitStorageErrorMsg(pc),a1
-    jsr CONPUTS(a6)
-    move.l d7,d0
-    bsr PrintErrorCode
+    beq.s .initOk
     rts
-.storageOk:
+.initOk:    
+    ; End of BIOS init code
+    
+    move.l ROOTLIB_BASE,a6
+    move.l DosLibBase,a5
+
     move.l #READBUFFER_SIZE,d0
-    bsr MemAlloc
+    jsr MEMALLOC(a6)
     move.l d0,ReadBufferPtr
 
     lea LineBreakMsg,a1
@@ -42,10 +28,6 @@ TESTSECTOR equ $800000
     bsr ClearCommandLine
     lea CommandLine,a4  ; Command line buffer
 MainLoop:    
-    ;lea OSVARS_BASE,a0
-    ;lea OsDosState(a0),a0
-    ;move.l DosCurrentDir(a0),d0
-    ;jsr CONPUTHEX32(a6)
     bsr PrintPrompt
 .waitForChar:    
     jsr CONGETC(a6)
@@ -170,8 +152,8 @@ TrimLeadingSpaces:
 
 PrintPrompt:
     lea MsgPrompt1(pc),a1
-    jsr CONPUTS(a6)
-    lea OsDosState(a5),a0
+    jsr CONPUTS(a6)    
+    jsr DOS_GET_PROC_STATE(a5)
     lea DosCurDirName(a0),a1
     jsr CONPUTS(a6)
     lea MsgPrompt2(pc),a1
@@ -200,18 +182,6 @@ MsgPrompt2:
     dc.b "]$ ",0
     even
 
-InitStorageDevices:
-    bsr FMInit    
-    bsr MMCInit  
-    move.w d0,MmcStatus
-    beq.s .mmcOk
-    and.w #$ffff,d0
-    rts
-.mmcOk:
-    lea MmcStorageDevice,a0
-    bsr FMRegisterDevice
-    rts
-    
 PrintSpace:
     move.b #' ',d0
     jmp CONPUTC(a6)
@@ -233,36 +203,6 @@ PrintTextAndNumber:
     jsr CONPUTHEX32(a6)
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
-
-InstallExceptionHandlers:
-    lea ExceptionAddressError,a0
-    move.l a0,$0000000C
-    lea ExceptionIllegalInstruction,a0
-    move.l a0,$00000010    
-    rts
-
-InitDosVars:
-    lea OSVARS_BASE,a0
-    lea OsDosState(a0),a0
-    clr.l DosCurrentDir(a0)
-    move.b #'/',DosCurDirName(a0)
-    clr.b 1+DosCurDirName(a0)
-    rts
-
-InstallFakeLibraries:
-    move.l ROOTLIB_BASE,a5
-    lea -8(a5),a5
-    lea JT_ROOT_LIB_BASE-8,a6
-    moveq #7,d7
-.copyVectors:
-    move.l (a5),(a6)
-    lea -6(a5),a5
-    lea -6(a6),a6
-    dbra d7,.copyVectors
-    move.l #JT_ROOT_LIB_BASE,ROOTLIB_BASE
-    move.l #JT_DOS_LIB_BASE,DosLibBase   
-    rts
-
 
 BuiltInCommands:
     dc.l CommandLs,ExecuteLs
@@ -291,11 +231,6 @@ LineBreakMsg:
     dc.b 13,10,0    
     even
 
-MmcStorageDevice:
-    dc.b "SD"
-    dc.l MMCReadSector
-    dc.l MMCWriteSector
-    blk.w 10,0
 DosLibBase:
     dc.l 0
 READBUFFER_SIZE EQU 2048
@@ -305,32 +240,7 @@ ReadBufferPtr:
 DecBuffer:
     ds.b 12,0
 
-JT_DOS_LOAD_EXE:    jmp FMLoadExecutable
-JT_DOS_READ_FILE:   jmp FMReadFile
-JT_DOS_READ_DIR:    jmp FMReadDir
-JT_DOS_CREATE_CTX:  jmp FMCreateContext
-JT_DOS_VERSION:     dc.l 1
-JT_DOS_LIB_BASE:    
-
-ConPuts:
-ConPutc:
-ConPutHex32:
-ConPutHex16:
-ConPutHex8:
-ConGetChar:
-ConClr:
-    include jt_root.asm
-JT_ROOT_LIB_BASE:
-
-    include exceptions.asm
-    include mmc.asm
-    include storagedevice.asm
-    include partman.asm
-    include fat16.asm
-    include fileman.asm
-    include exeloader.asm
     include decimal.asm
-    include memman.asm
     include cd.asm
     include ls.asm
     include cat.asm
@@ -339,6 +249,7 @@ JT_ROOT_LIB_BASE:
     include free.asm
     include part.asm
     include printutil.asm
+    include shell_bios.asm
 
 CommandLine  EQU *
 MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH

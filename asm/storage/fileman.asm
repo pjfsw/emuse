@@ -243,9 +243,9 @@ CompareFilenames:
 
 ;____________________________________________________________
 ;
-; § - store pointer to context in A0
+; Retrieve current DOS state in A0
 ;____________________________________________________________
-GetProcDosState:
+FMGetProcDosState:
     lea OSVARS_BASE,a0
     lea OsDosState(a0),a0
     rts
@@ -267,7 +267,7 @@ FMCreateContext:
 .fmCreateContextInt:  
     move.l a0,a4    ; Path context (target)
     move.l a1,a5    ; Path
-    bsr GetProcDosState
+    bsr FMGetProcDosState
     move.l a0,a3    ; Process context
 
     lea OSVARS_BASE,a6
@@ -387,7 +387,7 @@ FMReadFile:
     rts
 .isFile:
     move.l d0,d2    ; Save bytes to read
-    bsr GetProcDosState
+    bsr FMGetProcDosState
     move.l a0,a3    ; Process context
     lea OSVARS_BASE,a6
     lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition

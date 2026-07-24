@@ -1,15 +1,16 @@
 ; A1 Command line
 ExecutePart:
-    movem.l d6-d7/a2/a6,-(sp)
+    movem.l d6-d7/a2/a5-a6,-(sp)
     bsr.s .executePart
-    movem.l (sp)+,d6-d7/a2/a6
+    movem.l (sp)+,d6-d7/a2/a5-a6
     rts
 .executePart:
+    move.l DosLibBase,a5
     move.l ROOTLIB_BASE,a6
     lea .hdrMsg(pc),a1
     jsr CONPUTS(a6)
 
-    bsr PMGetPartitionCount
+    jsr DOS_GET_PART_COUNT(a5)
     move.l d0,d7
     moveq #0,d6
     subq.w #1,d7
@@ -20,7 +21,7 @@ ExecutePart:
     
     move.l d6,d0
     lea ShellPartitionInfo,a0
-    bsr PMGetPartitionInfo    
+    jsr DOS_GET_PART_INFO(a5)
     lea ShellPartitionInfo,a2
     
     lea PM_NAME(a2),a1

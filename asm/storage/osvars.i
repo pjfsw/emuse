@@ -2,8 +2,8 @@
     include "fat16.i"
     include "partman.i"
     include "fileman.i"
+    include "doslib.i"
 
-PROC_MAX_HUNKS      equ 4
 DOS_TEMP_AREA_SIZE  equ 16
 ;____________________________________________________________
 ;
@@ -17,7 +17,6 @@ DosDirEntry     rs.b 32
 DosPathEntry    rs.b 16
 DosBuffer       rs.b 512
 DosTemp:        rs.b DOS_TEMP_AREA_SIZE
-DosHunkStart:   rs.l PROC_MAX_HUNKS
 DosSizeof       rs.b 0
 
 ;____________________________________________________________
@@ -39,14 +38,3 @@ OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
 OsSizeof:           rs.b 0
-
-
-    rsreset
-ProcStreamOffset rs.w 1
-ProcCurrentHunk: rs.w 1
-ProcHunkCount:   rs.w 1
-ProcReserved1:   rs.w 1
-ProcHunkStart:   rs.l PROC_MAX_HUNKS
-ProcHunkSize:    rs.l PROC_MAX_HUNKS
-ProcEntry:       rs.l 1
-ProcSizeof:      rs.b 0
