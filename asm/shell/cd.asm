@@ -15,9 +15,9 @@ ExecuteCd:
 .pathProvided:
     move.l ROOTLIB_BASE,a6    
     lea CurrentDir,a5
-    move.l DosLibBase,a4
-    lea DirectoryCtx,a3
-    lea DirEntry,a2
+    move.l DosLibBase(pc),a4
+    lea DirectoryCtx(pc),a3
+    lea DirEntry(pc),a2
     move.l a3,a0
     jsr DOS_CREATE_CONTEXT(a4)
     tst.l d0

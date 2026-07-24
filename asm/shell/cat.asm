@@ -17,21 +17,21 @@ ExecuteCat:
 .hasArgument:
     move.l ROOTLIB_BASE,a6
     move.l #READBUFFER_SIZE,d2    ; Read buffer size
-    move.l ReadBufferPtr,a5     ; Read buffer
-    move.l DosLibBase,a4
-    lea DirectoryCtx,a0
+    move.l ReadBufferPtr(pc),a5     ; Read buffer
+    move.l DosLibBase(pc),a4
+    lea DirectoryCtx(pc),a0
     jsr DOS_CREATE_CONTEXT(a4)
     tst.l d0
     beq.s .resolveOk
     rts
 .resolveOk:
-    lea DirectoryCtx,a0
+    lea DirectoryCtx(pc),a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     beq.s .readFileContents
     moveq #DOS_ERR_NOT_FILE,d0
     rts
 .readFileContents:
-    lea DirectoryCtx,a0
+    lea DirectoryCtx(pc),a0
     move.l a5,a1
     move.l d2,d0
     jsr DOS_READ_FILE(a4)
@@ -58,7 +58,7 @@ PrintChar:
     blo.s .printSpace
     jmp CONPUTC(a6)
 .printLineBreak:
-    lea LineBreakMsg,a1
+    lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 .printSpace:
     move.b #' ',d0

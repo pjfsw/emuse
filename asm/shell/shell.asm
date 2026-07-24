@@ -17,16 +17,17 @@ MAX_CMDLINE_LENGTH equ 128
     ; End of BIOS init code
     
     move.l ROOTLIB_BASE,a6
-    move.l DosLibBase,a5
+    move.l DosLibBase(pc),a5
 
     move.l #READBUFFER_SIZE,d0
     jsr MEMALLOC(a6)
-    move.l d0,ReadBufferPtr
+    lea ReadBufferPtr(pc),a0
+    move.l d0,(a0)
 
-    lea LineBreakMsg,a1
+    lea LineBreakMsg(pc),a1
     jsr CONPUTS(a6)
     bsr ClearCommandLine
-    lea CommandLine,a4  ; Command line buffer
+    lea CommandLine(pc),a4  ; Command line buffer
 MainLoop:    
     bsr PrintPrompt
 .waitForChar:    
@@ -48,7 +49,7 @@ MainLoop:
     jsr CONPUTC(a6) ; CONPUTC
     bra.s .waitForChar
 .lineBreak:
-    lea LineBreakMsg,a1
+    lea LineBreakMsg(pc),a1
     jsr CONPUTS(a6)
     bsr ParseCommandLine
     bsr ClearCommandLine
@@ -93,7 +94,7 @@ ParseCommandLine:
     movem.l (sp)+,a2/a3
     rts
 .parseCommandLine:    
-    lea CommandLine,a1
+    lea CommandLine(pc),a1
     bsr TrimLeadingSpaces
     tst.b (a1)
     bne.s .cmdLineNotEmpty
@@ -113,7 +114,7 @@ ParseCommandLine:
     lea -1(a1),a1
     bra .endOfCmdLine
 .trimmed:    
-    lea BuiltInCommands,a2
+    lea BuiltInCommands(pc),a2
 .nextCommand:
     tst.l (a2)
     beq.s .notBuiltInCommand
@@ -161,7 +162,7 @@ PrintPrompt:
 
 ClearCommandLine:
     moveq #MAX_CMDLINE_LENGTH/4-1,d7
-    lea CommandLine,a0
+    lea CommandLine(pc),a0
 .clearCmdLine:
     clr.l (a0)+
     dbra d7,.clearCmdLine

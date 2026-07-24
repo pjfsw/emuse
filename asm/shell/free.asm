@@ -22,10 +22,10 @@ ExecuteFree:
     moveq #0,d0
     rts
 .printBytes: 
-    lea DecBuffer,a0
+    lea DecBuffer(pc),a0
     bsr PrintU32Decimal
 
-    lea DecBuffer,a1
+    lea DecBuffer(pc),a1
     jsr CONPUTS(a6)
 
     lea .bytesMsg(pc),a1

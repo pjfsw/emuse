@@ -16,16 +16,16 @@ ExecuteCommand:
 .foundSpace:
     clr.b (a1)
 .foundCommandEnd:
-    move.l DosLibBase,a4
-    lea DirectoryCtx,a0
+    move.l DosLibBase(pc),a4
+    lea DirectoryCtx(pc),a0
     move.l a3,a1
     jsr DOS_CREATE_CONTEXT(a4)
     tst.l d0
     beq.s .resolveOk
     rts
 .resolveOk:
-    lea DirectoryCtx,a0
-    move.l DosLibBase,a6
+    lea DirectoryCtx(pc),a0
+    move.l DosLibBase(pc),a6
     jsr DOS_LOAD_EXE(a6)
     tst.l d0 
     beq.s .loadOk1
@@ -62,7 +62,7 @@ ExecuteCommand:
 
 PrintNum:
     jsr CONPUTHEX32(a6)
-    lea LineBreakMsg,a1
+    lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 
     incdir "../storage"

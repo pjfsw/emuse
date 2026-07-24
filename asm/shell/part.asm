@@ -5,7 +5,7 @@ ExecutePart:
     movem.l (sp)+,d6-d7/a2/a5-a6
     rts
 .executePart:
-    move.l DosLibBase,a5
+    move.l DosLibBase(pc),a5
     move.l ROOTLIB_BASE,a6
     lea .hdrMsg(pc),a1
     jsr CONPUTS(a6)
@@ -20,9 +20,9 @@ ExecutePart:
 .nextPart:
     
     move.l d6,d0
-    lea ShellPartitionInfo,a0
+    lea ShellPartitionInfo(pc),a2
+    move.l a2,a0
     jsr DOS_GET_PART_INFO(a5)
-    lea ShellPartitionInfo,a2
     
     lea PM_NAME(a2),a1
     jsr CONPUTS(a6)   

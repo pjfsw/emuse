@@ -28,7 +28,7 @@ ExceptionAddressError:
     move.w d4,d0
     jsr CONPUTHEX16(a6)
 
-    lea ExceptionEndMsg,a1
+    lea ExceptionEndMsg(pc),a1
     jsr CONPUTS(a6)
 
 .loop:
@@ -64,7 +64,7 @@ ExceptionIllegalInstruction:
     move.w d6,d0
     jsr CONPUTHEX16(a6)
 
-    lea ExceptionEndMsg,a1
+    lea ExceptionEndMsg(pc),a1
     jsr CONPUTS(a6)
 
 .loop:

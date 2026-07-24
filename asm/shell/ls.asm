@@ -12,21 +12,21 @@ ExecuteLs:
     rts
 .executeLs:
     move.l ROOTLIB_BASE,a6
-    move.l DosLibBase,a4
-    lea DirectoryCtx,a0
+    move.l DosLibBase(pc),a4
+    lea DirectoryCtx(pc),a0
     jsr DOS_CREATE_CONTEXT(a4)
     tst.l d0
     beq.s .resolveOk
     rts
 .resolveOk:
-    lea DirectoryCtx,a0
+    lea DirectoryCtx(pc),a0
     btst.b #PATTR_DIR_BIT,PCTX_ATTR(a0)
     bne.s .isDir
     moveq #DOS_ERR_NOT_DIRECTORY,d0
     rts
 .isDir:
 .nextEntry:    
-    lea DirectoryCtx,a0
+    lea DirectoryCtx(pc),a0
     move.l a3,a1
     jsr DOS_READ_DIR(a4)
     cmp.l #0,d0
@@ -49,7 +49,7 @@ PrintDirEntry:
     bsr PrintSpace
     tst.b DIRENT_ATTR(a3)
     beq.s .isFile
-    lea DirTextMsg,a1
+    lea DirTextMsg(pc),a1
     jsr CONPUTS(a6)
     bra.s .printDate
 .isFile:    
@@ -69,7 +69,7 @@ PrintDirEntry:
     move.l DIRENT_BLOCK(a3),d0
     jsr CONPUTHEX32(a6)
 
-    lea LineBreakMsg,a1   
+    lea LineBreakMsg(pc),a1   
     jsr CONPUTS(a6)
     rts
 PrintDate:
@@ -109,7 +109,7 @@ PrintTime:
 
     rts
 PrintTwoDigitsDateWord:
-    lea DecBuffer,a0    
+    lea DecBuffer(pc),a0    
     bsr PrintU16Decimal
     move.l a0,d0
     sub.l #DecBuffer,a0
@@ -121,13 +121,13 @@ PrintTwoDigitsDateWord:
     jsr CONPUTC(a6)
     dbra d7,.pad
 .print:    
-    lea DecBuffer,a1
+    lea DecBuffer(pc),a1
     jmp CONPUTS(a6)
 
 PrintDateWord:
-    lea DecBuffer,a0
+    lea DecBuffer(pc),a0
     bsr PrintU16Decimal
-    lea DecBuffer,a1
+    lea DecBuffer(pc),a1
     jmp CONPUTS(a6)
 PrintDash:
     move.b #'-',d0
