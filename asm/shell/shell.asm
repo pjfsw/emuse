@@ -8,6 +8,8 @@ START equ $1000
 MAX_CMDLINE_LENGTH equ 128
     ; End of BIOS init code        
     move.l ROOTLIB_BASE,a6    
+    lea DosLoadingMsg(pc),a1
+    jsr CONPUTS(a6)
     move.l #DOS_LIB_ID,d0
     moveq #1,d1
     jsr LIBOPEN(a6)
@@ -222,7 +224,7 @@ CommandFree:
 CommandPart:
     dc.b "part",0
 DosLoadingMsg:
-    dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
+    dc.b 13,10,13,10,"Starting Jofmodore DOS 1.0...",0
 PathErrorMsg:
     dc.b "Invalid path",0
 LineBreakMsg:
