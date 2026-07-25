@@ -13,9 +13,9 @@ HUNK_RELOC32SHORT equ $3fC
 ;____________________________________________________________
 ; Requirements: A4 contains PathCtx, A5 contains temp long buffer, D0 number of bytes (max 16)
 ExeStreamRead:
-    move.l d2,-(sp)
+    movem.l d2,-(sp)        ; Use movem to preserve status flag
     bsr .ExeStreamReadInt
-    move.l (sp)+,d2
+    movem.l (sp)+,d2        ; Use movem to preserve status flag
     rts
 .ExeStreamReadInt:    
     move.l d0,d2
@@ -90,7 +90,7 @@ FMLoadExecutable:
     cmp.l 8(a5),d7
     bne .invalidExe   ; Only support last hunk=size-1
 
-    lea DosHunkOffsets(a5),a2   ; Hunk offset temp storage
+    lea DosHunkOffsets-DosTemp(a5),a2   ; Hunk offset temp storage
     moveq #0,d5
 .calcAllocSize:
     moveq #4,d0    
@@ -116,7 +116,7 @@ FMLoadExecutable:
     lea ProcHunkStart(a2),a1
     move.l d6,d7
     subq.w #1,d7
-    lea DosHunkOffsets(a5),a0    
+    lea DosHunkOffsets-DosTemp(a5),a0    
 .updateHunkOffsets:
     move.l (a0)+,d0  ; Zero based start of this hunk
     lsl.l #2,d0

@@ -1,5 +1,6 @@
 ROOTLIB_BASE equ $000004
-ROOTLIB_VERSION equ -4
+ROOTLIB_VERSION_OFFSET equ -4
+ROOTLIB_VERSION equ 1
 ;____________________________________________________________
 ;
 ; LIBADD  - Install new or replace existing library

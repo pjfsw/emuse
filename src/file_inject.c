@@ -10,9 +10,7 @@ static void write_le32(uint8_t *p, uint32_t value) {
     p[3] = (uint8_t)(value >> 24);
 }
 
-int inject_file(uint8_t *sd_image, const char *filename) {
-    const size_t data_offset = 0x00383000;
-    const size_t dir_offset = 0x0013F300;
+int inject_file(uint8_t *sd_image, const char *filename, uint32_t data_offset, uint32_t dir_offset) {
     const size_t cluster_size = 0x10000; /* 128 sectors × 512 bytes */
 
     FILE *file = fopen(filename, "rb");

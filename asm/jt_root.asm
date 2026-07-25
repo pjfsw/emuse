@@ -33,5 +33,5 @@ JT_ConPutc: ; -16
     jmp ConPutc
 JT_ConClr: ; -10
     jmp ConClr
-    dc.l 1             ; Version
+    dc.l ROOTLIB_VERSION      ; Version
 

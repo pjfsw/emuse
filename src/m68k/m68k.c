@@ -433,7 +433,7 @@ static int getCpuState(void *userdata, CpuState *gpRegisters, int maxLines, CpuS
         gpRegisters[15].label[0] = 'S';
         gpRegisters[15].label[1] = 'P';
         gpRegisters[15].label[2] = 0;
-        writeU32(gpRegisters[15].value, *getSP(cpu));
+        writeU32(gpRegisters[15].value, cpu->registers.a[7]);
         actualLines++;
     }
     if (actualLines < maxLines) {

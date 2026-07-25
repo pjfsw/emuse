@@ -3,6 +3,9 @@
     include "partman.i"
     include "fileman.i"
     include "doslib.i"
+    include "dirent.i"
+
+BOOT_LOADER_BASE equ $001000 
 
 DOS_TEMP_AREA_SIZE  equ 16
 ;____________________________________________________________
@@ -12,12 +15,13 @@ DOS_TEMP_AREA_SIZE  equ 16
 
     rsreset
 DosCurrentDir:  rs.l 1
-DosDirEntry     rs.b 32
-DosPathEntry    rs.b 16
-DosBuffer       rs.b 512
+DosDirEntry:    rs.b 32
+DosPathEntry:   rs.b 16
+DosBuffer:      rs.b 512
+DosPathContext: rs.b 32
 DosTemp:        rs.b DOS_TEMP_AREA_SIZE
 DosHunkOffsets: rs.l PROC_MAX_HUNKS
-DosSizeof       rs.b 0
+DosSizeof:      rs.b 0
 
 ;____________________________________________________________
 ;

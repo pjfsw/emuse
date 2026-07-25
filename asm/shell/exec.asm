@@ -32,7 +32,7 @@ ExecuteCommand:
     rts
 .loadOk1:
     move.l a0,a3    
-    ;bsr .debugPrint
+;    bsr .debugPrint
     move.l ProcHunkStart(a3),a0
     movem.l a2-a6,-(sp)
     jsr (a0)
