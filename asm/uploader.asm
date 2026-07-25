@@ -6,7 +6,7 @@ Uploader:
     lea Uploader_StartMsg(pc),a1
     bsr ConPuts
 
-    lea SIMPLE_LOADER_BASE,a2       ; Loader v0.9 loads everything into address $10000
+    lea BOOT_LOADER_BASE,a2       ; Loader v0.9 loads everything into address $10000
     moveq #0,d2                     ; D2 is the current digit
     move.w #2,d3                    ; Digits remaining for the next byte
 .nextNibble:
@@ -38,7 +38,7 @@ Uploader:
 .done:
     lea Uploader_DoneMsg(pc),a1
     bsr ConPuts
-    move.l #SIMPLE_LOADER_BASE,d0
+    move.l #BOOT_LOADER_BASE,d0
     bsr ConPutHex32
     move.b #'-',d0
     bsr ConPutc
@@ -46,9 +46,12 @@ Uploader:
     bsr ConPutHex32
     lea Uploader_DoneMsg2(pc),a1
     bsr ConPuts
-    jsr SIMPLE_LOADER_BASE
-    ; Todo execute
-    rts
+    move.l a2,d0
+    bsr MemInit
+    lea OSVARS_BASE,a0
+    move.l OsAllocatorStart(a0),d0
+    bsr ConPutHex32
+    jmp BOOT_LOADER_BASE
 
 ; Convert digit in D0 to nibble
 ConvertDigit:

@@ -16,6 +16,7 @@ DosDirEntry     rs.b 32
 DosPathEntry    rs.b 16
 DosBuffer       rs.b 512
 DosTemp:        rs.b DOS_TEMP_AREA_SIZE
+DosHunkOffsets: rs.l PROC_MAX_HUNKS
 DosSizeof       rs.b 0
 
 ;____________________________________________________________
@@ -36,6 +37,9 @@ OsDeviceList:       rs.b SD_DEVICE_LIST_SIZE
 OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
+OsMmcCmdArg:        rs.b 4
+OsMmcStatus:        rs.l 1
+OsAllocatorStart:   rs.l 1
 OsSizeof:           rs.b 0
 
  printt "OsSizeof:"

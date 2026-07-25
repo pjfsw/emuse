@@ -1,21 +1,23 @@
-START equ $10000
-    org START
-
     include rootlib.i
     include errcode.i
 
-MAX_CMDLINE_LENGTH equ 128
+START equ $1000
+    org START
 
-    ; BIOS init code
-    bsr ShellBiosInit
+
+MAX_CMDLINE_LENGTH equ 128
+    ; End of BIOS init code        
+    move.l ROOTLIB_BASE,a6    
+    move.l #DOS_LIB_ID,d0
+    moveq #1,d1
+    jsr LIBOPEN(a6)
     tst.l d0
-    beq.s .initOk
+    bpl.s .dosLibOk
     rts
-.initOk:    
-    ; End of BIOS init code
-    
-    move.l ROOTLIB_BASE,a6
-    move.l DosLibBase(pc),a5
+.dosLibOk:
+    lea DosLibBase(pc),a0
+    move.l d0,(a0)
+    move.l (a0),a5    
 
     move.l #READBUFFER_SIZE,d0
     jsr MEMALLOC(a6)
@@ -221,8 +223,6 @@ CommandPart:
     dc.b "part",0
 DosLoadingMsg:
     dc.b 13,10,"Loading JOFMODORE DOS 1.0...",13,10,0
-InitStorageErrorMsg:
-    dc.b 13,10,"Failed to initialize boot device: ",0
 PathErrorMsg:
     dc.b "Invalid path",0
 LineBreakMsg:
@@ -247,16 +247,13 @@ DecBuffer:
     include free.asm
     include part.asm
     include printutil.asm
-    include shell_bios.asm
 
 CurrentDir:
     dc.b "/",0
     blk.b 10,0
 
-CommandLine  EQU *
-MmcStatus    EQU CommandLine+MAX_CMDLINE_LENGTH
-MmcCmdArg    EQU MmcStatus+4
-ShellPartitionInfo EQU MmcCmdArg+4
-DirectoryCtx EQU ShellPartitionInfo+32
-DirEntry     EQU DirectoryCtx+PCTX_SIZEOF
+CommandLine:    blk.b MAX_CMDLINE_LENGTH,0
+ShellPartitionInfo: blk.b 32,0
+DirectoryCtx: blk.b PCTX_SIZEOF,0
+DirEntry: blk.b DIRENT_SIZEOF,0
 

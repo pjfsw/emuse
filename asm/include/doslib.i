@@ -1,3 +1,6 @@
+DOS_LIB_VERSION     equ 1
+DOS_LIB_ID          equ $444f5330       ; "DOS0"
+
 PROC_MAX_HUNKS      equ 4
 
     rsreset
@@ -9,7 +12,6 @@ ProcHunkStart:   rs.l PROC_MAX_HUNKS
 ProcHunkSize:    rs.l PROC_MAX_HUNKS
 ProcEntry:       rs.l 1
 ProcSizeof:      rs.b 0
-
 
     rsreset
 PM_DEVICE    rs.l 1

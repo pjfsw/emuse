@@ -15,14 +15,22 @@ MEMMAN_ATTR    rs.w 1
 MEMMAN_RESRVD  rs.w 1
 MEMMAN_SIZEOF  rs.b 0
 
-MEMMAN_BASE equ $020000-MEMMAN_SIZEOF   ; Set lower later
-
 ;____________________________________________________________
 ;
 ; MemInit - Initialize memory manager, making all memory free
+;           D0 - Earliest start of allocation space
 ;____________________________________________________________
 MemInit:
-    lea MEMMAN_BASE,a1
+    ; d0 last loaded byte address + 1 => add padding and even
+    ; address
+    add.l #2*MEMMAN_BLOCK_SIZE-1,d0
+    and.l #~(MEMMAN_BLOCK_MASK),d0
+    sub.l #MEMMAN_SIZEOF,d0
+    
+    lea OSVARS_BASE,a1    
+    lea OsAllocatorStart(a1),a1    
+    move.l d0,(a1)  ; Save allocator address to OsAllocatorStart
+    move.l d0,a1    ; Use A1 for init memory below
 ;____________________________________________________________
 ;
 ; MemClearEntry - Clear current memory entry in A1
@@ -51,7 +59,8 @@ MemAlloc:
     add.l #MEMMAN_SIZEOF,d0
     add.l #MEMMAN_BLOCK_MASK,d0
     and.l #~(MEMMAN_BLOCK_MASK),d0
-    lea MEMMAN_BASE,a0
+    lea OSVARS_BASE,a0
+    move.l OsAllocatorStart(a0),a0
     suba.l a1,a1
 .findEmptySlot:
     tst.l MEMMAN_NEXT(a0)
@@ -94,7 +103,8 @@ MemFree:
     rts
 .memFreeInt:
     suba.l #MEMMAN_SIZEOF,a0
-    lea MEMMAN_BASE,a1
+    lea OSVARS_BASE,a1
+    move.l OsAllocatorStart(a1),a1
     suba.l a2,a2
 .findSlot:
     move.l a1,d0
@@ -129,7 +139,8 @@ MemFree:
 MemAvail:
     lea OSVARS_BASE,a0
     move.l OsRamSize(a0),d0     ; Max RAM amount
-    lea MEMMAN_BASE,a0
+    lea OSVARS_BASE,a0
+    move.l OsAllocatorStart(a0),a0
 .findLastAllocation:
     tst.l MEMMAN_NEXT(a0)
     beq.s .lastSlotFound

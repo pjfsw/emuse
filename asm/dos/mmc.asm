@@ -247,7 +247,8 @@ MMCReadSectorInt:
 
     move.l a0,-(sp)
     lea Cmd17(pc),a0
-    lea MmcCmdArg,a1
+    lea OSVARS_BASE,a1
+    lea OsMmcCmdArg(a1),a1
     move.l d1,(a1)
     bsr MMCSendCommandInt    
     move.l (sp)+,a0    
@@ -299,7 +300,8 @@ MMCWriteSector:
     MmcMosiClockA5MisoA6
     move.l a0,-(sp)
     lea Cmd24(pc),a0
-    lea MmcCmdArg,a1
+    lea OSVARS_BASE,a1
+    lea OsMmcCmdArg(a1),a1
     move.l d1,(a1)
     bsr MMCSendCommandInt    
     move.l (sp)+,a0    

@@ -30,6 +30,6 @@ IREG        equ $e00001
 
 SYSTEM_BSS_BASE equ $000400 
 ALLOCATOR_BASE  equ $001000 
-SIMPLE_LOADER_BASE equ $010000 
+BOOT_LOADER_BASE equ $001000 
 
     include "uart.i"

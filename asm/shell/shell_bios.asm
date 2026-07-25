@@ -5,6 +5,7 @@
 ; Herein lies code that eventually should be moved from the shell to BIOS
 ;
 ShellBiosInit:
+    rts
     bsr InstallFakeLibraries
     bsr InstallExceptionHandlers
 
@@ -64,18 +65,9 @@ InstallFakeLibraries:
     lea -6(a6),a6
     dbra d7,.copyVectors
     move.l #JT_ROOT_LIB_BASE,ROOTLIB_BASE
-    move.l #JT_DOS_LIB_BASE,DosLibBase   
     rts
 
-JT_DOS_CHANGE_DIR:      jmp FMChangeDirectory
-JT_DOS_GET_PART_INFO:   jmp PMGetPartitionInfo
-JT_DOS_GET_PART_COUNT:  jmp PMGetPartitionCount
-JT_DOS_LOAD_EXE:        jmp FMLoadExecutable
-JT_DOS_READ_FILE:       jmp FMReadFile
-JT_DOS_READ_DIR:        jmp FMReadDir
-JT_DOS_CREATE_CTX:      jmp FMCreateContext
-JT_DOS_VERSION:         dc.l 1
-JT_DOS_LIB_BASE:    
+    include jt_dos.asm
 
 ConPuts:
 ConPutc:

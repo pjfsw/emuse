@@ -25,14 +25,15 @@ loop\@:
 
     org $f00400        ; Move past the vector table    
 
-    include "jt_root.asm"
+    include "jt_dos.asm"
+    include "jt_root.asm"   ; MUST BE IMMEDIATELY ABOVE "Start"
 Start:
     move.b #OVR_OFF,OVR_REG    
 
     move.w #$2700,sr    ; disable interrupts while configuring    
     lea Start,a6
     move.l a6,EXEC_BASE
-    
+
     bsr Blink           ; First blink means the CPU is executing code
     bsr Blink           ; Second blink means the OVR and stack is working
     bsr ConOpen    
@@ -43,15 +44,19 @@ Start:
     bsr DetectRam
     move.l DetectedRamSize,a7   ; Set top of RAM be stack pointer
 
+    bsr ExceptionHandlerInit
+    bsr LMInit
+
     bsr ConClr
     lea welcomeMsg(pc),a1
     bsr ConPuts  
     
     move.l DetectedRamSize,d0
-    bsr ConPutHex32
-    
+    bsr ConPutHex32    
     lea detectedMsg(pc),a1
     bsr ConPuts
+    bsr DOSInit
+
 BootMenuLoop:
     lea menuMsg(pc),a1
     bsr ConPuts
@@ -108,6 +113,8 @@ welcomeMsg:
     dc.b "Copyright (C) 2026 Johan Fransson",13,10
     dc.b "All rights reserved.",13,10
     dc.b "$",0
+LineBreakMsg:
+    dc.b 13,10,0    
 detectedMsg:
     dc.b " bytes RAM",13,10,0        
 menuMsg:    
@@ -124,7 +131,13 @@ Blink:
     Delay
     rts    
 
+    include exceptions.asm
+    include dos.asm
     include memman.asm
+    include libman.asm
+    include fileman.asm
+    include exeloader.asm    
+    include partman.asm
     include bootloader.asm
     include uploader.asm
     include monitor.asm

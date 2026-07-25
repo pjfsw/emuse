@@ -21,6 +21,7 @@ LSTFILE="build/${BASENAME}.lst"
 vasmm68k_mot \
     -ignore-mult-inc \
     -Fhunkexe \
+    -Iasm/include \
     -L "$LSTFILE" \
     -Lnf \
     -no-opt \

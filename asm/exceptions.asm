@@ -1,3 +1,10 @@
+ExceptionHandlerInit:
+    lea ExceptionAddressError,a0
+    move.l a0,$0000000C
+    lea ExceptionIllegalInstruction,a0
+    move.l a0,$00000010    
+    rts
+
 ;SP+00  SR                (word)
 ;SP+02  PC                (long)
 ;SP+06  IR                (word)
@@ -78,4 +85,3 @@ ExceptionIllegalInstruction:
     even
 ExceptionEndMsg:
     dc.b 13,10,"Execution terminated.",13,10,0
-

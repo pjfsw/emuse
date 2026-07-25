@@ -8,21 +8,19 @@ HUNK_RELOC32SHORT equ $3fC
 
     include "osvars.i"
     include "errcode.i"
-
-
+    include "rootlib.i"
 
 ;____________________________________________________________
 ; Requirements: A4 contains PathCtx, A5 contains temp long buffer, D0 number of bytes (max 16)
 ExeStreamRead:
-    movem.l d2/a6,-(sp)
+    move.l d2,-(sp)
     bsr .ExeStreamReadInt
-    movem.l (sp)+,d2/a6
+    move.l (sp)+,d2
     rts
 .ExeStreamReadInt:    
     move.l d0,d2
     move.l a4,a0
     move.l a5,a1    
-    move.l DosLibBase,a6
     jsr DOS_READ_FILE(a6)
     tst.l d0
     bpl.s .notReadError
@@ -56,6 +54,15 @@ FMLoadExecutable:
     move.l a0,a5    ; DOS context
     lea DosTemp(a5),a5  ; Temp long word
 
+    move.l ROOTLIB_BASE,a3
+    move.l #DOS_LIB_ID,d0
+    moveq #1,d1
+    jsr LIBOPEN(a3)
+    move.l d0,a6
+    tst.l d0
+    bpl.s .dosLibOk
+    rts
+.dosLibOk:
     moveq #8,d0       
     bsr ExeStreamRead
     bpl.s .ok1
@@ -83,7 +90,7 @@ FMLoadExecutable:
     cmp.l 8(a5),d7
     bne .invalidExe   ; Only support last hunk=size-1
 
-    lea DOS_TEMP_AREA_SIZE(a5),a2   ; Hunk offset temp storage
+    lea DosHunkOffsets(a5),a2   ; Hunk offset temp storage
     moveq #0,d5
 .calcAllocSize:
     moveq #4,d0    
@@ -96,14 +103,12 @@ FMLoadExecutable:
     move.l d5,d0
     lsl.l #2,d0
     add.l #ProcSizeof,d0   
-    move.l ROOTLIB_BASE,a6
-    jsr MEMALLOC(a6)
+    jsr MEMALLOC(a3)
     tst.l d0
     bne.s .memoryOk
     moveq #DOS_ERR_OUT_OF_MEMORY,d0
     rts
 .memoryOk:
-    move.l DosLibBase,a6
     move.l d0,a2                ; PROCESS NOW IN A2!!
     move.w d6,ProcHunkCount(a2)  
     lea ProcSizeof(a2),a1     ; Start of hunks
@@ -111,7 +116,7 @@ FMLoadExecutable:
     lea ProcHunkStart(a2),a1
     move.l d6,d7
     subq.w #1,d7
-    lea DOS_TEMP_AREA_SIZE(a5),a0    
+    lea DosHunkOffsets(a5),a0    
 .updateHunkOffsets:
     move.l (a0)+,d0  ; Zero based start of this hunk
     lsl.l #2,d0
@@ -192,9 +197,9 @@ FMLoadExecutable:
     move.l (a3,d5.w),a0    ; A3+D5 is the pointer to the current hunk
     moveq #0,d0
     move.w (a5),d0    ; Offset in current hunk
-    move.l (a0,d0.w),d1 ; Value to change
+    move.l (a0,d0.l),d1 ; Value to change
     add.l d6,d1
-    move.l d1,(a0,d0.w)
+    move.l d1,(a0,d0.l)
     dbra d7,.nextWord
     bra.s .relocateShortNext
     bra .readNextHunk

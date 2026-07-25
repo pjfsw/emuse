@@ -3,19 +3,19 @@
 ; Jump table for the root library
 ;____________________________________________________________
 
-JT_LibAdd:
-    jmp 0
-JT_LibClose:
-    jmp 0
-JT_LibOpen:
-    jmp 0
-JT_MemTotal:
+JT_LibAdd:     ; -94
+    jmp LMAddLibrary
+JT_LibClose:   ; -88
+    jmp LMCloseLibrary
+JT_LibOpen:    ; -82
+    jmp LMOpenLibrary
+JT_MemTotal:   ; -76
     jmp MemTotal
-JT_MemAvail:
+JT_MemAvail:   ; -70
     jmp MemAvail
-JT_MemFree:
+JT_MemFree:    ; -64
     jmp MemFree
-JT_MemAlloc:
+JT_MemAlloc:   ; -58
     jmp MemAlloc
 JT_ConGetChar: ; -52
     jmp ConGetChar
