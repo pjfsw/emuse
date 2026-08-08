@@ -1,6 +1,11 @@
 ROOTLIB_BASE equ $000004
 ROOTLIB_VERSION_OFFSET equ -4
 ROOTLIB_VERSION equ 1
+
+CONUNDER    equ -118
+CONREVERSE  equ -112
+CONBOLD     equ -106
+CONNORMAL   equ -100
 ;____________________________________________________________
 ;
 ; LIBADD  - Install new or replace existing library

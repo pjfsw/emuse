@@ -1,36 +1,32 @@
+    include "osvars.i"
+
 ConOpen:
-    bsr UARTInit    
-    rts
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    bra TTYInit
 
 ;____________________________________________________________
 ;
 ; Clear screen
 ;____________________________________________________________
 ConClr: 
-    lea (ConClrMsg).l,a1
-    bra ConPuts
-ConClrMsg:  ; TODO this is UART specific, needs Terminal abstraction
-    dc.b 27,"[2J",27,"[H",0
-    even
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleClearFunc(a0)
 
 ;____________________________________________________________
 ;
 ; Write character (byte) in D0 to console
 ;____________________________________________________________
 ConPutc:
-    bra UARTPutChar
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsolePutcFunc(a0)
 
 ;____________________________________________________________
 ;
 ; Write a null-terminated string (A1) to console.
 ;____________________________________________________________
 ConPuts:
-    move.b (a1)+,d0
-    beq.s .1
-    bsr ConPutc
-    bra.s ConPuts
-.1:
-    rts    
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsolePutsFunc(a0)
 
 ConPutHexNibble:
     and.b #15,d0
@@ -39,8 +35,7 @@ ConPutHexNibble:
     bcs.s .1
     add.b #7,d0
 .1:    
-    bsr ConPutc
-    rts
+    bra ConPutc
 
 ;____________________________________________________________
 ;
@@ -102,6 +97,39 @@ ConPutHex8:
 ; Return character 0-255 in D0, or -1 if no char available
 ;____________________________________________________________
 ConGetChar:
-    bra UARTGetChar
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleGetcFunc(a0)
 
-    include uart.asm
+;____________________________________________________________
+;
+; Set normal text
+;____________________________________________________________
+ConNormalText:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleNormalTextFunc(a0)
+
+;____________________________________________________________
+;
+; Set bold text
+;____________________________________________________________
+ConBoldText:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleBoldTextFunc(a0)
+
+;____________________________________________________________
+;
+; Set reverse text
+;____________________________________________________________
+ConReverseText:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleReverseTextFunc(a0)
+
+;____________________________________________________________
+;
+; Set underlined text
+;____________________________________________________________
+ConUnderlinedText:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleUnderlinedTextFunc(a0)
+
+    include "tty.asm"

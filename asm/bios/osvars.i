@@ -25,6 +25,16 @@ DosHunkOffsets: rs.l PROC_MAX_HUNKS
 DosExtErrorCode:rs.b 2
 DosSizeof:      rs.b 0
 
+    rsreset
+ConsoleClearFunc:           rs.w 3
+ConsolePutcFunc:            rs.w 3
+ConsolePutsFunc:            rs.w 3
+ConsoleGetcFunc:            rs.w 3
+ConsoleNormalTextFunc:      rs.w 3
+ConsoleBoldTextFunc:        rs.w 3
+ConsoleReverseTextFunc:     rs.w 3
+ConsoleUnderlinedTextFunc:  rs.w 3
+ConsoleFuncSizeof:          rs.b 0
 ;____________________________________________________________
 ;
 ; Operating system variables
@@ -44,6 +54,7 @@ OsDeviceList:       rs.b SD_DEVICE_LIST_SIZE
 OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
+OsConsoleFunc:      rs.b ConsoleFuncSizeof
 OsMmcCmdArg:        rs.b 4
 OsBootMediaStatus:  rs.w 1
 OsAllocatorStart:   rs.l 1

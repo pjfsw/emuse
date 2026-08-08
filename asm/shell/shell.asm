@@ -156,8 +156,10 @@ TrimLeadingSpaces:
 PrintPrompt:
     lea MsgPrompt1(pc),a1
     jsr CONPUTS(a6)    
+    jsr CONBOLD(a6)
     lea CurrentDir,a1
     jsr CONPUTS(a6)
+    jsr CONNORMAL(a6)
     lea MsgPrompt2(pc),a1
     jmp CONPUTS(a6) ; CONPUTS
 
@@ -171,7 +173,6 @@ ClearCommandLine:
     moveq #0,d6     ; Command line position    
 
     rts
-
 
 PrintErrorCode:
     jsr CONPUTHEX32(a6)

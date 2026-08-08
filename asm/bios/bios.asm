@@ -45,6 +45,7 @@ Start:
     bsr ExceptionHandlerInit
     bsr LMInit
 
+    bsr ConNormalText
     bsr ConClr
     lea welcomeMsg(pc),a1
     bsr ConPuts  

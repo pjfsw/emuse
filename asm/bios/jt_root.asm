@@ -3,6 +3,14 @@
 ; Jump table for the root library
 ;____________________________________________________________
 
+JT_ConUnderlinedText: ;-118
+    jmp ConUnderlinedText
+JT_ConReverseText: ; -112
+    jmp ConReverseText
+JT_ConBoldText:   ; -106
+    jmp ConBoldText
+JT_ConNormalText: ; -100
+    jmp ConNormalText
 JT_LibAdd:     ; -94
     jmp LMAddLibrary
 JT_LibClose:   ; -88
