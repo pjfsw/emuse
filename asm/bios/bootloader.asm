@@ -3,7 +3,7 @@
     include "doslib.i"
 BootLoader:
     lea OSVARS_BASE,a0
-    tst.l OsBootMediaStatus(a0)
+    tst.w OsBootMediaStatus(a0)
     beq.s .bootMediaInitialized
     move.l ROOTLIB_BASE,a6
     lea .bootMediaNotFoundMsg,a1

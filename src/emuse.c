@@ -21,7 +21,8 @@ typedef struct {
 
 void readArgs(Args *args, int argc, char *argv[]) {
     memset(args, 0, sizeof(Args));
-    args->cpuFreq = 12000000;
+    //args->cpuFreq = 12000000;
+    args->cpuFreq = 14745600;
 
     int c;
     while ((c = getopt(argc, argv, "z:r:m:")) != -1) {

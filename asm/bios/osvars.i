@@ -45,7 +45,7 @@ OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
 OsMmcCmdArg:        rs.b 4
-OsBootMediaStatus:  rs.l 1
+OsBootMediaStatus:  rs.w 1
 OsAllocatorStart:   rs.l 1
 OsSizeof:           rs.b 0
 
