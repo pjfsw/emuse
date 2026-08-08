@@ -21,12 +21,12 @@ MMC_ERR_CMD55_FAILED   equ $3000
 MMC_ERR_ACMD41_FAILED  equ $4000
 MMC_ERR_CMD17_FAILED   equ $5000
 MMC_ERR_CMD24_FAILED   equ $6000
-MMC_ERR_WAIT_TIMEOUT   equ $0100
-MMC_ERR_RESP_TIMEOUT   equ $0200
-MMC_ERR_READ_TIMEOUT   equ $0300
-MMC_ERR_ACMD41_TIMEOUT equ $0400
-MMC_ERR_WRITE_ERROR    equ $0500
-MMC_ERR_WRITE_TIMEOUT  equ $0600
+MMC_ERR_WAIT_TIMEOUT   equ $0101
+MMC_ERR_RESP_TIMEOUT   equ $0102
+MMC_ERR_READ_TIMEOUT   equ $0103
+MMC_ERR_ACMD41_TIMEOUT equ $0104
+MMC_ERR_WRITE_ERROR    equ $0204
+MMC_ERR_WRITE_TIMEOUT  equ $0203
 MCC_ERR_NOT_IMPLEMENTED equ $ffff
 
     macro MmcSelect
@@ -145,7 +145,7 @@ MMCInitInt:
     moveq #9,d7
 .cmd0Loop:
     bsr MMCSendCmd0
-    cmp.b #1,d0
+    cmp.w #1,d0
     bls.s .cmd0OK
     dbra d7,.cmd0Loop
     ; Init Failure
@@ -153,7 +153,7 @@ MMCInitInt:
     rts
 .cmd0OK:
     bsr MMCSendCmd8
-    cmp.b #1,d0
+    cmp.w #1,d0
     bls.s .cmd8OK
     ; Init Failure
     or.w #MMC_ERR_CMD8_FAILED,d0
@@ -167,7 +167,7 @@ MMCInitInt:
     move.w #$fff,d7
 .cmd55Loop:
     bsr MMCSendCmd55
-    cmp.b #1,d0
+    cmp.w #1,d0
     bls.s .cmd55OK
     or.w #MMC_ERR_CMD55_FAILED,d0
     rts
@@ -252,7 +252,7 @@ MMCReadSectorInt:
     move.l d1,(a1)
     bsr MMCSendCommandInt    
     move.l (sp)+,a0    
-    tst.b d0
+    tst.w d0
     beq.s .readCmdOk
     or.w #MMC_ERR_CMD17_FAILED,d0
     rts
@@ -305,7 +305,7 @@ MMCWriteSector:
     move.l d1,(a1)
     bsr MMCSendCommandInt    
     move.l (sp)+,a0    
-    tst.b d0
+    tst.w d0
     beq.s .writeCmdOk
     or.w #MMC_ERR_CMD24_FAILED,d0
     rts
@@ -325,7 +325,7 @@ MMCWriteSector:
     and.b #$1f,d0
     move.b d0,d6        ; Save error code for later
     bsr MmcWaitBusy
-    tst.l d0
+    tst.w d0
     beq.s .waitOk
     move.w #MMC_ERR_WRITE_TIMEOUT,d0
     rts
@@ -349,9 +349,14 @@ Cmd24:
 ; Returns D0 = 0-1, OK > 1 = Failed
 ;____________________________________________________________
 MMCSendCommandInt:   
+    move.l d7,-(sp)
+    bsr.s .sendCommandInt
+    move.l (sp)+,d7
+    rts
+.sendCommandInt:
     MmcSelect
     bsr MmcWaitBusy
-    tst.l d0
+    tst.w d0
     beq.s .waitOk
     rts
 .waitOk:    
@@ -389,6 +394,11 @@ MMCSendCommandInt:
     rts
 
 MmcWaitBusy:
+    move.l d7,-(sp)
+    bsr.s .mmcWaitBusyInt
+    move.l (sp)+,d7
+    rts
+.mmcWaitBusyInt:
     move.w #$7fff,d7
 .wait:    
     bsr MMCReadByteInt

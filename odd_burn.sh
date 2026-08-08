@@ -1,3 +1,3 @@
 #!/bin/sh
 
-minipro -u -p "28C256" -w build/boot_odd.bin
+minipro -u -p "28C256" -w build/bios_odd.bin

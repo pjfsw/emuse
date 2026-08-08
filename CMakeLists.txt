@@ -21,9 +21,9 @@ find_package(SDL3 REQUIRED)
 # 2. VASM Integration
 # This assumes 'vasmm68k_mot' is in your PATH. 
 # We output a raw binary (.bin) for the emulator to load into its RAM buffer.
-set(ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/asm/boot.asm")
-set(ASM_BIN "${CMAKE_CURRENT_BINARY_DIR}/boot.bin")
-set(ASM_SYM "${CMAKE_CURRENT_BINARY_DIR}/boot.sym")
+set(ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/asm/bios/bios.asm")
+set(ASM_BIN "${CMAKE_CURRENT_BINARY_DIR}/bios.bin")
+set(ASM_SYM "${CMAKE_CURRENT_BINARY_DIR}/bios.sym")
 
 add_custom_command(
     OUTPUT ${ASM_BIN}
@@ -35,9 +35,9 @@ add_custom_command(
 # Create a target for the binary so it builds automatically
 add_custom_target(generate_boot_code DEPENDS ${ASM_BIN})
 
-set(ROM_BIN ${CMAKE_BINARY_DIR}/boot.bin)
-set(ROM_ODD ${CMAKE_BINARY_DIR}/boot_odd.bin)
-set(ROM_EVEN ${CMAKE_BINARY_DIR}/boot_even.bin)
+set(ROM_BIN ${CMAKE_BINARY_DIR}/bios.bin)
+set(ROM_ODD ${CMAKE_BINARY_DIR}/bios_odd.bin)
+set(ROM_EVEN ${CMAKE_BINARY_DIR}/bios_even.bin)
 
 add_custom_command(
     OUTPUT ${ROM_EVEN} ${ROM_ODD}

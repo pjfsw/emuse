@@ -10,7 +10,7 @@ ConClr:
     lea (ConClrMsg).l,a1
     bra ConPuts
 ConClrMsg:  ; TODO this is UART specific, needs Terminal abstraction
-    dc.b 27,"[2J",0
+    dc.b 27,"[2J",27,"[H",0
     even
 
 ;____________________________________________________________

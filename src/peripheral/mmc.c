@@ -2,13 +2,15 @@
 #include <stdio.h>
 #include "mmc.h"
 
-void mmcInit(Mmc *mmc, Spi *spi, SectorFunc readSectorFunc, SectorFunc writeSectorFunc, void *sectorFuncUserdata) {
+void mmcInit(Mmc *mmc, Spi *spi, SectorFunc readSectorFunc, SectorFunc writeSectorFunc, void *sectorFuncUserdata,
+    bool cardInserted) {
     memset(mmc, 0, sizeof(Mmc));
     mmc->spi = spi;
     mmc->state = MMC_WAIT_CLOCKS;
     mmc->readSectorFunc = readSectorFunc;
     mmc->writeSectorFunc = writeSectorFunc;
     mmc->sectorFuncUserdata = sectorFuncUserdata;
+    mmc->cardInserted = cardInserted;
 }
 
 static inline void resetRead(Mmc *mmc) {
@@ -247,10 +249,16 @@ static void stateReadSectorCrc(Mmc *mmc, uint8_t clk) {
 
 void mmcClock(void *userdata, int clocks) {
     Mmc *mmc = (Mmc*)userdata;    
+
     bool clock = spiIsClock(mmc->spi);
     if (clock == mmc->lastClock) {
         return;
     }
+    if (!mmc->cardInserted) {
+        mmc->spi->miso = 1;
+        return;
+    }
+
     switch (mmc->state) {
         case MMC_WAIT_CLOCKS:
             stateWaitClocks(mmc, clock);

@@ -1,5 +1,5 @@
     incdir ..
-    incdir ../lib
+    incdir ../include
     include hardware.i
     include rootlib.i
 

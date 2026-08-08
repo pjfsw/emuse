@@ -125,6 +125,7 @@ int main(int argc, char* argv[]) {
 
     uint32_t mmcCapacity = 64 * 1024 * 1024;
     SectorStorage storage;
+    bool cardInserted = false;
     sectorStorageInit(&storage, mmcCapacity);
 
     if (strlen(args.mmcFile) > 0) {
@@ -132,6 +133,7 @@ int main(int argc, char* argv[]) {
         loadFile(args.mmcFile, storage.data, mmcCapacity);
         inject_file(storage.data, "build/blinker.exe", 0x00383000, 0x0013F300);
         inject_file(storage.data, "build/shell.bin",  0x003a3000, 0x0013f360);
+        cardInserted = true;
     }
 
     ReadWriteMappingKey mappingKey;
@@ -191,7 +193,7 @@ int main(int argc, char* argv[]) {
     Spi spi;
     spiInit(&spi, getMmcCs, getMmcSi, getMmcClk, &outReg);
     Mmc mmc;
-    mmcInit(&mmc, &spi, sectorStorageReadSector, sectorStorageWriteSector, &storage);
+    mmcInit(&mmc, &spi, sectorStorageReadSector, sectorStorageWriteSector, &storage, cardInserted);
     busAddClockFunc(&bus, mmcClock, &mmc);
     
     Ireg ireg;

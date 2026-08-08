@@ -2,6 +2,13 @@
     include "rootlib.i"
     include "doslib.i"
 BootLoader:
+    lea OSVARS_BASE,a0
+    tst.l OsBootMediaStatus(a0)
+    beq.s .bootMediaInitialized
+    move.l ROOTLIB_BASE,a6
+    lea .bootMediaNotFoundMsg,a1
+    jmp CONPUTS(a6)
+.bootMediaInitialized:
     move.l ROOTLIB_BASE,a6
     move.l #DOS_LIB_ID,d0
     move.l #DOS_LIB_VERSION,d1
@@ -37,6 +44,8 @@ BootLoader:
     lea LineBreakMsg,a1
     jsr CONPUTS(a6)
     rts
+.bootMediaNotFoundMsg:
+    dc.b "No boot device found.",0
 .loadErrorMsg:
     dc.b "Boot failure: ",0
 .systemFilename:

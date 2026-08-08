@@ -1,8 +1,8 @@
-    incdir "storage"
+    incdir "../storage"
+    incdir "../include"
     include "hardware.i"
     include "osvars.i"
 
-; boot.asm - Minimal 68k Header
     org $f00000
 
     dc.l ALLOCATOR_BASE  ; Initial Stack Pointer
@@ -34,12 +34,10 @@ Start:
     lea Start,a6
     move.l a6,EXEC_BASE
 
-    bsr Blink           ; First blink means the CPU is executing code
-    bsr Blink           ; Second blink means the OVR and stack is working
-    bsr ConOpen    
-    bne.s .1
-    bsr Blink           ; Third blink means the UART is responding
-.1:
+    bsr SetLedOn           ; Led ON means CPU is executing code
+    Delay
+    LedOff                 ; Led OFF means RAM/stack is working
+    bsr ConOpen   
     move.w #$2400,sr    ; mask level 4, accepts 5–7 (UART)
     bsr DetectRam
     move.l DetectedRamSize,a7   ; Set top of RAM be stack pointer
@@ -52,7 +50,13 @@ Start:
     bsr ConPuts  
     
     move.l DetectedRamSize,d0
-    bsr ConPutHex32    
+    lsr.l #4,d0
+    lsr.l #6,d0
+    lea OSVARS_BASE,a6
+    lea OsScratchArea(a6),a0
+    bsr GetU16DecimalString
+    lea OsScratchArea(a6),a1
+    bsr ConPuts
     lea detectedMsg(pc),a1
     bsr ConPuts
     bsr DOSInit
@@ -68,19 +72,12 @@ BootMenuLoop:
     beq StartUploader
     cmp.b #'u',d0
     beq StartUploader
-    cmp.b #'M',d0
-    beq StartMonitor
-    cmp.b #'m',d0
-    beq StartMonitor
     cmp.b #13,d0
     beq StartBootLoader
     bra.s .waitChar
 
 StartUploader:
     bsr Uploader
-    bra.s BootMenuLoop
-StartMonitor:
-    bsr Monitor
     bra.s BootMenuLoop
 StartBootLoader:
     bsr BootLoader
@@ -106,30 +103,23 @@ RamEnd:
     move.l a0,DetectedRamSize   
     rts
 
-loop:
-    bra loop
+SetLedOn:
+    LedOn
+    rts
+
 welcomeMsg:
     dc.b "JOFMODORE SE BIOS V1.00",13,10
     dc.b "Copyright (C) 2026 Johan Fransson",13,10
-    dc.b "All rights reserved.",13,10
-    dc.b "$",0
+    dc.b "All rights reserved",13,10,0
 LineBreakMsg:
     dc.b 13,10,0    
 detectedMsg:
-    dc.b " bytes RAM",13,10,0        
+    dc.b "K RAM",13,10,0        
 menuMsg:    
     dc.b 13,10
-    dc.b "[U]pload S-records  [M]onitor or  [Enter] boot from disk: "
+    dc.b "[U]pload hex data or [Enter] normal boot: "
     dc.b 0
     even
-
-Blink:
-    LedOn
-    Delay
-    LedOff
-    Delay
-    Delay
-    rts    
 
     include exceptions.asm
     include dos.asm
@@ -140,6 +130,6 @@ Blink:
     include partman.asm
     include bootloader.asm
     include uploader.asm
-    include monitor.asm
     include console.asm
     include biosram.asm
+    include decimal.asm

@@ -1,3 +1,4 @@
+    incdir "dos"
     include "storagedevice.i"
     include "fat16.i"
     include "partman.i"
@@ -21,6 +22,7 @@ DosBuffer:      rs.b 512
 DosPathContext: rs.b 32
 DosTemp:        rs.b DOS_TEMP_AREA_SIZE
 DosHunkOffsets: rs.l PROC_MAX_HUNKS
+DosExtErrorCode:rs.b 2
 DosSizeof:      rs.b 0
 
 ;____________________________________________________________
@@ -37,12 +39,13 @@ OsSectorBuffer:     rs.b 512
 OsUartRdBuf:        rs.b 256
 OsUartWrPtr:        rs.b 1
 OsUartRdPtr:        rs.b 1
+OsScratchArea:      rs.b 32
 OsDeviceList:       rs.b SD_DEVICE_LIST_SIZE
 OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
 OsMmcCmdArg:        rs.b 4
-OsMmcStatus:        rs.l 1
+OsBootMediaStatus:  rs.l 1
 OsAllocatorStart:   rs.l 1
 OsSizeof:           rs.b 0
 

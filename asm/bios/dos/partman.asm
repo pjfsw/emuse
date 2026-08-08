@@ -5,12 +5,6 @@
 ; 
 ;____________________________________________________________
 
-PM_ERR_DEVICE_LIST_FULL equ $80100000
-PM_ERR_DEVICE_NOT_FOUND equ $80200000
-PM_ERR_PARTITION_NOT_FOUND equ $80300000
-PM_ERR_INVALID_MBR      equ $80400000
-PM_ERR_DEVICE_IO_ERROR  equ $80f00000
-
 ;____________________________________________________________
 ;
 ; PMInit - initialize the partion manager
@@ -59,13 +53,14 @@ PMRegisterDevice:
     bsr SDReadSector
     tst.l d0
     beq.s .readOk
-    or.l #PM_ERR_DEVICE_IO_ERROR,d0
+    bsr PMStoreDeviceError
+    moveq #PM_ERR_DEVICE_ERROR,d0
     rts
 .readOk:    
     lea OsSectorBuffer(a6),a1
     cmp.w #$55aa,$1fe(a1)    ; Sanity check
     beq.s .isValidMbr
-    move.l #PM_ERR_INVALID_MBR,d0    
+    moveq #PM_ERR_INVALID_MBR,d0    
     rts    
 .isValidMbr:
     moveq #3,d7
@@ -81,7 +76,7 @@ PMRegisterDevice:
     beq.s .foundFreeEntry
     lea PM_SIZEOF(a2),a2
     dbra d6,.findNextFreeEntry
-    move.l #PM_ERR_DEVICE_LIST_FULL,d0
+    moveq #PM_ERR_DEVICE_LIST_FULL,d0
     rts  
 .foundFreeEntry:   
     ; Copy stuff        
@@ -146,7 +141,7 @@ findPartitionFromIndex:
     moveq #0,d0
     rts
 .notFound:
-    move.l #PM_ERR_PARTITION_NOT_FOUND,d0
+    moveq #PM_ERR_PARTITION_NOT_FOUND,d0
     rts    
 
 ;____________________________________________________________
@@ -206,8 +201,15 @@ PMReadSector:
     bsr SDReadSector
     tst.l d0
     beq.s .readOk
-    or.l #PM_ERR_DEVICE_IO_ERROR,d0
+    bsr PMStoreDeviceError
+    moveq #PM_ERR_DEVICE_ERROR,d0
 .readOk:
+    rts
+
+PMStoreDeviceError:
+    move.l a6,-(sp)
+    bsr GetCurrentDosState
+    move.w d0,DosExtErrorCode(a0)
     rts
 
 PMWriteSector:

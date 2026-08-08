@@ -39,6 +39,9 @@ PrintError:
     dc.l DOS_ERR_PATH_NOT_FOUND,.pathNotFoundMsg
     dc.l DOS_ERR_COMMAND_NOT_FOUND,.cmdNotFoundMsg
     dc.l DOS_ERR_OUT_OF_MEMORY,.outOfMemoryMsg
+    dc.l PM_ERR_DEVICE_ERROR,.deviceErrorMsg
+    dc.l PM_ERR_DEVICE_NOT_FOUND,.deviceNotFoundMsg
+    dc.l PM_ERR_PARTITION_NOT_FOUND,.partNotFoundMsg
     dc.l 0,0
 .genericErrorMsg:
     dc.b "Code ",0
@@ -56,6 +59,14 @@ PrintError:
     dc.b "Command not found",0
 .outOfMemoryMsg:
     dc.b "Not enough memory",0
+.deviceErrorMsg:
+    dc.b "Device I/O error",0
+.deviceNotFoundMsg:
+    dc.b "Device not found",0
+.partNotFoundMsg:
+    dc.b "Partition not found",0
+
+
 ;LineBreakMsg:
     ;dc.b 13,10,0
     even

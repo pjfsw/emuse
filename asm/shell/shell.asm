@@ -224,7 +224,7 @@ CommandFree:
 CommandPart:
     dc.b "part",0
 DosLoadingMsg:
-    dc.b 13,10,13,10,"Starting Jofmodore DOS 1.0...",0
+    dc.b 13,10,13,10,"Starting JOFMODORE DOS 1.0...",0
 PathErrorMsg:
     dc.b "Invalid path",0
 LineBreakMsg:

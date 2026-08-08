@@ -19,7 +19,7 @@ InitStorageDevices:
     bsr FMInit    
     bsr MMCInit  
     lea OSVARS_BASE,a0
-    move.w d0,OsMmcStatus(a0)
+    move.w d0,OsBootMediaStatus(a0)
     beq.s .mmcOk
     and.w #$ffff,d0
     rts
@@ -34,8 +34,20 @@ InitDosVars:
     clr.l DosCurrentDir(a0)
     rts
 
+;____________________________________________________________
+;
+; Retrieve current DOS state in A0
+;____________________________________________________________
+GetCurrentDosState:
+    lea OSVARS_BASE,a0
+    lea OsDosState(a0),a0
+    rts
+
+
 PrintErrorCode:
-    jsr CONPUTHEX32(a6)
+    jsr CONPUTHEX16(a6)
+    move.b #')',d0
+    jsr CONPUTC(a6)
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
 
@@ -53,5 +65,6 @@ MmcStorageDevice:
     dc.l MMCWriteSector
     blk.w 10,0
 InitStorageErrorMsg:
-    dc.b 13,10,"Failed to initialize boot device: ",0
+    dc.b 13,10,"Failed to initialize boot device.",13,10
+    dc.b "Card not found or failed to initialize (code ",0
     even

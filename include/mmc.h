@@ -36,9 +36,11 @@ typedef struct {
     bool initialised;
     bool okResponse;
     bool lastClock;
+    bool cardInserted;
 } Mmc;
 
-void mmcInit(Mmc *mmc, Spi *spi, SectorFunc readSectorFunc, SectorFunc writeSectorFunc, void *sectorFuncUserdata);
+void mmcInit(Mmc *mmc, Spi *spi, SectorFunc readSectorFunc, SectorFunc writeSectorFunc, void *sectorFuncUserdata,
+    bool cardInserted);
 
 void mmcClock(void *userdata, int clocks);
 

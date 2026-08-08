@@ -243,15 +243,6 @@ CompareFilenames:
 
 ;____________________________________________________________
 ;
-; Retrieve current DOS state in A0
-;____________________________________________________________
-FMGetProcDosState:
-    lea OSVARS_BASE,a0
-    lea OsDosState(a0),a0
-    rts
-
-;____________________________________________________________
-;
 ; Create context based on path name
 ;
 ; A0: Pointer to target path context
@@ -267,7 +258,7 @@ FMCreateContext:
 .fmCreateContextInt:  
     move.l a0,a4    ; Path context (target)
     move.l a1,a5    ; Path
-    bsr FMGetProcDosState
+    bsr GetCurrentDosState
     move.l a0,a3    ; Process context
 
     moveq #PCTX_SIZEOF-1,d7
@@ -392,7 +383,7 @@ FMReadFile:
     rts
 .isFile:
     move.l d0,d2    ; Save bytes to read
-    bsr FMGetProcDosState
+    bsr GetCurrentDosState
     move.l a0,a3    ; Process context
     lea OSVARS_BASE,a6
     lea OsVolumeList(a6),a6 ; TODO scan for correct device, for now just first partition
@@ -495,7 +486,7 @@ FMChangeDirectory:
     rts
 .isDir:
     move.l a0,a4    ; Context in A4
-    bsr FMGetProcDosState
+    bsr GetCurrentDosState
     move.l a0,a5
     move.l PCTX_CURR_BLOCK(a4),DosCurrentDir(a5)
     moveq #0,d0
