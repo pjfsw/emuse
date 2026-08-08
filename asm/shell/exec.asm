@@ -5,17 +5,36 @@ ExecuteCommand:
     movem.l (sp)+,d2/d7/a3-a6
     rts
 .executeCommand:
-    move.l a1,a3
+    lea ResolvedCmd(pc),a3
+    moveq #0,d2 ;  Tracker of dot (extension)
+    ;move.l a1,a3
 .findCommandEnd:    
     move.b (a1),d0
     beq.s .foundCommandEnd
     cmp.b #' ',d0
-    beq.s .foundSpace
+    beq.s .foundCommandEnd
+    cmp.b #'.',d0
+    bne.s .checkSlash
+    moveq #1,d2
+.checkSlash:    
+    cmp.b #'/',d0
+    bne.s .copyChar
+    moveq #0,d2
+.copyChar:
+    move.b d0,(a3)+
     lea 1(a1),a1
     bra.s .findCommandEnd
-.foundSpace:
-    clr.b (a1)
 .foundCommandEnd:
+    tst.b d2
+    bne.s .hasDot
+    move.b #'.',(a3)+
+    move.b #'e',(a3)+
+    move.b #'x',(a3)+
+    move.b #'e',(a3)+
+.hasDot:
+    ; a1 now points to space if argument is present
+    clr.b (a3)
+    lea ResolvedCmd(pc),a3
     move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a0
     move.l a3,a1

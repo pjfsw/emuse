@@ -256,6 +256,7 @@ CurrentDir:
     blk.b 10,0
 
 CommandLine:    blk.b MAX_CMDLINE_LENGTH,0
+ResolvedCmd:    blk.b MAX_CMDLINE_LENGTH,0
 ShellPartitionInfo: blk.b 32,0
 DirectoryCtx: blk.b PCTX_SIZEOF,0
 DirEntry: blk.b DIRENT_SIZEOF,0
