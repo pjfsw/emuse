@@ -7,12 +7,14 @@ set(VASM      vasmm68k_mot)
 set(VLINK     vlink)
 
 
-set(C_SOURCES
-    src/edit.c
+set(ASM_SOURCES
+    asm/entry.asm
+    asm/memory.asm
+    asm/console.asm
 )
 
-set(ASM_SOURCES
-    asm/console.asm
+set(C_SOURCES
+    src/edit.c
 )
 
 set(ROOT_ASM_INCLUDE
@@ -20,6 +22,26 @@ set(ROOT_ASM_INCLUDE
 )
 
 set(OBJECTS)
+
+# Hand-written ASM -> object
+foreach(src ${ASM_SOURCES})
+    get_filename_component(name ${src} NAME_WE)
+
+    set(obj ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
+
+    add_custom_command(
+        OUTPUT ${obj}
+        COMMAND ${VASM}
+                -I${ROOT_ASM_INCLUDE}        
+                -Fhunk
+                -o ${obj}
+                ${CMAKE_CURRENT_SOURCE_DIR}/${src}
+        DEPENDS ${src}
+        VERBATIM
+    )
+
+    list(APPEND OBJECTS ${obj})
+endforeach()
 
 # C -> ASM -> object
 foreach(src ${C_SOURCES})
@@ -52,25 +74,6 @@ foreach(src ${C_SOURCES})
     list(APPEND OBJECTS ${obj})
 endforeach()
 
-# Hand-written ASM -> object
-foreach(src ${ASM_SOURCES})
-    get_filename_component(name ${src} NAME_WE)
-
-    set(obj ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
-
-    add_custom_command(
-        OUTPUT ${obj}
-        COMMAND ${VASM}
-                -I${ROOT_ASM_INCLUDE}        
-                -Fhunk
-                -o ${obj}
-                ${CMAKE_CURRENT_SOURCE_DIR}/${src}
-        DEPENDS ${src}
-        VERBATIM
-    )
-
-    list(APPEND OBJECTS ${obj})
-endforeach()
 
 # Objects -> HUNK executable
 add_custom_command(

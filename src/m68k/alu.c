@@ -156,6 +156,14 @@ int decodeAddqSubq(
     uint16_t dstReg = opcode & 7;
     uint16_t isSub = (opcode >> 8) & 1;
     uint16_t data = ((opcode >> 9) & 7);
+
+    if (dstMode == AM_AREG) {
+        if (size == IS_BYTE) {
+            return -1;    // illegal instruction
+        }
+        size = IS_LONG;
+    }
+
     if (data == 0) {
         data = 8;
     }

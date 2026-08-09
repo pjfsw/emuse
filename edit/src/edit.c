@@ -1,6 +1,59 @@
 #include "console.h"
+#include "memory.h"
 
-int main() {
+#define KEY_UP  0x101
+#define KEY_DOWN 0x102
+#define KEY_RIGHT 0x103
+#define KEY_LEFT 0x104
+
+#define MAX_LINE_LENGTH 256
+#define MAX_LINES 256
+
+typedef struct {
+    char lines[MAX_LINE_LENGTH][MAX_LINES];
+    int lineCount;
+} Data;
+
+static Data global_data;
+
+void dataInit(Data *data) {
+    memclr(data, sizeof(Data));
+}
+
+char *getLine(Data *data, int i) {
+    return data->lines[i];
+}
+
+int getChar() {
+    int key;
+    do {
+        key = congetc();        
+    } while (key == EOF);
+    return key;
+}
+
+int readKey() {
+    int c = getChar();
+    
+    if (c == 27) {
+        c = getChar();
+        if (c == '[') {
+            c = getChar();
+
+            switch (c) {
+                case 'A': return KEY_UP;
+                case 'B': return KEY_DOWN;
+                case 'C': return KEY_RIGHT;
+                case 'D': return KEY_LEFT;
+            }
+        }
+    }
+    return c;
+}
+
+int run() {   
+    Data *data = &global_data;
+    dataInit(data);
     conclr();
     consetcrs(25,1);
     conreverse();
@@ -17,7 +70,7 @@ int main() {
     const char *text[]={
         "This is some bogus text",
         "to test out the appearance of my sick text editor",
-        "bleh"
+        "bleh",
         "as asdadsjadsjoidsaiojdsajiosadioajdsaidojsdisoj",
         "ls /",
         "if a=b then",
@@ -34,9 +87,30 @@ int main() {
         connormal();
         conputs(text[i]);
     }
-    while (congetc() != EOF);
-    while (congetc() == EOF);
+    int running = 1;
+    while (running) {
+        int key = readKey();
+        switch (key) {
+            case KEY_UP:
+                concrsup(1);
+                break;
+            case KEY_DOWN:
+                concrsdown(1);
+                break;
+            case 3: // CTRL+C
+                running = 0;
+                break;
+            default:            
+        } 
+    }
+
     conclrline();
     concrsleft(80);
+}
+
+int main() {
+    conputs("\x1b[?1049h");
+    run();
+    conputs("\x1b[?1049l");
     return 0;
 }

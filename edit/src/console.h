@@ -1,11 +1,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
-#ifdef __VBCC__
-#define REG(r) __reg(r)
-#else
-#define REG(r)
-#endif
+#include "arch.h"
 
 #define EOF -1
 
