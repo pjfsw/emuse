@@ -132,6 +132,7 @@ int main(int argc, char* argv[]) {
     if (strlen(args.mmcFile) > 0) {
         printf("Loading MMC file \"%s\"\n", args.mmcFile);
         loadFile(args.mmcFile, storage.data, mmcCapacity);
+        inject_file(storage.data, "edit/build/edit.exe", 0x003b3000, 0x0013f3a0);
         inject_file(storage.data, "build/blinker.exe", 0x00383000, 0x0013F300);
         inject_file(storage.data, "build/shell.bin",  0x003a3000, 0x0013f360);
         cardInserted = true;

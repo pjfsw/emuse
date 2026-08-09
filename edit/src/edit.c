@@ -1,7 +1,13 @@
 #include "console.h"
 
 int main() {
-    puts("Hello world from C!\n");
-
+    conclr();
+    conputc('!');
+    conreverse();
+    conputs("Hello world from C!\r\n");
+    connormal();
+    conputs("Press any key to continue\r\n");
+    while (congetc() != EOF);
+    while (congetc() == EOF);
     return 0;
 }
