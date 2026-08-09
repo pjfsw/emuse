@@ -3,6 +3,12 @@
 ; Jump table for the root library
 ;____________________________________________________________
 
+JT_ConClearLine:    ; -160
+    jmp ConClearLine     
+JT_ConClearEol:     ; -154
+    jmp ConClearEol
+JT_ConSetCursor:    ; -148
+    jmp ConSetCursor
 JT_ConCursorLeft:   ; -142
     jmp ConCursorLeft 
 JT_ConCursorRight:  ; -136

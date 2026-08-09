@@ -38,6 +38,9 @@ ConsoleCurUpFunc:           rs.w 3
 ConsoleCurDnFunc:           rs.w 3
 ConsoleCurRtFunc:           rs.w 3
 ConsoleCurLtFunc:           rs.w 3
+ConsoleCursorFunc:          rs.w 3
+ConsoleClearEolFunc:        rs.w 3
+ConsoleClearLineFunc:       rs.w 3
 ConsoleFuncSizeof:          rs.b 0
 ;____________________________________________________________
 ;

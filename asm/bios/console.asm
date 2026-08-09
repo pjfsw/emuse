@@ -132,20 +132,71 @@ ConUnderlinedText:
     lea OSVARS_BASE+OsConsoleFunc,a0
     jmp ConsoleUnderlinedTextFunc(a0)
 
+;____________________________________________________________
+;
+; Move cursor up
+; 
+; D0 = steps 0..99
+;____________________________________________________________
 ConCursorUp:
     lea OSVARS_BASE+OsConsoleFunc,a0
     jmp ConsoleCurUpFunc(a0)
 
+;____________________________________________________________
+;
+; Move cursor down
+; 
+; D0 = steps 0..99
+;____________________________________________________________
 ConCursorDown:
     lea OSVARS_BASE+OsConsoleFunc,a0
     jmp ConsoleCurDnFunc(a0)
 
+;____________________________________________________________
+;
+; Move cursor left
+; 
+; D0 = steps 0..99
+;____________________________________________________________
 ConCursorLeft:
     lea OSVARS_BASE+OsConsoleFunc,a0
     jmp ConsoleCurLtFunc(a0)
 
+;____________________________________________________________
+;
+; Move cursor right
+; 
+; D0 = steps 0..99
+;____________________________________________________________
 ConCursorRight:
     lea OSVARS_BASE+OsConsoleFunc,a0
     jmp ConsoleCurRtFunc(a0)
+
+;____________________________________________________________
+;
+; Set cursor position
+; 
+; D0 = Y-pos 0..99
+; D1 = X-pos 0..99
+;____________________________________________________________
+ConSetCursor:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleCursorFunc(a0)
+
+;____________________________________________________________
+;
+; Clear to end of line
+;____________________________________________________________
+ConClearEol:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleClearEolFunc(a0)
+
+;____________________________________________________________
+;
+; Clear entire line
+;____________________________________________________________
+ConClearLine:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleClearLineFunc(a0)
 
     include "tty.asm"

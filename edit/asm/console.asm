@@ -2,6 +2,9 @@
 
     section text,code
 
+    xdef _conclrline
+    xdef _conclreol
+    xdef _consetcrs
     xdef _concrsright
     xdef _concrsleft
     xdef _concrsdown
@@ -14,6 +17,27 @@
     xdef _conputc
     xdef _conputs
     xdef _congetc
+
+_conclrline:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONCLRLINE(a6)
+    move.l (sp)+,a6
+    rts
+
+_conclreol:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONCLREOL(a6)
+    move.l (sp)+,a6
+    rts
+
+_consetcrs:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONSETCRS(a6)
+    move.l (sp)+,a6
+    rts
 
 _concrsdown:
     move.l a6,-(sp)

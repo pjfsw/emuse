@@ -9,12 +9,25 @@
 
 #define EOF -1
 
+// Clear entire line
+extern void conclrline(void);
+
+// Clear to end of line
+extern void conclreol(void);
+
+// Set cursor position (0..99)
+extern void consetcrs(REG("d0") int y, REG("d1") int x);
+
+// Move cursor right (0..99)
 extern void concrsright(REG("d0") int steps);
 
+// Move cursor left (0..99)
 extern void concrsleft(REG("d0") int steps);
 
+// Move cursor down (0..99)
 extern void concrsdown(REG("d0") int steps);
 
+// Move cursor upp (0..99)
 extern void concrsup(REG("d0") int steps);
 
 // Switch to underlined text

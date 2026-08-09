@@ -23,6 +23,9 @@ TTYInit:
     move.l #TTYCursorUp,2+ConsoleCurUpFunc(a0)
     move.l #TTYCursorRight,2+ConsoleCurRtFunc(a0)
     move.l #TTYCursorLeft,2+ConsoleCurLtFunc(a0)
+    move.l #TTYSetCursor,2+ConsoleCursorFunc(a0)
+    move.l #TTYClearEol,2+ConsoleClearEolFunc(a0)
+    move.l #TTYClearLine,2+ConsoleClearLineFunc(a0)
 
     bra UARTInit
 
@@ -82,6 +85,35 @@ TTYUnderlinedText:
     dc.b 27,"[4m",0
     even
 
+TTYClearEol:
+    lea .msg(pc),a1
+    bra TTYPuts
+.msg:
+    dc.b 27,"[K",0
+    even
+
+TTYClearLine:
+    lea .msg(pc),a1
+    bra TTYPuts
+.msg:
+    dc.b 27,"[2K",0
+    even
+
+; D0 = row, D1 = col
+TTYSetCursor:
+    move.l d1,-(sp)
+    move.l d0,-(sp)
+    lea EscapeCode(pc),a1
+    bsr TTYPuts
+    move.l (sp)+,d0
+    bsr TTYWriteNumber
+    move.b #';',d0
+    bsr TTYPutc
+    move.l (sp)+,d0
+    bsr TTYWriteNumber
+    move.b #'H',d0
+    bra TTYPutc        
+
 TTYCursorUp:
     bsr.s TTYMoveCursor
     move.b #'A',d0
@@ -104,15 +136,16 @@ TTYCursorRight:
 
 TTYMoveCursor:
     move.l d0,-(sp)
-    lea .msg(pc),a1
+    lea EscapeCode(pc),a1
     bsr TTYPuts
-    move.l (sp),d0
+    move.l (sp)+,d0
+    bra TTYWriteNumber
+
+TTYWriteNumber:
+    move.l d0,-(sp)
     bsr TTYWriteHiNibble
     move.l (sp)+,d0
     bra TTYWriteLoNibble
-.msg:
-    dc.b 27,"[",0
-    even
 
 TTYWriteHiNibble:
     and.l #$ff,d0
@@ -151,5 +184,9 @@ TTYWriteLoNibble:
     dc.b '0','1','2','3','4','5','6','7','8','9'
     dc.b '0','1','2','3','4','5','6','7','8','9'
     dc.b '0','1','2','3','4','5','6','7','8','9'
-    
+
+EscapeCode:
+    dc.b 27,"[",0
+    even
+
     include uart.asm
