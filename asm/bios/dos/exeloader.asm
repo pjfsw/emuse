@@ -1,9 +1,10 @@
-HUNK_END    equ $3f2
-HUNK_HEADER equ $3f3
-HUNK_CODE   equ $3e9
-HUNK_DATA   equ $3ea
-HUNK_BSS    equ $3eb
-HUNK_DREL32 equ $3f7
+HUNK_END          equ $3f2
+HUNK_HEADER       equ $3f3
+HUNK_CODE         equ $3e9
+HUNK_DATA         equ $3ea
+HUNK_BSS          equ $3eb
+HUNK_DREL32       equ $3f7
+HUNK_RELOC32      equ $3ec
 HUNK_RELOC32SHORT equ $3fC
 
     include "osvars.i"
@@ -136,6 +137,10 @@ FMLoadExecutable:
     beq.s .readCodeOrData
     cmp.l #HUNK_DREL32,d0
     beq.s .relocateShort
+    cmp.l #HUNK_RELOC32,d0
+    beq .relocateLong
+    cmp.l #HUNK_RELOC32SHORT,d0
+    beq .relocateShort    
     cmp.l #HUNK_END,d0
     beq .hunkEnd
     cmp.l #HUNK_BSS,d0
@@ -161,6 +166,10 @@ FMLoadExecutable:
     bpl.s .readNextHunk
     rts
 
+;____________________________________________________________
+;   DREL32
+;   RELOC32SHORT
+;____________________________________________________________
 .relocateShort:
     moveq #0,d4 ; Number of words
 .relocateShortNext:
@@ -173,7 +182,7 @@ FMLoadExecutable:
     bne .moreRelocation
     ; We are done, check if padding word needed
     btst #0,d4
-    bne.s .readNextHunk
+    bne .readNextHunk
     ; Uneven number of words relocated, read padding word
     moveq #2,d0
     bsr ExeStreamRead
@@ -204,6 +213,49 @@ FMLoadExecutable:
     bra.s .relocateShortNext
     bra .readNextHunk
 
+;____________________________________________________________
+;   RELOC32
+;____________________________________________________________
+.relocateLong:
+.relocateLongNext:
+    ; Number of relocations in this block
+    moveq #4,d0
+    bsr ExeStreamRead
+    bne .invalidExe
+
+    move.l (a5),d7
+    beq .readNextHunk          ; count == 0 terminates RELOC32
+
+    ; Referenced hunk number
+    moveq #4,d0
+    bsr ExeStreamRead
+    bne .invalidExe
+
+    move.l (a5),d0
+    cmp.l d6,d0                ; validate target hunk < hunk count
+    bhs .invalidExe    
+
+    lsl.l #2,d0
+    move.l (a3,d0.l),d6       ; d6 = referenced hunk base
+    
+    subq.l #1,d7
+.relocateLongOffset:
+    moveq #4,d0
+    bsr ExeStreamRead
+    bne .invalidExe
+
+    move.l (a3,d5.w),a0       ; current hunk base
+    move.l (a5),d0            ; relocation offset
+
+    move.l (a0,d0.l),d1
+    add.l d6,d1
+    move.l d1,(a0,d0.l)
+
+    dbra d7,.relocateLongOffset
+    bra .relocateLongNext    
+;____________________________________________________________
+;   HUNK_END
+;____________________________________________________________
 .hunkEnd:
     moveq #0,d0
     move.w ProcHunkCount(a2),d0
