@@ -64,6 +64,7 @@ foreach(src ${C_SOURCES})
     add_custom_command(
         OUTPUT ${obj}
         COMMAND ${VASM}
+                -no-opt
                 -Fhunk
                 -o ${obj}
                 ${generated_asm}
