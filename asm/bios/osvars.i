@@ -34,6 +34,10 @@ ConsoleNormalTextFunc:      rs.w 3
 ConsoleBoldTextFunc:        rs.w 3
 ConsoleReverseTextFunc:     rs.w 3
 ConsoleUnderlinedTextFunc:  rs.w 3
+ConsoleCurUpFunc:           rs.w 3
+ConsoleCurDnFunc:           rs.w 3
+ConsoleCurRtFunc:           rs.w 3
+ConsoleCurLtFunc:           rs.w 3
 ConsoleFuncSizeof:          rs.b 0
 ;____________________________________________________________
 ;

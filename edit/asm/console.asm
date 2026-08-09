@@ -2,6 +2,10 @@
 
     section text,code
 
+    xdef _concrsright
+    xdef _concrsleft
+    xdef _concrsdown
+    xdef _concrsup
     xdef _conunder
     xdef _conreverse
     xdef _conbold
@@ -10,6 +14,34 @@
     xdef _conputc
     xdef _conputs
     xdef _congetc
+
+_concrsdown:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONCRSDOWN(a6)
+    move.l (sp)+,a6
+    rts
+
+_concrsup:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONCRSUP(a6)
+    move.l (sp)+,a6
+    rts
+
+_concrsleft:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONCRSLEFT(a6)
+    move.l (sp)+,a6
+    rts
+
+_concrsright:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONCRSRIGHT(a6)
+    move.l (sp)+,a6
+    rts
 
 _conunder:
     move.l a6,-(sp)

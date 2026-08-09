@@ -3,6 +3,14 @@
 ; Jump table for the root library
 ;____________________________________________________________
 
+JT_ConCursorLeft:   ; -142
+    jmp ConCursorLeft 
+JT_ConCursorRight:  ; -136
+    jmp ConCursorRight 
+JT_ConCursorUp:     ; -130
+    jmp ConCursorUp   
+JT_ConCursorDown:   ; -124
+    jmp ConCursorDown 
 JT_ConUnderlinedText: ;-118
     jmp ConUnderlinedText
 JT_ConReverseText: ; -112

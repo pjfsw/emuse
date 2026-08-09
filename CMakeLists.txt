@@ -74,3 +74,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
 target_compile_definitions(${PROJECT_NAME} PRIVATE 
     BOOT_BIN_PATH="${ASM_BIN}"
 )
+
+add_subdirectory(edit)

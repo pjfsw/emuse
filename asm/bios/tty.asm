@@ -19,6 +19,10 @@ TTYInit:
     move.l #TTYBoldText,2+ConsoleBoldTextFunc(a0)
     move.l #TTYReverseText,2+ConsoleReverseTextFunc(a0)
     move.l #TTYUnderlinedText,2+ConsoleUnderlinedTextFunc(a0)
+    move.l #TTYCursorDown,2+ConsoleCurDnFunc(a0)
+    move.l #TTYCursorUp,2+ConsoleCurUpFunc(a0)
+    move.l #TTYCursorRight,2+ConsoleCurRtFunc(a0)
+    move.l #TTYCursorLeft,2+ConsoleCurLtFunc(a0)
 
     bra UARTInit
 
@@ -26,6 +30,11 @@ TTYDummy:
     moveq #0,d0
     rts
 
+TTYPutc:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsolePutcFunc(a0)
+
+; A1 Pointer to string
 TTYPuts:
     move.l a2,-(sp)
     lea OSVARS_BASE+OsConsoleFunc,a2
@@ -39,38 +48,108 @@ TTYPuts:
     rts    
 
 TTYClear:
-    lea (.msg).l,a1
+    lea .msg(pc),a1
     bra TTYPuts
 .msg:  
     dc.b 27,"[2J",27,"[H",0
     even
 
 TTYBoldText:
-    lea (.msg).l,a1
+    lea .msg(pc),a1
     bra TTYPuts
 .msg:
     dc.b 27,"[1m",0
     even
 
 TTYNormalText:
-    lea (.msg).l,a1
+    lea .msg(pc),a1
     bra TTYPuts
 .msg:
     dc.b 27,"[0m",0
     even
 
 TTYReverseText:
-    lea (.msg).l,a1
+    lea .msg(pc),a1
     bra TTYPuts
 .msg:
     dc.b 27,"[7m",0
     even
 
 TTYUnderlinedText:
-    lea (.msg).l,a1
+    lea .msg(pc),a1
     bra TTYPuts
 .msg:
     dc.b 27,"[4m",0
     even
 
+TTYCursorUp:
+    bsr.s TTYMoveCursor
+    move.b #'A',d0
+    bra TTYPutc
+
+TTYCursorDown:
+    bsr.s TTYMoveCursor
+    move.b #'B',d0
+    bra TTYPutc
+
+TTYCursorLeft:
+    bsr.s TTYMoveCursor
+    move.b #'D',d0
+    bra TTYPutc
+
+TTYCursorRight:
+    bsr.s TTYMoveCursor
+    move.b #'C',d0
+    bra TTYPutc
+
+TTYMoveCursor:
+    move.l d0,-(sp)
+    lea .msg(pc),a1
+    bsr TTYPuts
+    move.l (sp),d0
+    bsr TTYWriteHiNibble
+    move.l (sp)+,d0
+    bra TTYWriteLoNibble
+.msg:
+    dc.b 27,"[",0
+    even
+
+TTYWriteHiNibble:
+    and.l #$ff,d0
+    cmp.b #9,d0
+    bls.s .done
+    lea .hinibbles(pc),a0
+    move.b (a0,d0.w),d0
+    bra TTYPutc
+.done:
+    rts
+.hinibbles:
+    dc.b '0','0','0','0','0','0','0','0','0','0'
+    dc.b '1','1','1','1','1','1','1','1','1','1'
+    dc.b '2','2','2','2','2','2','2','2','2','2'
+    dc.b '3','3','3','3','3','3','3','3','3','3'
+    dc.b '4','4','4','4','4','4','4','4','4','4'
+    dc.b '5','5','5','5','5','5','5','5','5','5'
+    dc.b '6','6','6','6','6','6','6','6','6','6'
+    dc.b '7','7','7','7','7','7','7','7','7','7'
+    dc.b '8','8','8','8','8','8','8','8','8','8'
+    dc.b '9','9','9','9','9','9','9','9','9','9'
+
+TTYWriteLoNibble:
+    and.l #$ff,d0
+    lea .lonibbles(pc),a0
+    move.b (a0,d0.w),d0
+    bra TTYPutc
+.lonibbles:
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    dc.b '0','1','2','3','4','5','6','7','8','9'
+    
     include uart.asm

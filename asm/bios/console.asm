@@ -132,4 +132,20 @@ ConUnderlinedText:
     lea OSVARS_BASE+OsConsoleFunc,a0
     jmp ConsoleUnderlinedTextFunc(a0)
 
+ConCursorUp:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleCurUpFunc(a0)
+
+ConCursorDown:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleCurDnFunc(a0)
+
+ConCursorLeft:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleCurLtFunc(a0)
+
+ConCursorRight:
+    lea OSVARS_BASE+OsConsoleFunc,a0
+    jmp ConsoleCurRtFunc(a0)
+
     include "tty.asm"
