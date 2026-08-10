@@ -100,7 +100,7 @@ static void refresh(Data *data) {
 }
 
 static void setEditorCursor(Data *data) {
-    consetcrs(data->row+1, data->col+1);
+    consetcrs(data->row+1, data->col+3);
 }
 
 // Returns 1 if refresh is needed
