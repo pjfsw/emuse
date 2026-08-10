@@ -4,6 +4,9 @@
 #include "arch.h"
 
 // Set count number of bytes to zero from the specified address
-void memclr(REG("A0") void *address, REG("D0") int count);
+void memclr(REG("a0") void *address, REG("d0") int count);
+
+// Copy count number of bytes from src to target. Overlapping behavior is undefined
+REG("a1") void *memcopy(REG("a1") void *target, REG("a0") void *src, REG("d0") int count);
 
 #endif

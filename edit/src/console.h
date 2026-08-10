@@ -45,9 +45,13 @@ extern void conclr(void);
 extern void conputs(REG("a1") const char *str);
 
 // Write char to console
-extern void conputc(REG("d0") int c);
+extern void conputc(REG("d0") unsigned char c);
 
 // Get character from console, or EOF if no character
 extern int REG("d0") congetc();
+
+int conwidth();
+
+int conheight();
 
 #endif

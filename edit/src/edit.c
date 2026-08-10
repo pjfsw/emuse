@@ -1,5 +1,6 @@
 #include "console.h"
 #include "memory.h"
+#include "strutils.h"
 
 #define KEY_UP  0x101
 #define KEY_DOWN 0x102
@@ -7,24 +8,53 @@
 #define KEY_LEFT 0x104
 
 #define MAX_LINE_LENGTH 256
-#define MAX_LINES 256
+#define MAX_LINES 512
 
 typedef struct {
-    char lines[MAX_LINE_LENGTH][MAX_LINES];
-    int lineCount;
+    char text[MAX_LINE_LENGTH][MAX_LINES];
+    int count; 
+    // Cursor column
+    int col;
+    // Actual row in buffer at top of screen
+    int top;
+    // Cursor row relative to screen top
+    int row;
+    int width;
+    int height;
+    int linesHeight;
 } Data;
 
 static Data global_data;
 
-void dataInit(Data *data) {
+static char *getLineAt(Data *data, int i) {
+    return data->text[i];
+}
+
+static void insertLine(Data *data, char *text) {
+    data->count++;
+    char *targetLine = getLineAt(data, data->count-1);
+    stringCopy(targetLine, text);
+}
+
+static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
+    data->count = 2;
+    char *txt = "Type something";
+    int n = 0;
+    while (txt[n] != 0) {
+        data->text[0][n] = txt[n];
+        n++;
+    }
+    data->text[0][n] = txt[n];
+    data->text[1][0] = 0;
+
+//  Needs PEA instruction
+//   insertLine(data, "Type something");
+//  insertLine(data, "");
 }
 
-char *getLine(Data *data, int i) {
-    return data->lines[i];
-}
 
-int getChar() {
+static int getChar() {
     int key;
     do {
         key = congetc();        
@@ -32,7 +62,7 @@ int getChar() {
     return key;
 }
 
-int readKey() {
+static int readKey() {
     int c = getChar();
     
     if (c == 27) {
@@ -51,51 +81,88 @@ int readKey() {
     return c;
 }
 
-int run() {   
-    Data *data = &global_data;
-    dataInit(data);
+static void refresh(Data *data) {
+    data->width = conwidth();
+    data->height = conheight();
+    data->linesHeight = data->height - 1;
     conclr();
-    consetcrs(25,1);
+    consetcrs(data->height,1);
     conreverse();
-    for (int i = 0; i < 80; i++) {
+    for (int i = 0; i < data->width; i++) {
         conputc(' ');
     }
-    concrsleft(80);
+    concrsleft(data->width);
     conputs("/SOMEFILE.TXT");
-    consetcrs(25,70);
+    consetcrs(data->height,data->width-16);
     conputs("1/???");    
     connormal();
     consetcrs(1,1);
-    int lines=8;
-    const char *text[]={
-        "This is some bogus text",
-        "to test out the appearance of my sick text editor",
-        "bleh",
-        "as asdadsjadsjoidsaiojdsajiosadioajdsaidojsdisoj",
-        "ls /",
-        "if a=b then",
-        "  load coolr driver",
-        "fi"
-    };
-    for (int i = 0; i < lines; i++) {
-        if (i > 0) {
-            conputs("\r\n");
+}
+
+static void setEditorCursor(Data *data) {
+    consetcrs(data->row+1, data->col+1);
+}
+
+// Returns 1 if refresh is needed
+static int moveUp(Data *data) {
+    if ((data->row == 0) && (data->top == 0)) {
+        return 0;
+    }
+
+    if (data->row == 0) {
+        data->top--;
+        return 1;
+    } else {
+        data->row--;
+        concrsup(1);
+        return 0;
+    }
+}
+
+// Returns 1 if refresh is needed
+static int moveDown(Data *data) {
+    if ((data->row + data->top) == (data->count-1)) {
+        return 0;
+    }
+
+    if (data->row == data->linesHeight-1) {
+        data->top++;
+        return 1;
+    } else {
+        data->row++;
+        concrsdown(1);
+        return 0;
+    }
+}
+
+
+static void run() {   
+    Data *data = &global_data;
+    dataInit(data);
+    refresh(data);
+    int row = data->top;
+    for (int i = 0; i < data->linesHeight ; i++) {
+        if (row >= data->count) {
+            break;
         }
+        consetcrs(i+1,1);
         conbold();
-        conputc(i+'0');
+        conputc((i%10)+'0');
         conputc(':');
         connormal();
-        conputs(text[i]);
+        conputs(getLineAt(data, row));
+        row++;
     }
+    setEditorCursor(data);
     int running = 1;
     while (running) {
         int key = readKey();
         switch (key) {
             case KEY_UP:
-                concrsup(1);
+                moveUp(data);
                 break;
             case KEY_DOWN:
-                concrsdown(1);
+                moveDown(data);
                 break;
             case 3: // CTRL+C
                 running = 0;

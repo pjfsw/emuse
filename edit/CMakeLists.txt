@@ -15,6 +15,8 @@ set(ASM_SOURCES
 
 set(C_SOURCES
     src/edit.c
+    src/console_src.c
+    src/strutils.c
 )
 
 set(ROOT_ASM_INCLUDE
@@ -82,6 +84,9 @@ add_custom_command(
     COMMAND ${VLINK}
             -s
             -bamigahunk
+            -L${CMAKE_CURRENT_SOURCE_DIR}/lib
+            #-L/opt/vbcc/targets/m68k-linux/lib
+            -lvc
             -o ${CMAKE_CURRENT_BINARY_DIR}/edit.exe
             ${OBJECTS}
     DEPENDS ${OBJECTS}
