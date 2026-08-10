@@ -38,7 +38,6 @@ static void insertLine(Data *data, char *text) {
 
 static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
-    data->count = 2;
     char *txt = "Type something";
     int n = 0;
     while (txt[n] != 0) {
@@ -46,7 +45,12 @@ static void dataInit(Data *data) {
         n++;
     }
     data->text[0][n] = txt[n];
-    data->text[1][0] = 0;
+    int max = 100;
+    for (int i = 1; i < max; i++) {
+        data->text[i][0] = (i%26)+'a';
+        data->text[i][1] = 0;
+    }
+    data->count = max;
 
 //  Needs PEA instruction
 //   insertLine(data, "Type something");
@@ -135,34 +139,42 @@ static int moveDown(Data *data) {
     }
 }
 
-
-static void run() {   
-    Data *data = &global_data;
-    dataInit(data);
-    refresh(data);
+static void redrawLines(Data *data) {
     int row = data->top;
     for (int i = 0; i < data->linesHeight ; i++) {
         if (row >= data->count) {
             break;
         }
         consetcrs(i+1,1);
+        conclrline();
         conbold();
-        conputc((i%10)+'0');
+        conputc((row%10)+'0');
         conputc(':');
         connormal();
         conputs(getLineAt(data, row));
         row++;
     }
     setEditorCursor(data);
+}
+
+static void run() {   
+    Data *data = &global_data;
+    dataInit(data);
+    refresh(data);
+    redrawLines(data);
     int running = 1;
     while (running) {
         int key = readKey();
         switch (key) {
             case KEY_UP:
-                moveUp(data);
+                if (moveUp(data)) {
+                    redrawLines(data);
+                }
                 break;
             case KEY_DOWN:
-                moveDown(data);
+                if (moveDown(data)) {
+                    redrawLines(data);
+                }
                 break;
             case 3: // CTRL+C
                 running = 0;
