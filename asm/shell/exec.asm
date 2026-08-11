@@ -4,10 +4,9 @@ ExecuteCommand:
     bsr.s .executeCommand
     movem.l (sp)+,d2/d7/a3-a6
     rts
-.executeCommand:
+.executeCommand:   
     lea ResolvedCmd(pc),a3
     moveq #0,d2 ;  Tracker of dot (extension)
-    ;move.l a1,a3
 .findCommandEnd:    
     move.b (a1),d0
     beq.s .foundCommandEnd
@@ -32,9 +31,9 @@ ExecuteCommand:
     move.b #'x',(a3)+
     move.b #'e',(a3)+
 .hasDot:
-    ; a1 now points to space if argument is present
     clr.b (a3)
     lea ResolvedCmd(pc),a3
+    ; a1 now points to space if argument is present
     move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a0
     move.l a3,a1

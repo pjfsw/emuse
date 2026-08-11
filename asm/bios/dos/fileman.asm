@@ -162,9 +162,10 @@ ExtractNextPathElement:
 .normalCase:    
     moveq #7,d7    ; Max path element size
 .nextBaseChar:
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'/',d0            
     beq.s .subPathFound
     cmp.b #'.',d0
@@ -174,9 +175,10 @@ ExtractNextPathElement:
     bmi.s .invalidPath 
     move.b d0,(a1)+
     dbra d7,.nextBaseChar
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'.',d0
     beq.s .parseExtChar    
 .invalidPath:    
@@ -188,9 +190,10 @@ ExtractNextPathElement:
 .parseExtChar:
     moveq #2,d7
 .nextExtChar:
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'/',d0            
     beq.s .subPathFound
     bsr NormalizeChar
@@ -198,9 +201,10 @@ ExtractNextPathElement:
     bmi.s .invalidPath 
     move.b d0,(a1)+
     dbra d7,.nextExtChar
-    move.b (a0)+,d0
+    move.b (a0),d0
     tst.b d0
     beq.s .subPathFound
+    addq.l #1,a0
     cmp.b #'/',d0
     beq.s .subPathFound
     move.l #FM_ERR_INVALID_PATH,d0
