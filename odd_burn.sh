@@ -1,3 +1,3 @@
 #!/bin/sh
 
-minipro -u -p "28C256" -w build/bios_odd.bin
+minipro -u -p "CAT28C256" -w build/bios_odd.bin
