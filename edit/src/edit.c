@@ -105,7 +105,7 @@ static void refresh(Data *data) {
 }
 
 static void setEditorCursor(Data *data) {
-    consetcrs(data->row+1, data->col+3);
+    consetcrs(data->row+1, data->col+5);
 }
 
 // Returns 1 if refresh is needed
@@ -142,10 +142,10 @@ static int moveDown(Data *data) {
     }
 }
 
-/*
+
 static void putUInt(unsigned int n)
 {
-    char buf[6];   
+    unsigned char buf[6];   
     int i = 0;
 
     do {
@@ -156,7 +156,21 @@ static void putUInt(unsigned int n)
     while (i) {
         conputc(buf[--i]);
     }
-}*/
+}
+
+static void putLineNumber(int n)
+{
+    int digits = 1;
+
+    if (n >= 10)  digits++;
+    if (n >= 100) digits++;
+
+    while (digits++ < 3) {
+        conputc(' ');
+    }
+
+    putUInt(n);
+}
 
 static void redrawLines(Data *data, int first, int last) {
     int row = data->top + first -1;
@@ -166,9 +180,9 @@ static void redrawLines(Data *data, int first, int last) {
         conclrline();
         if (row < data->count) {
             conbold();
-            //putUInt(row);
-            conputc(((row+1) % 10) + '0');
-            conputc(':');
+            putLineNumber(row);
+            //conputc(((row+1) % 10) + '0');
+            consetcrs(i,5);
             connormal();
             conputs(getLineAt(data, row));
         }
