@@ -252,12 +252,12 @@ FATReadDir:
     beq .endOfDirListing
     cmp.b #$e5,d0
     beq.s .findNextEntry
-    cmp.b #$0f,d0
+    move.b 11(a6,d1.w),d0   ; Attribute byte
+    cmp.b #$0f,d0           ; Skip Long filenames
     beq.s .findNextEntry
-    move.b 11(a6,d1.w),d0
-    btst #2,d0
+    btst #2,d0              ; Skip system
     bne.s .findNextEntry
-    btst #3,d0
+    btst #3,d0              ; Skip volume label
     beq.s .entryOk
 .findNextEntry:
     add.w #32,d1
