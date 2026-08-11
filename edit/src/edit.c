@@ -101,6 +101,7 @@ static void refresh(Data *data) {
     conputs("1/???");    
     connormal();
     consetcrs(1,1);
+    consetarea(1,data->linesHeight);
 }
 
 static void setEditorCursor(Data *data) {
@@ -115,6 +116,7 @@ static int moveUp(Data *data) {
 
     if (data->row == 0) {
         data->top--;
+        conscrolldown();
         return 1;
     } else {
         data->row--;
@@ -131,6 +133,7 @@ static int moveDown(Data *data) {
 
     if (data->row == data->linesHeight-1) {
         data->top++;
+        conscrollup();
         return 1;
     } else {
         data->row++;
@@ -139,41 +142,59 @@ static int moveDown(Data *data) {
     }
 }
 
-static void redrawLines(Data *data) {
-    int row = data->top;
-    for (int i = 0; i < data->linesHeight ; i++) {
-        if (row >= data->count) {
-            break;
-        }
-        consetcrs(i+1,1);
+/*
+static void putUInt(unsigned int n)
+{
+    char buf[6];   
+    int i = 0;
+
+    do {
+        buf[i++] = '0' + (n % 10);
+        n /= 10;
+    } while (n);
+
+    while (i) {
+        conputc(buf[--i]);
+    }
+}*/
+
+static void redrawLines(Data *data, int first, int last) {
+    int row = data->top + first -1;
+    concrsoff();
+    for (int i = first; i <= last ; i++) {
+        consetcrs(i,1);
         conclrline();
-        conbold();
-        conputc((row%10)+'0');
-        conputc(':');
-        connormal();
-        conputs(getLineAt(data, row));
+        if (row < data->count) {
+            conbold();
+            //putUInt(row);
+            conputc(((row+1) % 10) + '0');
+            conputc(':');
+            connormal();
+            conputs(getLineAt(data, row));
+        }
         row++;
     }
     setEditorCursor(data);
+    concrson();
 }
 
 static void run() {   
     Data *data = &global_data;
     dataInit(data);
     refresh(data);
-    redrawLines(data);
+    redrawLines(data, 1, data->linesHeight);
     int running = 1;
     while (running) {
         int key = readKey();
         switch (key) {
             case KEY_UP:
                 if (moveUp(data)) {
-                    redrawLines(data);
+                    redrawLines(data, 1, 1);
                 }
                 break;
             case KEY_DOWN:
                 if (moveDown(data)) {
-                    redrawLines(data);
+                    redrawLines(data, data->linesHeight, data->linesHeight);
                 }
                 break;
             case 3: // CTRL+C

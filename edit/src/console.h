@@ -54,4 +54,14 @@ int conwidth();
 
 int conheight();
 
+void consetarea(int top, int bottom);
+
+void conscrollup();
+
+void conscrolldown();
+
+void concrsoff();
+
+void concrson();
+
 #endif

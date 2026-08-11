@@ -75,3 +75,34 @@ int conheight() {
     return h;
 }
 
+static void putNumber(int number) {
+    if (number > 9) {
+        conputc((number/10)+'0');
+    }
+    conputc((number%10)+'0');
+}
+
+void consetarea(int top, int bottom) {
+    conputc(27);
+    conputc('[');
+    putNumber(top);
+    conputc(';');
+    putNumber(bottom);
+    conputc('r');
+}
+
+void conscrollup() {
+    conputs("\x1b" "D");
+}
+
+void conscrolldown() {
+    conputs("\x1b" "M");
+}
+
+void concrsoff() {
+    conputs("\x1b[?25l");
+}
+
+void concrson() {
+    conputs("\x1b[?25h");
+}
