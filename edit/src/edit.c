@@ -42,7 +42,6 @@ static void dataInit(Data *data) {
     insertLine(data, "");
 }
 
-
 static int getChar() {
     int key;
     do {
@@ -130,7 +129,7 @@ static int moveDown(Data *data) {
 
 static void putUInt(unsigned int n)
 {
-    unsigned char buf[6];   
+    char buf[6];   
     int i = 0;
 
     do {

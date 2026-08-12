@@ -8,6 +8,7 @@
 #include "clr.h"
 #include "dbcc.h"
 #include "div.h"
+#include "ext.h"
 #include "jump.h"
 #include "lea.h"
 #include "move.h"
@@ -127,6 +128,8 @@ static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},
     { 0xfff8, 0x4840, decodeSwap, IF_SINGLE_DEST },
+    { 0xfff8, 0x4880, decodeExtw, IF_SINGLE_DEST },
+    { 0xfff8, 0x48c0, decodeExtl, IF_SINGLE_DEST },
     { 0xffc0, 0x4840, decodePea, IF_SINGLE_SRC },
     { 0xffc0, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x4ec0, decodeJmp, IF_JUMP},
