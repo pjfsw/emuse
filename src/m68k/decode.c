@@ -13,6 +13,7 @@
 #include "move.h"
 #include "movem.h"
 #include "mulu.h"
+#include "pea.h"
 #include "rte.h"
 #include "rts.h"
 #include "shift.h"
@@ -126,6 +127,7 @@ static const DecodeRule rules[] = {
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},
     { 0xfff8, 0x4840, decodeSwap, IF_SINGLE_DEST },
+    { 0xffc0, 0x4840, decodePea, IF_SINGLE_SRC },
     { 0xffc0, 0x4e80, decodeJsr, IF_JUMP},
     { 0xffc0, 0x4ec0, decodeJmp, IF_JUMP},
     { 0xffc0, 0x40c0, decodeMoveFromSr, IF_MOVE_FROM_SR },

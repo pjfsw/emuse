@@ -38,23 +38,8 @@ static void insertLine(Data *data, char *text) {
 
 static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
-    char *txt = "Type something";
-    int n = 0;
-    while (txt[n] != 0) {
-        data->text[0][n] = txt[n];
-        n++;
-    }
-    data->text[0][n] = txt[n];
-    int max = 100;
-    for (int i = 1; i < max; i++) {
-        data->text[i][0] = (i%26)+'a';
-        data->text[i][1] = 0;
-    }
-    data->count = max;
-
-//  Needs PEA instruction
-//   insertLine(data, "Type something");
-//  insertLine(data, "");
+    insertLine(data, "Type something");
+    insertLine(data, "");
 }
 
 

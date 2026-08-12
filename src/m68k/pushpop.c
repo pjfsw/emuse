@@ -1,12 +1,13 @@
 #include "m68k.h"
 #include "decode.h"
 
-void push(M68k *cpu, uint16_t word) {
-    M68kRegisters *regs = &cpu->registers;
-    RwFunc *rw = &cpu->rwFunc;    
-    void *readWriteUserdata = cpu->readWriteUserdata;
+void pushWord(M68kRegisters *regs, RwFunc *rw, void *readWriteUserdata, uint16_t word) {
     regs->a[7] = align24(regs->a[7] - 2);
     rw->ww(readWriteUserdata, regs->a[7], word);
+}
+
+void push(M68k *cpu, uint16_t word) {
+    pushWord(&cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata, word);
 }
 
 uint16_t pop(M68kRegisters *regs, RwFunc *rw, void *readWriteUserdata) {

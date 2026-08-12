@@ -28,7 +28,7 @@ loop\@:
     include "jt_dos.asm"
     include "jt_root.asm"   ; MUST BE IMMEDIATELY ABOVE "Start"
 Start:
-    move.b #OVR_OFF,OVR_REG    
+    move.b #OVR_OFF,OVR_REG       
 
     move.w #$2700,sr    ; disable interrupts while configuring    
     lea Start,a6
