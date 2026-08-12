@@ -66,21 +66,21 @@ static void dataInit(Data *data) {
     insertLine(data, "delta");
     insertLine(data, "omega");
     insertLine(data, "");
-    insertLine(data, "many words written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "many words written on a single line in attempt to make it overflow the width of the editor.");
     insertLine(data, "");
     insertLine(data, "more words1");
     insertLine(data, "more words2");
     insertLine(data, "more words3");
     insertLine(data, "more words4");
     insertLine(data, "");
-    insertLine(data, "additional words written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "additional words written on a single line in attempt to make it overflow the width of the editor!");
     insertLine(data, "");
     insertLine(data, "more words5");
     insertLine(data, "more words6");
     insertLine(data, "more words7");
     insertLine(data, "more words8");
     insertLine(data, "");
-    insertLine(data, "complete nonsense written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "complete nonsense written on a single line in attempt to make it overflow the width of the editor...");
     insertLine(data, "");
     insertLine(data, "more words9");
     insertLine(data, "more words10");
@@ -94,7 +94,7 @@ static void dataInit(Data *data) {
     insertLine(data, "more words16");
     insertLine(data, "");
     insertLine(data, "more words17");
-    insertLine(data, "once again, stuff is written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "once again, stuff is written on a single line in attempt to make it overflow the width of the editor!");
     insertLine(data, "more words18");
     insertLine(data, "");
     insertLine(data, "more words19");
@@ -177,13 +177,13 @@ static void updateStatusLine(Data *data) {
     conputc('C');    
     putNumberPad(data->col+data->left+1, 3);
     connormal();
-    concrson();
 }
 
 static void refresh(Data *data) {
     data->width = conwidth();
     data->height = conheight();
     data->linesHeight = data->height - 1;
+    concrsoff();
     conclr();
     consetcrs(data->height,1);
     conreverse();
@@ -204,6 +204,7 @@ static void setEditorCursor(Data *data) {
         data->col = len;
     }
     consetcrs(data->row+1, data->col+1);
+    concrson();
 }
 
 static void redrawLines(Data *data, int first, int last) {
@@ -225,8 +226,6 @@ static void redrawLines(Data *data, int first, int last) {
         }
         row++;
     }
-    setEditorCursor(data);
-    concrson();
 }
 
 static void restoreCurrentLine(Data *data) {
@@ -329,6 +328,8 @@ static void run() {
     dataInit(data);
     refresh(data);
     redrawLines(data, 1, data->linesHeight);
+    setEditorCursor(data);
+
     int running = 1;
     int old;
     while (running) {
