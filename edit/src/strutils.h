@@ -6,5 +6,7 @@ int stringLen(const char *str);
 
 char *stringCopy(char *destination, const char *source);
 
+char *stringNCopy(char *destination, const char *source, int n);
+
 #endif
 

@@ -7,4 +7,6 @@
 #define REG(r)
 #endif
 
+#define NULL 0
+
 #endif

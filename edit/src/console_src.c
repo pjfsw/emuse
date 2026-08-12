@@ -106,3 +106,12 @@ void concrsoff() {
 void concrson() {
     conputs("\x1b[?25h");
 }
+
+void concrssave() {
+    conputs("\x1b""7");
+}
+
+void concrsrestore() {
+    conputs("\x1b""8");
+}
+

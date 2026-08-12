@@ -55,6 +55,7 @@ foreach(src ${C_SOURCES})
     add_custom_command(
         OUTPUT ${generated_asm}
         COMMAND ${VBCC}
+                -I${CMAKE_CURRENT_SOURCE_DIR}/include
                 -quiet
                 -O=1
                 -o=${generated_asm}

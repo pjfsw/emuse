@@ -1,6 +1,7 @@
 #include "console.h"
 #include "memory.h"
 #include "strutils.h"
+#include "string.h"
 
 #define KEY_UP  0x101
 #define KEY_DOWN 0x102
@@ -13,21 +14,37 @@
 typedef struct {
     char text[MAX_LINE_LENGTH][MAX_LINES];
     int count; 
-    // Cursor column
-    int col;
-    // Actual row in buffer at top of screen
+    // Actual row in buffer at top of screen (0-based)
     int top;
-    // Cursor row relative to screen top
+    // Cursor row relative to screen top (0-based)
     int row;
+    // Actual position at the left of screen for current line (0-based) 
+    int left;
+    // Cursor column relative to screen left (0-based)
+    int col;
     int width;
     int height;
     int linesHeight;
 } Data;
 
 static Data global_data;
+static char tmps[MAX_LINE_LENGTH];
+
 
 static char *getLineAt(Data *data, int i) {
     return data->text[i];
+}
+
+static char *getCurrentLine(Data *data) {
+    return getLineAt(data, data->top + data->row);
+}
+
+static int getLineLength(Data *data, int i) {
+    return stringLen(getLineAt(data, i));
+}
+
+static int getCurrentLength(Data *data) {
+    return getLineLength(data, data->top + data->row);
 }
 
 static void insertLine(Data *data, char *text) {
@@ -39,6 +56,7 @@ static void insertLine(Data *data, char *text) {
 static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
     insertLine(data, "Type something");
+    insertLine(data, "You are looking at a very very long line that covers many columns and reaches far outside the screen.");
     insertLine(data, "");
 }
 
@@ -69,64 +87,6 @@ static int readKey() {
     return c;
 }
 
-static void refresh(Data *data) {
-    data->width = conwidth();
-    data->height = conheight();
-    data->linesHeight = data->height - 1;
-    conclr();
-    consetcrs(data->height,1);
-    conreverse();
-    for (int i = 0; i < data->width; i++) {
-        conputc(' ');
-    }
-    concrsleft(data->width);
-    conputs("/SOMEFILE.TXT");
-    consetcrs(data->height,data->width-16);
-    conputs("1/???");    
-    connormal();
-    consetcrs(1,1);
-    consetarea(1,data->linesHeight);
-}
-
-static void setEditorCursor(Data *data) {
-    consetcrs(data->row+1, data->col+5);
-}
-
-// Returns 1 if refresh is needed
-static int moveUp(Data *data) {
-    if ((data->row == 0) && (data->top == 0)) {
-        return 0;
-    }
-
-    if (data->row == 0) {
-        data->top--;
-        conscrolldown();
-        return 1;
-    } else {
-        data->row--;
-        concrsup(1);
-        return 0;
-    }
-}
-
-// Returns 1 if refresh is needed
-static int moveDown(Data *data) {
-    if ((data->row + data->top) == (data->count-1)) {
-        return 0;
-    }
-
-    if (data->row == data->linesHeight-1) {
-        data->top++;
-        conscrollup();
-        return 1;
-    } else {
-        data->row++;
-        concrsdown(1);
-        return 0;
-    }
-}
-
-
 static void putUInt(unsigned int n)
 {
     char buf[6];   
@@ -142,39 +102,160 @@ static void putUInt(unsigned int n)
     }
 }
 
-static void putLineNumber(int n)
+static void putNumberPad(int n, int pad)
 {
     int digits = 1;
 
-    if (n >= 10)  digits++;
-    if (n >= 100) digits++;
+    if (n >= 10) {
+        digits++;
+    }
+    if (n >= 100) {
+        digits++;
+    }
+
+    putUInt(n);
 
     while (digits++ < 3) {
         conputc(' ');
     }
 
-    putUInt(n);
+}
+
+
+static void updateStatusLine(Data *data) {
+    conreverse();
+    consetcrs(data->height,data->width-16);
+    conputc('L');
+    putNumberPad(data->row+data->top+1, 3);
+    conputc('C');    
+    putNumberPad(data->col+data->left+1, 3);
+    connormal();
+}
+
+static void refresh(Data *data) {
+    data->width = conwidth();
+    data->height = conheight();
+    data->linesHeight = data->height - 1;
+    conclr();
+    consetcrs(data->height,1);
+    conreverse();
+    for (int i = 0; i < data->width; i++) {
+        conputc(' ');
+    }
+    concrsleft(data->width);
+    conputs("/SOMEFILE.TXT");
+    updateStatusLine(data);
+    connormal();
+    consetcrs(1,1);
+    consetarea(1,data->linesHeight);
+}
+
+static void setEditorCursor(Data *data) {
+    int len = getCurrentLength(data);
+    if (data->col > len) {
+        data->col = len;
+    }
+    consetcrs(data->row+1, data->col+1);
 }
 
 static void redrawLines(Data *data, int first, int last) {
     int row = data->top + first -1;
+    int cur = data->top + data->row;
     concrsoff();
+    connormal();
     for (int i = first; i <= last ; i++) {
         consetcrs(i,1);
         conclrline();
         if (row < data->count) {
-            conbold();
-            putLineNumber(row);
-            //conputc(((row+1) % 10) + '0');
-            consetcrs(i,5);
-            connormal();
-            conputs(getLineAt(data, row));
+            if (row == cur) {
+                char *c = getLineAt(data, row); 
+                strncpy(tmps, &c[data->left], data->width);
+                conputs(tmps);
+            } else {
+                conputs(getLineAt(data, row));
+            }
         }
         row++;
     }
     setEditorCursor(data);
     concrson();
 }
+
+static void restoreCurrentLine(Data *data) {
+    if (data->left == 0) {
+        return;
+    }
+    data->left = 0;
+    redrawLines(data, data->row+1, data->row+1);
+}
+
+
+// Returns 1 if refresh is needed
+static int moveUp(Data *data) {
+    if ((data->row == 0) && (data->top == 0)) {
+        return 0;
+    }
+
+    restoreCurrentLine(data);
+
+    if (data->row == 0) {
+        data->top--;
+        conscrolldown();
+        return 1;
+    } else {
+        data->row--;
+        concrsup(1);
+        return 0;
+    }
+}
+
+static int moveLeft(Data *data) {
+    if ((data->col == 0) && (data->left == 0)) {
+        return 0;
+    }
+    
+    if (data->col == 0) {
+        data->left--;
+        return 1;
+    } else {
+        data->col--;
+        concrsleft(1);
+        return 0;
+    }
+}
+
+// Returns 1 if refresh is needed
+static int moveDown(Data *data) {
+    if ((data->row + data->top) == (data->count-1)) {
+        return 0;
+    }
+    restoreCurrentLine(data);
+
+    if (data->row == data->linesHeight-1) {
+        data->top++;
+        conscrollup();
+        return 1;
+    } else {
+        data->row++;
+        concrsdown(1);
+        return 0;
+    }
+}
+
+static int moveRight(Data *data) {
+    if ((data->col + data->left) == getCurrentLength(data)) {
+        return 0;
+    }
+    if (data->col == data->width-1) {
+        data->left++;
+        return 1;
+    } else {
+        data->col++;
+        concrsright(1);
+        return 0;
+    }
+}
+
 
 static void run() {   
     Data *data = &global_data;
@@ -189,11 +270,29 @@ static void run() {
                 if (moveUp(data)) {
                     redrawLines(data, 1, 1);
                 }
+                updateStatusLine(data);
+                setEditorCursor(data);
                 break;
             case KEY_DOWN:
                 if (moveDown(data)) {
                     redrawLines(data, data->linesHeight, data->linesHeight);
                 }
+                updateStatusLine(data);
+                setEditorCursor(data);
+                break;
+            case KEY_LEFT:
+                if (moveLeft(data)) {
+                    redrawLines(data, data->row+1, data->row+1);
+                }
+                updateStatusLine(data);               
+                setEditorCursor(data);
+                break;
+            case KEY_RIGHT:
+                if (moveRight(data)) {
+                    redrawLines(data, data->row+1, data->row+1);
+                }
+                updateStatusLine(data);
+                setEditorCursor(data);
                 break;
             case 3: // CTRL+C
                 running = 0;

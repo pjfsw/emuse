@@ -64,4 +64,8 @@ void concrsoff();
 
 void concrson();
 
+void concrssave();
+
+void concrsrestore();
+
 #endif
