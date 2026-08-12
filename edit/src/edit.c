@@ -169,6 +169,7 @@ static void putNumberPad(int n, int pad)
 
 
 static void updateStatusLine(Data *data) {
+    concrsoff();
     conreverse();
     consetcrs(data->height,data->width-16);
     conputc('L');
@@ -176,6 +177,7 @@ static void updateStatusLine(Data *data) {
     conputc('C');    
     putNumberPad(data->col+data->left+1, 3);
     connormal();
+    concrson();
 }
 
 static void refresh(Data *data) {
