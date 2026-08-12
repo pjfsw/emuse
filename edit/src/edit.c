@@ -59,6 +59,49 @@ static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
     insertLine(data, "Type something");
     insertLine(data, "You are looking at a very very long line that covers many columns and reaches far outside the screen.");
+    insertLine(data, "Another line");
+    insertLine(data, "");
+    insertLine(data, "alpha");
+    insertLine(data, "beta");
+    insertLine(data, "delta");
+    insertLine(data, "omega");
+    insertLine(data, "");
+    insertLine(data, "many words written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "");
+    insertLine(data, "more words1");
+    insertLine(data, "more words2");
+    insertLine(data, "more words3");
+    insertLine(data, "more words4");
+    insertLine(data, "");
+    insertLine(data, "additional words written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "");
+    insertLine(data, "more words5");
+    insertLine(data, "more words6");
+    insertLine(data, "more words7");
+    insertLine(data, "more words8");
+    insertLine(data, "");
+    insertLine(data, "complete nonsense written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "");
+    insertLine(data, "more words9");
+    insertLine(data, "more words10");
+    insertLine(data, "more words11");
+    insertLine(data, "");
+    insertLine(data, "more words12");
+    insertLine(data, "more words13");
+    insertLine(data, "");
+    insertLine(data, "more words14");
+    insertLine(data, "more words15");
+    insertLine(data, "more words16");
+    insertLine(data, "");
+    insertLine(data, "more words17");
+    insertLine(data, "once again, stuff is written on a single line in attempt to make it overflow the width of the editor ");
+    insertLine(data, "more words18");
+    insertLine(data, "");
+    insertLine(data, "more words19");
+    insertLine(data, "");
+    insertLine(data, "more words20");
+    insertLine(data, "");
+    insertLine(data, "This is the final line");
     insertLine(data, "");
 }
 
@@ -273,7 +316,7 @@ static int moveEnd(Data *data) {
     }
 
     /* Scroll so end of line is at right edge */
-    data->left = len - (data->width - 1);
+    data->left = len - data->width + 1;
     data->col = data->width - 1;
 
     return 1;    
