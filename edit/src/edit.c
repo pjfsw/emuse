@@ -7,6 +7,8 @@
 #define KEY_DOWN 0x102
 #define KEY_RIGHT 0x103
 #define KEY_LEFT 0x104
+#define KEY_HOME 0x105
+#define KEY_END 0x106
 
 #define MAX_LINE_LENGTH 256
 #define MAX_LINES 512
@@ -81,6 +83,8 @@ static int readKey() {
                 case 'B': return KEY_DOWN;
                 case 'C': return KEY_RIGHT;
                 case 'D': return KEY_LEFT;
+                case 'F': return KEY_END;
+                case 'H': return KEY_HOME;
             }
         }
     }
@@ -118,7 +122,6 @@ static void putNumberPad(int n, int pad)
     while (digits++ < 3) {
         conputc(' ');
     }
-
 }
 
 
@@ -204,7 +207,7 @@ static int moveUp(Data *data) {
         return 1;
     } else {
         data->row--;
-        concrsup(1);
+        //concrsup(1);
         return 0;
     }
 }
@@ -219,7 +222,7 @@ static int moveLeft(Data *data) {
         return 1;
     } else {
         data->col--;
-        concrsleft(1);
+        //concrsleft(1);
         return 0;
     }
 }
@@ -237,7 +240,7 @@ static int moveDown(Data *data) {
         return 1;
     } else {
         data->row++;
-        concrsdown(1);
+        //concrsdown(1);
         return 0;
     }
 }
@@ -251,11 +254,30 @@ static int moveRight(Data *data) {
         return 1;
     } else {
         data->col++;
-        concrsright(1);
+        //concrsright(1);
         return 0;
     }
 }
 
+static int moveEnd(Data *data) {
+    int len = getCurrentLength(data);
+
+    if ((data->col + data->left) == len) {
+        return 0;
+    }
+
+    if (len < data->left + data->width) {
+        /* End is already visible */
+        data->col = len - data->left;
+        return 0;
+    }
+
+    /* Scroll so end of line is at right edge */
+    data->left = len - (data->width - 1);
+    data->col = data->width - 1;
+
+    return 1;    
+}
 
 static void run() {   
     Data *data = &global_data;
@@ -263,9 +285,14 @@ static void run() {
     refresh(data);
     redrawLines(data, 1, data->linesHeight);
     int running = 1;
+    int old;
     while (running) {
+        int row = data->row+1;
         int key = readKey();
         switch (key) {
+            case 3: // CTRL+C
+                running = 0;
+                break;
             case KEY_UP:
                 if (moveUp(data)) {
                     redrawLines(data, 1, 1);
@@ -282,20 +309,34 @@ static void run() {
                 break;
             case KEY_LEFT:
                 if (moveLeft(data)) {
-                    redrawLines(data, data->row+1, data->row+1);
+                    redrawLines(data, row, row);
                 }
                 updateStatusLine(data);               
                 setEditorCursor(data);
                 break;
             case KEY_RIGHT:
                 if (moveRight(data)) {
-                    redrawLines(data, data->row+1, data->row+1);
+                    redrawLines(data, row, row);
                 }
                 updateStatusLine(data);
                 setEditorCursor(data);
                 break;
-            case 3: // CTRL+C
-                running = 0;
+            case KEY_HOME:
+                old = data->left + data->col;
+                data->left = 0;
+                data->col = 0;
+                if (old > 0) {
+                    redrawLines(data, row, row);
+                }
+                updateStatusLine(data);
+                setEditorCursor(data);
+                break;
+            case KEY_END:
+                if (moveEnd(data)) {
+                    redrawLines(data, row, row);
+                }
+                updateStatusLine(data);
+                setEditorCursor(data);
                 break;
             default:            
         } 
