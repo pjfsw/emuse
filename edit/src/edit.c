@@ -3,12 +3,14 @@
 #include "strutils.h"
 #include "string.h"
 
-#define KEY_UP  0x101
-#define KEY_DOWN 0x102
-#define KEY_RIGHT 0x103
-#define KEY_LEFT 0x104
-#define KEY_HOME 0x105
-#define KEY_END 0x106
+#define KEY_UP          0x101
+#define KEY_DOWN        0x102
+#define KEY_RIGHT       0x103
+#define KEY_LEFT        0x104
+#define KEY_HOME        0x105
+#define KEY_END         0x106
+#define KEY_DELETE      0x107
+#define KEY_BACKSPACE   0x108
 
 #define MAX_LINE_LENGTH 256
 #define MAX_LINES 512
@@ -128,8 +130,25 @@ static int readKey() {
                 case 'D': return KEY_LEFT;
                 case 'F': return KEY_END;
                 case 'H': return KEY_HOME;
+                case '1':
+                    if (getChar() == '~')
+                        return KEY_HOME;
+                case '3':
+                    if (getChar() == '~')
+                        return KEY_DELETE;
+                    break;
             }
         }
+        if (c == 'O') {
+            c = getChar();
+            switch (c) {
+                case 'F':
+                    return KEY_END;
+            }
+        }
+    }
+    if ((c == 8) || (c == 127)) {
+        return KEY_BACKSPACE;
     }
     return c;
 }
@@ -323,6 +342,46 @@ static int moveEnd(Data *data) {
     return 1;    
 }
 
+static int addChar(Data *data, int c) {
+    int len = getCurrentLength(data);
+    if (len >= MAX_LINE_LENGTH-1) {
+        return 0;
+    }
+    int cur = data->left + data->col;
+    char *line = getCurrentLine(data);  
+    for (int i = len; i >= cur; i--) {
+        line[i+1] = line[i];
+    }
+    line[cur] = c;
+    return 1;
+}
+
+static int deleteLeftChar(Data *data) {
+    int cur = data->left + data->col;
+    if (cur == 0) {
+        return 0;
+    }
+    char *line = getCurrentLine(data);  
+    int len = getCurrentLength(data);
+    for (int i = cur-1; i < len; i++) {
+        line[i] = line[i+1];
+    }
+    return 1;
+}
+
+static int deleteChar(Data *data) {
+    int cur = data->left + data->col;
+    int len = getCurrentLength(data);
+    if (cur == len) {
+        return 0;
+    }
+    char *line = getCurrentLine(data);  
+    for (int i = cur; i < len; i++) {
+        line[i] = line[i+1];
+    }
+    return 1;
+}
+
 static void run() {   
     Data *data = &global_data;
     dataInit(data);
@@ -332,12 +391,37 @@ static void run() {
 
     int running = 1;
     int old;
-    while (running) {
+    while (running) {        
         int row = data->row+1;
         int key = readKey();
+        if ((key >= 32) && (key < 255)) {
+            if (addChar(data, key)) {
+                moveRight(data);
+                redrawLines(data, row, row);
+                updateStatusLine(data);
+                setEditorCursor(data);
+            }
+            continue;
+        } else if (KEY_DELETE == key) {
+            if (deleteChar(data)) {
+                redrawLines(data, row, row);
+                updateStatusLine(data);
+                setEditorCursor(data);
+            }
+            continue;
+        } 
+        // TODO (d8,PC,Xn) relative addressing support required if more cases in switch (vbcc switched to jumptable)
         switch (key) {
             case 3: // CTRL+C
                 running = 0;
+                break;
+            case KEY_BACKSPACE:
+                if (deleteLeftChar(data)) {
+                    moveLeft(data);
+                    redrawLines(data, row, row);
+                    updateStatusLine(data);
+                    setEditorCursor(data);
+                }
                 break;
             case KEY_UP:
                 if (moveUp(data)) {
