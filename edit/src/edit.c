@@ -16,7 +16,9 @@
 #define MAX_LINES 512
 
 typedef struct {
-    char text[MAX_LINE_LENGTH][MAX_LINES];
+    char text[MAX_LINE_LENGTH][MAX_LINES];    
+    char dummy[MAX_LINE_LENGTH];
+    int index[MAX_LINES];
     int count; 
     // Actual row in buffer at top of screen (0-based)
     int top;
@@ -36,7 +38,12 @@ static char tmps[MAX_LINE_LENGTH];
 
 
 static char *getLineAt(Data *data, int i) {
-    return data->text[i];
+    int idx = data->index[i];
+    if ((idx >= 0) && (idx < MAX_LINES)) {
+        return data->text[idx];
+    } else {
+        return data->dummy;
+    }
 }
 
 static char *getCurrentLine(Data *data) {
@@ -51,60 +58,100 @@ static int getCurrentLength(Data *data) {
     return getLineLength(data, data->top + data->row);
 }
 
-static void insertLine(Data *data, char *text) {
-    data->count++;
-    char *targetLine = getLineAt(data, data->count-1);
+static int findFreeLine(Data *data) {
+    for (int i = 0; i < MAX_LINES; i++) {
+        if (data->index[i] < 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Return slot index or -1 if full
+static int addToSlot(Data *data, char *text) {
+    int idx = findFreeLine(data);
+    if (idx < 0) {
+        return -1;
+    }
+    char *targetLine = data->text[idx];
     stringCopy(targetLine, text);
+    return idx;
+}
+
+static void insertLineAtPos(Data *data, int pos, char *text) {    
+    if (data->count >= MAX_LINES) {
+        return;
+    }
+    int idx = addToSlot(data, text);    
+    if (idx < 0) {
+        return;
+    }
+    for (int i = data->count; i > pos; i--) {
+        data->index[i] = data->index[i - 1];          
+    }
+    data->index[pos] = idx;
+    data->count++;
+}
+
+static void appendLine(Data *data,  char *text) {    
+    insertLineAtPos(data, data->count, text);
+}
+
+static void insertLine(Data *data, char *text) {
+    insertLineAtPos(data, data->row+data->top, text);
 }
 
 static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
-    insertLine(data, "Type something");
-    insertLine(data, "You are looking at a very very long line that covers many columns and reaches far outside the screen.");
-    insertLine(data, "Another line");
-    insertLine(data, "");
-    insertLine(data, "alpha");
-    insertLine(data, "beta");
-    insertLine(data, "delta");
-    insertLine(data, "omega");
-    insertLine(data, "");
-    insertLine(data, "many words written on a single line in attempt to make it overflow the width of the editor.");
-    insertLine(data, "");
-    insertLine(data, "more words1");
-    insertLine(data, "more words2");
-    insertLine(data, "more words3");
-    insertLine(data, "more words4");
-    insertLine(data, "");
-    insertLine(data, "additional words written on a single line in attempt to make it overflow the width of the editor!");
-    insertLine(data, "");
-    insertLine(data, "more words5");
-    insertLine(data, "more words6");
-    insertLine(data, "more words7");
-    insertLine(data, "more words8");
-    insertLine(data, "");
-    insertLine(data, "complete nonsense written on a single line in attempt to make it overflow the width of the editor...");
-    insertLine(data, "");
-    insertLine(data, "more words9");
-    insertLine(data, "more words10");
-    insertLine(data, "more words11");
-    insertLine(data, "");
-    insertLine(data, "more words12");
-    insertLine(data, "more words13");
-    insertLine(data, "");
-    insertLine(data, "more words14");
-    insertLine(data, "more words15");
-    insertLine(data, "more words16");
-    insertLine(data, "");
-    insertLine(data, "more words17");
-    insertLine(data, "once again, stuff is written on a single line in attempt to make it overflow the width of the editor!");
-    insertLine(data, "more words18");
-    insertLine(data, "");
-    insertLine(data, "more words19");
-    insertLine(data, "");
-    insertLine(data, "more words20");
-    insertLine(data, "");
-    insertLine(data, "This is the final line");
-    insertLine(data, "");
+    for (int i = 0; i < MAX_LINES; i++) {
+        data->index[i] = -1;
+    }
+    appendLine(data, "Type something");
+    appendLine(data, "You are looking at a very very long line that covers many columns and reaches far outside the screen.");
+    appendLine(data, "Another line");
+    appendLine(data, "");
+    appendLine(data, "alpha");
+    appendLine(data, "beta");
+    appendLine(data, "delta");
+    appendLine(data, "omega");
+    appendLine(data, "");
+    appendLine(data, "many words written on a single line in attempt to make it overflow the width of the editor.");
+    appendLine(data, "");
+    appendLine(data, "more words1");
+    appendLine(data, "more words2");
+    appendLine(data, "more words3");
+    appendLine(data, "more words4");
+    appendLine(data, "");
+    appendLine(data, "additional words written on a single line in attempt to make it overflow the width of the editor!");
+    appendLine(data, "");
+    appendLine(data, "more words5");
+    appendLine(data, "more words6");
+    appendLine(data, "more words7");
+    appendLine(data, "more words8");
+    appendLine(data, "");
+    appendLine(data, "complete nonsense written on a single line in attempt to make it overflow the width of the editor...");
+    appendLine(data, "");
+    appendLine(data, "more words9");
+    appendLine(data, "more words10");
+    appendLine(data, "more words11");
+    appendLine(data, "");
+    appendLine(data, "more words12");
+    appendLine(data, "more words13");
+    appendLine(data, "");
+    appendLine(data, "more words14");
+    appendLine(data, "more words15");
+    appendLine(data, "more words16");
+    appendLine(data, "");
+    appendLine(data, "more words17");
+    appendLine(data, "once again, stuff is written on a single line in attempt to make it overflow the width of the editor!");
+    appendLine(data, "more words18");
+    appendLine(data, "");
+    appendLine(data, "more words19");
+    appendLine(data, "");
+    appendLine(data, "more words20");
+    appendLine(data, "");
+    appendLine(data, "This is the final line");
+    appendLine(data, "");
 }
 
 static int getChar() {
@@ -409,7 +456,13 @@ static void run() {
                 setEditorCursor(data);
             }
             continue;
-        } 
+        } else if (key == 13) {
+            insertLine(data, "");
+            redrawLines(data, row, data->linesHeight);
+            updateStatusLine(data);
+            setEditorCursor(data);
+            continue;
+        }
         // TODO (d8,PC,Xn) relative addressing support required if more cases in switch (vbcc switched to jumptable)
         switch (key) {
             case 3: // CTRL+C
