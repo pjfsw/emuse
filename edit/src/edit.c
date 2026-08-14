@@ -17,6 +17,8 @@
 
 typedef struct {
     char text[MAX_LINE_LENGTH][MAX_LINES];    
+    int freeSlots[MAX_LINES];
+    int freeCount;
     char dummy[MAX_LINE_LENGTH];
     int index[MAX_LINES];
     int count; 
@@ -58,18 +60,22 @@ static int getCurrentLength(Data *data) {
     return getLineLength(data, data->top + data->row);
 }
 
-static int findFreeLine(Data *data) {
-    for (int i = 0; i < MAX_LINES; i++) {
-        if (data->index[i] < 0) {
-            return i;
-        }
+static void freeSlot(Data *data, int slot) {
+    data->text[slot][0] = 0;
+    data->freeSlots[data->freeCount++] = slot;    
+}
+
+static int allocSlot(Data *data) {
+    if (data->freeCount == 0) {
+        return -1;
     }
-    return -1;
+    data->freeCount--;
+    return data->freeSlots[data->freeCount];
 }
 
 // Return slot index or -1 if full
 static int addToSlot(Data *data, char *text) {
-    int idx = findFreeLine(data);
+    int idx = allocSlot(data);
     if (idx < 0) {
         return -1;
     }
@@ -105,7 +111,9 @@ static void dataInit(Data *data) {
     memclr(data, sizeof(Data));
     for (int i = 0; i < MAX_LINES; i++) {
         data->index[i] = -1;
+        data->freeSlots[i] = i;
     }
+    data->freeCount = MAX_LINES;
     appendLine(data, "Type something");
     appendLine(data, "You are looking at a very very long line that covers many columns and reaches far outside the screen.");
     appendLine(data, "Another line");
@@ -403,11 +411,40 @@ static int addChar(Data *data, int c) {
     return 1;
 }
 
-static int deleteLeftChar(Data *data) {
-    int cur = data->left + data->col;
-    if (cur == 0) {
+static int joinWithPreviousLine(Data *data) {
+    int cur = data->top + data->row; 
+    if (cur < 1) {
         return 0;
     }
+    int freedSlot = data->index[cur];
+
+    char *line1 = getLineAt(data, cur-1);
+    char *line2 = getLineAt(data, cur);
+
+    int len1 = strlen(line1);
+    int len2 = strlen(line2);
+
+    if (len1 + len2 >= MAX_LINE_LENGTH) {
+        return 0;
+    }
+    moveUp(data);
+    moveEnd(data);
+
+    strcat(line1, line2);
+
+    for (int i = cur; i < data->count-1; i++) {
+        data->index[i] = data->index[i+1];
+    }
+    data->index[data->count - 1] = -1;
+    data->count--;
+
+    freeSlot(data, freedSlot);
+
+    return 1;
+}
+
+static int deleteLeftChar(Data *data) {
+    int cur = data->left + data->col;
     char *line = getCurrentLine(data);  
     int len = getCurrentLength(data);
     for (int i = cur-1; i < len; i++) {
@@ -440,6 +477,8 @@ static void run() {
     int old;
     while (running) {        
         int row = data->row+1;
+        int curCol = data->col+data->left;
+        int curRow = data->row+data->top;
         int key = readKey();
         if ((key >= 32) && (key < 255)) {
             if (addChar(data, key)) {
@@ -449,7 +488,7 @@ static void run() {
                 setEditorCursor(data);
             }
             continue;
-        } else if (KEY_DELETE == key) {
+        } else if (KEY_DELETE == key) {            
             if (deleteChar(data)) {
                 redrawLines(data, row, row);
                 updateStatusLine(data);
@@ -458,6 +497,7 @@ static void run() {
             continue;
         } else if (key == 13) {
             insertLine(data, "");
+            moveDown(data);
             redrawLines(data, row, data->linesHeight);
             updateStatusLine(data);
             setEditorCursor(data);
@@ -469,7 +509,13 @@ static void run() {
                 running = 0;
                 break;
             case KEY_BACKSPACE:
-                if (deleteLeftChar(data)) {
+                if (curCol == 0) {
+                    if (joinWithPreviousLine(data)) {
+                        redrawLines(data, data->row+1, data->linesHeight);
+                        updateStatusLine(data);
+                        setEditorCursor(data);
+                    }
+                } else if (deleteLeftChar(data)) {
                     moveLeft(data);
                     redrawLines(data, row, row);
                     updateStatusLine(data);
