@@ -2,6 +2,7 @@
 #include "memory.h"
 #include "strutils.h"
 #include "string.h"
+#include <stdint.h>
 
 #define KEY_UP          0x101
 #define KEY_DOWN        0x102
@@ -17,10 +18,10 @@
 
 typedef struct {
     char text[MAX_LINE_LENGTH][MAX_LINES];    
-    int freeSlots[MAX_LINES];
+    int16_t freeSlots[MAX_LINES];
+    int16_t index[MAX_LINES];
     int freeCount;
     char dummy[MAX_LINE_LENGTH];
-    int index[MAX_LINES];
     int count; 
     // Actual row in buffer at top of screen (0-based)
     int top;
@@ -40,7 +41,7 @@ static char tmps[MAX_LINE_LENGTH];
 
 
 static char *getLineAt(Data *data, int i) {
-    int idx = data->index[i];
+    int16_t idx = data->index[i];
     if ((idx >= 0) && (idx < MAX_LINES)) {
         return data->text[idx];
     } else {
@@ -60,12 +61,12 @@ static int getCurrentLength(Data *data) {
     return getLineLength(data, data->top + data->row);
 }
 
-static void freeSlot(Data *data, int slot) {
+static void freeSlot(Data *data, int16_t slot) {
     data->text[slot][0] = 0;
     data->freeSlots[data->freeCount++] = slot;    
 }
 
-static int allocSlot(Data *data) {
+static int16_t allocSlot(Data *data) {
     if (data->freeCount == 0) {
         return -1;
     }
@@ -74,8 +75,8 @@ static int allocSlot(Data *data) {
 }
 
 // Return slot index or -1 if full
-static int addToSlot(Data *data, char *text) {
-    int idx = allocSlot(data);
+static int16_t addToSlot(Data *data, char *text) {
+    int16_t idx = allocSlot(data);
     if (idx < 0) {
         return -1;
     }
@@ -88,7 +89,7 @@ static void insertLineAtPos(Data *data, int pos, char *text) {
     if (data->count >= MAX_LINES) {
         return;
     }
-    int idx = addToSlot(data, text);    
+    int16_t idx = addToSlot(data, text);    
     if (idx < 0) {
         return;
     }
@@ -246,6 +247,7 @@ static void updateStatusLine(Data *data) {
     concrsoff();
     conreverse();
     consetcrs(data->height,data->width-16);
+    conputhex32(sizeof(int));
     conputc('L');
     putNumberPad(data->row+data->top+1, 3);
     conputc('C');    
@@ -427,7 +429,7 @@ static int joinWithPreviousLine(Data *data) {
         return 0;
     }
 
-    int freedSlot = data->index[cur];
+    int16_t freedSlot = data->index[cur];
 
     moveUp(data);
     moveEnd(data);
@@ -461,7 +463,7 @@ static int joinWithNextLine(Data *data) {
         return 0;
     }
 
-    int freedSlot = data->index[cur+1];
+    int16_t freedSlot = data->index[cur+1];
 
     strcat(line1, line2);
 
@@ -526,37 +528,11 @@ static void run() {
         int curCol = data->col+data->left;
         int curRow = data->row+data->top;
         int key = readKey();
+        int len;
         if ((key >= 32) && (key < 255)) {
             if (addChar(data, key)) {
                 moveRight(data);
                 redrawLines(data, row, row);
-                updateStatusLine(data);
-                setEditorCursor(data);
-            }
-            continue;
-        } else if (KEY_DELETE == key) {      
-            int len = getCurrentLength(data);     
-            if (len == curCol) {
-                if (joinWithNextLine(data)) {
-                    redrawLines(data, row, data->linesHeight);
-                    updateStatusLine(data);
-                    setEditorCursor(data);
-                } 
-            } else if (deleteChar(data)) {
-                redrawLines(data, row, row);
-                updateStatusLine(data);
-                setEditorCursor(data);
-            }
-            continue;
-        } else if (key == 13) {
-            if (splitLine(data)) {
-                data->left = 0;
-                data->col = 0;
-                if (moveDown(data)) {
-                    redrawLines(data, data->linesHeight-1, data->linesHeight);
-                } else {
-                    redrawLines(data, data->row, data->linesHeight);
-                }
                 updateStatusLine(data);
                 setEditorCursor(data);
             }
@@ -566,6 +542,33 @@ static void run() {
         switch (key) {
             case 3: // CTRL+C
                 running = 0;
+                break;
+            case 13:
+                if (splitLine(data)) {
+                    data->left = 0;
+                    data->col = 0;
+                    if (moveDown(data)) {
+                        redrawLines(data, data->linesHeight - 1, data->linesHeight);
+                    } else {
+                        redrawLines(data, data->row, data->linesHeight);
+                    }
+                    updateStatusLine(data);
+                    setEditorCursor(data);
+                }
+                break;
+            case KEY_DELETE:
+                len = getCurrentLength(data);
+                if (len == curCol) {
+                    if (joinWithNextLine(data)) {
+                        redrawLines(data, row, data->linesHeight);
+                        updateStatusLine(data);
+                        setEditorCursor(data);
+                    }
+                } else if (deleteChar(data)) {
+                    redrawLines(data, row, row);
+                    updateStatusLine(data);
+                    setEditorCursor(data);
+                }
                 break;
             case KEY_BACKSPACE:
                 if (curCol == 0) {

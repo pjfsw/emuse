@@ -47,6 +47,9 @@ extern void conputs(REG("a1") const char *str);
 // Write char to console
 extern void conputc(REG("d0") unsigned char c);
 
+// Write 32-bit hex value to console
+extern void conputhex32(REG("d0") unsigned int);
+
 // Get character from console, or EOF if no character
 extern int REG("d0") congetc();
 

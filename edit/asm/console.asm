@@ -14,6 +14,7 @@
     xdef _conbold
     xdef _connormal
     xdef _conclr
+    xdef _conputhex32
     xdef _conputc
     xdef _conputs
     xdef _congetc
@@ -99,6 +100,13 @@ _conclr:
     move.l a6,-(sp)
     move.l ROOTLIB_BASE,a6
     jsr CONCLR(a6)
+    move.l (sp)+,a6
+    rts
+
+_conputhex32:
+    move.l a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONPUTHEX32(a6)
     move.l (sp)+,a6
     rts
 
