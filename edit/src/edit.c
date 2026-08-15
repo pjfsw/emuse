@@ -14,7 +14,7 @@
 #define KEY_BACKSPACE   0x108
 
 #define MAX_LINE_LENGTH 256
-#define MAX_LINES 512
+#define MAX_LINES 999
 
 typedef struct {
     char text[MAX_LINE_LENGTH][MAX_LINES];    
@@ -242,8 +242,7 @@ static void putNumberPad(int n, int pad)
     }
 }
 
-
-static void updateStatusLine(Data *data) {
+static void updateStatusLineAndSetCursor(Data *data) {
     concrsoff();
     conreverse();
     consetcrs(data->height,data->width-16);
@@ -253,6 +252,12 @@ static void updateStatusLine(Data *data) {
     conputc('C');    
     putNumberPad(data->col+data->left+1, 3);
     connormal();
+    int len = getCurrentLength(data);
+    if (data->col > len) {
+        data->col = len;
+    }
+    consetcrs(data->row+1, data->col+1);
+    concrson();
 }
 
 static void refresh(Data *data) {
@@ -268,19 +273,9 @@ static void refresh(Data *data) {
     }
     concrsleft(data->width);
     conputs("/SOMEFILE.TXT");
-    updateStatusLine(data);
     connormal();
     consetcrs(1,1);
     consetarea(1,data->linesHeight);
-}
-
-static void setEditorCursor(Data *data) {
-    int len = getCurrentLength(data);
-    if (data->col > len) {
-        data->col = len;
-    }
-    consetcrs(data->row+1, data->col+1);
-    concrson();
 }
 
 static void redrawLines(Data *data, int first, int last) {
@@ -519,7 +514,7 @@ static void run() {
     dataInit(data);
     refresh(data);
     redrawLines(data, 1, data->linesHeight);
-    setEditorCursor(data);
+    updateStatusLineAndSetCursor(data);
 
     int running = 1;
     int old;
@@ -533,8 +528,7 @@ static void run() {
             if (addChar(data, key)) {
                 moveRight(data);
                 redrawLines(data, row, row);
-                updateStatusLine(data);
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);
             }
             continue;
         }
@@ -552,8 +546,7 @@ static void run() {
                     } else {
                         redrawLines(data, data->row, data->linesHeight);
                     }
-                    updateStatusLine(data);
-                    setEditorCursor(data);
+                    updateStatusLineAndSetCursor(data);
                 }
                 break;
             case KEY_DELETE:
@@ -561,56 +554,48 @@ static void run() {
                 if (len == curCol) {
                     if (joinWithNextLine(data)) {
                         redrawLines(data, row, data->linesHeight);
-                        updateStatusLine(data);
-                        setEditorCursor(data);
+                        updateStatusLineAndSetCursor(data);
                     }
                 } else if (deleteChar(data)) {
                     redrawLines(data, row, row);
-                    updateStatusLine(data);
-                    setEditorCursor(data);
+                    updateStatusLineAndSetCursor(data);
                 }
                 break;
             case KEY_BACKSPACE:
                 if (curCol == 0) {
                     if (joinWithPreviousLine(data)) {
                         redrawLines(data, data->row+1, data->linesHeight);
-                        updateStatusLine(data);
-                        setEditorCursor(data);
+                        updateStatusLineAndSetCursor(data);
                     }
                 } else if (deleteLeftChar(data)) {
                     moveLeft(data);
                     redrawLines(data, row, row);
-                    updateStatusLine(data);
-                    setEditorCursor(data);
+                    updateStatusLineAndSetCursor(data);
                 }
                 break;
             case KEY_UP:
                 if (moveUp(data)) {
                     redrawLines(data, 1, 1);
                 }
-                updateStatusLine(data);
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);
                 break;
             case KEY_DOWN:
                 if (moveDown(data)) {
                     redrawLines(data, data->linesHeight, data->linesHeight);
                 }
-                updateStatusLine(data);
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);
                 break;
             case KEY_LEFT:
                 if (moveLeft(data)) {
                     redrawLines(data, row, row);
                 }
-                updateStatusLine(data);               
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);               
                 break;
             case KEY_RIGHT:
                 if (moveRight(data)) {
                     redrawLines(data, row, row);
                 }
-                updateStatusLine(data);
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);
                 break;
             case KEY_HOME:
                 old = data->left + data->col;
@@ -619,15 +604,13 @@ static void run() {
                 if (old > 0) {
                     redrawLines(data, row, row);
                 }
-                updateStatusLine(data);
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);
                 break;
             case KEY_END:
                 if (moveEnd(data)) {
                     redrawLines(data, row, row);
                 }
-                updateStatusLine(data);
-                setEditorCursor(data);
+                updateStatusLineAndSetCursor(data);
                 break;
             default:            
         } 
