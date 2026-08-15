@@ -443,6 +443,18 @@ static int joinWithPreviousLine(Data *data) {
     return 1;
 }
 
+static int splitLine(Data *data) {
+    if (data->count >= MAX_LINES) {
+        return 0;
+    }
+    int curLine = data->top + data->row;
+    int curCol = data->left + data->col;
+    char *line = getCurrentLine(data);
+    insertLineAtPos(data, curLine+1, &line[curCol]);
+    line[curCol] = 0;
+    return 1;
+}
+
 static int deleteLeftChar(Data *data) {
     int cur = data->left + data->col;
     char *line = getCurrentLine(data);  
@@ -496,11 +508,17 @@ static void run() {
             }
             continue;
         } else if (key == 13) {
-            insertLine(data, "");
-            moveDown(data);
-            redrawLines(data, row, data->linesHeight);
-            updateStatusLine(data);
-            setEditorCursor(data);
+            if (splitLine(data)) {
+                data->left = 0;
+                data->col = 0;
+                if (moveDown(data)) {
+                    redrawLines(data, data->linesHeight, data->linesHeight);
+                } else {
+                    redrawLines(data, data->row, data->linesHeight);
+                }
+                updateStatusLine(data);
+                setEditorCursor(data);
+            }
             continue;
         }
         // TODO (d8,PC,Xn) relative addressing support required if more cases in switch (vbcc switched to jumptable)
