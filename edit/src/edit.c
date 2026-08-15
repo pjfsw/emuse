@@ -416,8 +416,7 @@ static int joinWithPreviousLine(Data *data) {
     if (cur < 1) {
         return 0;
     }
-    int freedSlot = data->index[cur];
-
+    
     char *line1 = getLineAt(data, cur-1);
     char *line2 = getLineAt(data, cur);
 
@@ -427,6 +426,9 @@ static int joinWithPreviousLine(Data *data) {
     if (len1 + len2 >= MAX_LINE_LENGTH) {
         return 0;
     }
+
+    int freedSlot = data->index[cur];
+
     moveUp(data);
     moveEnd(data);
 
@@ -442,6 +444,38 @@ static int joinWithPreviousLine(Data *data) {
 
     return 1;
 }
+
+static int joinWithNextLine(Data *data) {
+    int cur = data->top + data->row;
+
+    if (cur >= data->count - 1) {
+        return 0;
+    }
+    char *line1 = getLineAt(data, cur);
+    char *line2 = getLineAt(data, cur+1);
+
+    int len1 = strlen(line1);
+    int len2 = strlen(line2);
+
+    if ((len1 + len2) >= MAX_LINE_LENGTH) {
+        return 0;
+    }
+
+    int freedSlot = data->index[cur+1];
+
+    strcat(line1, line2);
+
+    for (int i = cur + 1; i < data->count - 1; i++) {
+        data->index[i] = data->index[i + 1];
+    }
+    data->index[data->count - 1] = -1;
+    data->count--;
+
+    freeSlot(data, freedSlot);
+
+    return 1;
+}
+
 
 static int splitLine(Data *data) {
     if (data->count >= MAX_LINES) {
@@ -500,8 +534,15 @@ static void run() {
                 setEditorCursor(data);
             }
             continue;
-        } else if (KEY_DELETE == key) {            
-            if (deleteChar(data)) {
+        } else if (KEY_DELETE == key) {      
+            int len = getCurrentLength(data);     
+            if (len == curCol) {
+                if (joinWithNextLine(data)) {
+                    redrawLines(data, row, data->linesHeight);
+                    updateStatusLine(data);
+                    setEditorCursor(data);
+                } 
+            } else if (deleteChar(data)) {
                 redrawLines(data, row, row);
                 updateStatusLine(data);
                 setEditorCursor(data);
@@ -512,7 +553,7 @@ static void run() {
                 data->left = 0;
                 data->col = 0;
                 if (moveDown(data)) {
-                    redrawLines(data, data->linesHeight, data->linesHeight);
+                    redrawLines(data, data->linesHeight-1, data->linesHeight);
                 } else {
                     redrawLines(data, data->row, data->linesHeight);
                 }
