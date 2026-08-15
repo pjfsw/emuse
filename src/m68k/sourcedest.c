@@ -49,7 +49,8 @@ int readSource(
         if (ea->xn == AM_EXT_IMMEDIATE) {
             *value = ea->immediate;
             cycleCount = 0;
-        } else if ((ea->xn == AM_EXT_ABS_LONG) || (ea->xn == AM_EXT_ABS_SHORT) || (ea->xn == AM_EXT_PC_DISP)) {
+        } else if ((ea->xn == AM_EXT_ABS_LONG) || (ea->xn == AM_EXT_ABS_SHORT) || (ea->xn == AM_EXT_PC_DISP) ||
+                   (ea->xn == AM_EXT_PC_INDEX)) {
             if (di->size == IS_LONG) {
                 *value = (uint32_t)rwFunc->rw(readWriteUserdata, ea->address) << 16;
                 *value |= (uint32_t)rwFunc->rw(readWriteUserdata, ea->address + 2);

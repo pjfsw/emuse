@@ -97,6 +97,19 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
             ea->address = registers->pc + (int32_t)displacement;
             increasePc(registers);
             return 4;
+        } else if (reg == AM_EXT_PC_INDEX) {
+            uint16_t ext = readWordFunc(readWriteUserdata, registers->pc);
+            int8_t displacement = (int8_t)(ext & 0xff);
+            int reg = (ext >> 12) & 7;
+            ea->addrRegDisp = (ext >> 15) & 1;
+            ea->longRegDisp = (ext >> 11) & 1;
+            uint32_t index = ea->addrRegDisp ? registers->a[reg] : registers->d[reg];
+            if (!ea->longRegDisp) {
+                index = (int32_t)(int16_t)(index & 0xffff);
+            }
+            ea->address = registers->pc + (int32_t)displacement + index;
+            increasePc(registers);
+            return 4;
         }
     }
     return -1;

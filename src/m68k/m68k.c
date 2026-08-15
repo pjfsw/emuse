@@ -116,6 +116,13 @@ static void disassembleEa(Instruction *instruction, EffectiveAddress *ea, Instru
             sprintf(s, "$%X", ea->address);
             addDisassembly(instruction, s, SYM_CONSTANT);
             addDisassembly(instruction, "(PC)", SYM_REGISTER);
+        } else if (ea->xn == AM_EXT_PC_INDEX) {
+            sprintf(s, "$%X", ea->address);
+            addDisassembly(instruction, s, SYM_CONSTANT);
+            char sizeChar = ea->longRegDisp ? 'L' : 'W';
+            char regChar = ea->addrRegDisp ? 'A' : 'D';
+            sprintf(s, "(PC,%c%d.%c)", regChar, ea->dispReg, sizeChar);
+            addDisassembly(instruction, s, SYM_REGISTER);
         }
     } else {
         sprintf(s, "{MODE=%x Xn=%x}", ea->mode, ea->xn);
