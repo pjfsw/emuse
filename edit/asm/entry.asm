@@ -4,5 +4,4 @@
     xref    _main
 
 _entry:
-    jsr     _main
-    rts
+    jmp     _main

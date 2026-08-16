@@ -61,9 +61,9 @@ DOS_GET_PART_COUNT equ -34
 ;
 ; Input:  A0: pointer to path context 
 ; Output: D0: 0 upon success, otherwise error code
-;         A0: pointer to first code entry
+;         A0: pointer to Process struct
 ;____________________________________________________________
-DOS_LOAD_EXE equ -28
+DOS_LOAD_PROCESS equ -28
 
 ;____________________________________________________________
 ;

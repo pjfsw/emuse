@@ -1,11 +1,13 @@
+    incdir "../include"
     include rootlib.i
     include errcode.i
+    include psb.i
+
+MAX_CMDLINE_LENGTH equ PSB_ARG_LENGTH 
 
 START equ $1000
     org START
 
-
-MAX_CMDLINE_LENGTH equ 128
     ; End of BIOS init code        
     move.l ROOTLIB_BASE,a6    
     lea DosLoadingMsg(pc),a1
@@ -257,6 +259,7 @@ CurrentDir:
 
 CommandLine:    blk.b MAX_CMDLINE_LENGTH,0
 ResolvedCmd:    blk.b MAX_CMDLINE_LENGTH,0
+CommandStartup: dc.l 0
 ShellPartitionInfo: blk.b 32,0
 DirectoryCtx: blk.b PCTX_SIZEOF,0
 DirEntry: blk.b DIRENT_SIZEOF,0

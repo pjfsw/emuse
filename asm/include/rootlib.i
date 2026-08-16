@@ -58,7 +58,6 @@ MEMAVAIL    equ -70
 ;
 ; MEMFREE - Free allocated memory 
 ; Input:  A0: Pointer to allocated region
-; Output: D0: Character 0-255 or -1 if no char available
 ;____________________________________________________________
 MEMFREE     equ -64
 

@@ -619,7 +619,17 @@ static void run() {
     concrsleft(80);
 }
 
-int main() {
+typedef struct {
+    char arg[128];
+    void *env;
+} Psb;
+
+int main(REG("a1") Psb *psb) {    
+    if (strlen(psb->arg) > 0) {
+        conputc('"');
+        conputs(psb->arg);
+        conputc('"');        
+    }
     conputs("\x1b[?1049h");
     run();
     conputs("\x1b[?1049l");
