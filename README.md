@@ -12,6 +12,7 @@ This repository is about my 68000-based SBC, working name
 * 68HC000FN clocked at 14.7 MHz
 * 1 MB RAM 
 * 64 KB (EEP)ROM
+* 16C550 UART enabling 115200 baud serial connection via USB-adapter.
 * MMC/SD-card reader
 * SNES controller connector
 * External SPI-port
