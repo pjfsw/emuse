@@ -246,7 +246,6 @@ static void updateStatusLineAndSetCursor(Data *data) {
     concrsoff();
     conreverse();
     consetcrs(data->height,data->width-16);
-    conputhex32(sizeof(int));
     conputc('L');
     putNumberPad(data->row+data->top+1, 3);
     conputc('C');    
