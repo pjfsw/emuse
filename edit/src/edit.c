@@ -632,6 +632,9 @@ int main(REG("a1") Psb *psb) {
     }
     conputs("\x1b[?1049h");
     run();
+    conresetarea();
+    connormal();
+    concrson();
     conputs("\x1b[?1049l");
     return 0;
 }

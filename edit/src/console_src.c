@@ -91,6 +91,10 @@ void consetarea(int top, int bottom) {
     conputc('r');
 }
 
+void conresetarea() {
+    conputs("\x1b" "[r");
+}
+
 void conscrollup() {
     conputs("\x1b" "D");
 }

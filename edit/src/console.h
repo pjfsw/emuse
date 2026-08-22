@@ -59,6 +59,8 @@ int conheight();
 
 void consetarea(int top, int bottom);
 
+void conresetarea();
+
 void conscrollup();
 
 void conscrolldown();
