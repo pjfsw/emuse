@@ -7,7 +7,8 @@
 
 typedef struct {
     // --- Emulator Video State ---
-    uint16_t vram[32768];    
+    uint8_t vram[0x20000];    
+    uint8_t palette[16];
     uint32_t bufferA[VGA_WIDTH * VGA_HEIGHT];
     uint32_t bufferB[VGA_WIDTH * VGA_HEIGHT];
     uint32_t *activeWriteBuffer;

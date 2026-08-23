@@ -1,4 +1,7 @@
 #include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+
 #include "vga.h"
 
 #define H_VISIBLE 640
@@ -9,80 +12,69 @@
 #define VGA_HDIV 1
 #define VGA_VDIV 1
 
-#include <stdint.h>
 
-// PICO-8 Palette
-// Format: 0xRRGGBBAA (Alpha in the LSB)
-static const uint32_t pico8_palette[16] = {
-    0x000000FF, //  0: Black
-    0x1D2B53FF, //  1: Dark Blue
-    0x7E2553FF, //  2: Dark Purple
-    0x008751FF, //  3: Dark Green
-    0xAB5236FF, //  4: Brown
-    0x5F574FFF, //  5: Dark Gray
-    0xC2C3C7FF, //  6: Light Gray
-    0xFFF1E8FF, //  7: White
-    0xFF004DFF, //  8: Red
-    0xFFA300FF, //  9: Orange
-    0xFFEC27FF, // 10: Yellow
-    0x00E436FF, // 11: Green
-    0x29ADFFFF, // 12: Blue
-    0x83769CFF, // 13: Indigo / Lavender
-    0xFF77A8FF, // 14: Pink
-    0xFFCCAAFF  // 15: Peach    
-};
-
-static const unsigned char packed_font_data[] = {
+/*static const unsigned char packed_font_data[] = {
     #embed "font.bin"
-};
+};*/
 
+/*uint16_t expand1bpp(uint8_t data, uint8_t color0, uint8_t color1)
+{
+    uint16_t result = 0;
+
+    color0 &= 3;
+    color1 &= 3;
+
+    for (int i = 0; i < 8; i++) {
+        result <<= 2;
+
+        if (data & 0x80)
+            result |= color1;
+        else
+            result |= color0;
+
+        data <<= 1;
+    }
+
+    return result;
+}
+*/
 void vgaInit(Vga *vga, SharedState *sharedState) {
     memset(vga, 0, sizeof(Vga));
+    srand((unsigned)time(NULL));
     for (int i = 0; i < sizeof(vga->vram); i++) {
-        vga->vram[i] = rand() & 65535;
+        vga->vram[i] = rand() & 255;
     }
-    /*for (int i = 0; i < 2048; i++) {
-        int c1 = (i>>8)&3;
-        int c2 = (c1+1)&3;
-        for (int y = 0; y < 8; y++) {
-            uint16_t data = 0;
-            for (int x = 0; x < 8; x++) {
-                data = data << 2;
-                if ((packed_font_data[(i&255)*8+y] >> (7-x)) & 1) {
-                    data |= c1;
-                } else {
-                    data |= c2;
-                }
-            }
-            vga->vram[i*8+y] = data;                        
-        }
+    for (int i = 0; i < sizeof(vga->palette); i++) {
+        vga->palette[i] = rand() & 255;
+    }
+/*    for (int y = 0; y < 8; y++) {
+        uint16_t w = expand1bpp(packed_font_data[8*65+y], 0,2);
+        vga->vram[y*256] = w>>8;
+        vga->vram[y*256+1] = w&0xff;
     }*/
     vga->sharedState = sharedState;
     vga->activeWriteBuffer = vga->bufferA;
     vga->dummyColor = 0xFF0000FF;  // Start with solid Red (RGBA)    
 }
 
-/*
-static uint32_t pal[4] = {
-    0x00000000,
-    0xFFFFFFFF,
-    0x2288EEFF,
-    0x444444FF
-};*/
-
+static uint32_t rgbmToRgb32(uint32_t rgbm) {
+    uint32_t m = rgbm & 1;              // xxxxxxxM
+    uint32_t b = (rgbm & 6) | m;        // xxxxxBBx
+    uint32_t g = (rgbm>>3) & 7;         // xxGGGxxx
+    uint32_t r = ((rgbm>>5) & 6) | m;   // RRxxxxxx
+    return ((r*255/7)<<24)|((g*255/7)<<16)|((b*255/7)<<8)|0xff;
+}
 
 static void renderPixel(Vga *vga) {
     int currentPixel = vga->y * H_VISIBLE + vga->x;    
     int scaledY = vga->y >> 1;
-    uint16_t attr = vga->vram[(scaledY >> 3) * (H_PITCH>>4) + (vga->x >> 3)];
-    uint16_t scancode = attr & 0xff;
-    uint16_t fg = (attr >> 8) & 0xf;
-    uint16_t bg = (attr >> 12) & 0xf;
-    uint16_t fontByte = packed_font_data[scancode*8+(scaledY & 7)];    
-    
-    uint16_t shift = (7-(currentPixel&7));    
-    uint16_t color = (fontByte >> shift) & 1;
-    vga->activeWriteBuffer[currentPixel] = color ? pico8_palette[fg] : pico8_palette[bg];
+    int scaledX = vga->x >> 1;
+    int subPixel = 3 - (scaledX & 3);
+    uint8_t colorByte = vga->vram[(scaledY << 8) + (scaledX >> 2)];
+    uint8_t colorIdx = (colorByte >> (subPixel*2)) & 3;
+    uint32_t rgbm = (uint32_t)vga->palette[colorIdx & 15];
+    uint32_t color = rgbmToRgb32(rgbm);
+    vga->activeWriteBuffer[currentPixel] = color;
 }
 
 static void tick(Vga *vga) {
