@@ -3,6 +3,7 @@
 #include "strutils.h"
 #include "string.h"
 #include <stdint.h>
+#include "dos.h"
 
 #define KEY_UP          0x101
 #define KEY_DOWN        0x102
@@ -17,7 +18,7 @@
 #define MAX_LINES 999
 
 typedef struct {
-    char text[MAX_LINE_LENGTH][MAX_LINES];    
+    char text[MAX_LINES][MAX_LINE_LENGTH];    
     int16_t freeSlots[MAX_LINES];
     int16_t index[MAX_LINES];
     int freeCount;
@@ -38,7 +39,6 @@ typedef struct {
 
 static Data global_data;
 static char tmps[MAX_LINE_LENGTH];
-
 
 static char *getLineAt(Data *data, int i) {
     int16_t idx = data->index[i];
@@ -108,66 +108,77 @@ static void insertLine(Data *data, char *text) {
     insertLineAtPos(data, data->row+data->top, text);
 }
 
-static void dataInit(Data *data) {
+char fileBuf[512];
+static int readFile(Data *data, char *input_file) {
+    DosCtx ctx;
+
+    if (dosCreateCtx(&ctx, input_file) != 0) {
+        return 0;
+    }
+
+    uint32_t linePos = 0;
+
+    for (;;) {
+        int32_t read = dosReadFile(&ctx, fileBuf, sizeof(fileBuf));
+
+        if (read <= 0) {
+            return read;
+        }
+
+        for (int32_t i = 0; i < read; i++) {
+            char c = fileBuf[i];
+
+            if (c == '\n') {
+                tmps[linePos] = '\0';
+                appendLine(data, tmps);
+                linePos = 0;
+                continue;
+            }
+
+            if (c == '\r') {
+                continue;
+            }
+
+            tmps[linePos++] = c;
+
+            if (linePos >= MAX_LINE_LENGTH - 1) {
+                tmps[linePos] = '\0';
+                appendLine(data, tmps);
+                linePos = 0;
+            }
+        }
+    }
+
+    // Append final unterminated line.
+    if (linePos > 0) {
+        tmps[linePos] = '\0';
+        appendLine(data, tmps);
+    }
+    return 1;
+}
+
+static void dataInit(Data *data, char *input_file) {
     memclr(data, sizeof(Data));
     for (int i = 0; i < MAX_LINES; i++) {
         data->index[i] = -1;
         data->freeSlots[i] = i;
     }
     data->freeCount = MAX_LINES;
-    appendLine(data, "Type something");
-    appendLine(data, "You are looking at a very very long line that covers many columns and reaches far outside the screen.");
-    appendLine(data, "Another line");
-    appendLine(data, "");
-    appendLine(data, "alpha");
-    appendLine(data, "beta");
-    appendLine(data, "delta");
-    appendLine(data, "omega");
-    appendLine(data, "");
-    appendLine(data, "many words written on a single line in attempt to make it overflow the width of the editor.");
-    appendLine(data, "");
-    appendLine(data, "more words1");
-    appendLine(data, "more words2");
-    appendLine(data, "more words3");
-    appendLine(data, "more words4");
-    appendLine(data, "");
-    appendLine(data, "additional words written on a single line in attempt to make it overflow the width of the editor!");
-    appendLine(data, "");
-    appendLine(data, "more words5");
-    appendLine(data, "more words6");
-    appendLine(data, "more words7");
-    appendLine(data, "more words8");
-    appendLine(data, "");
-    appendLine(data, "complete nonsense written on a single line in attempt to make it overflow the width of the editor...");
-    appendLine(data, "");
-    appendLine(data, "more words9");
-    appendLine(data, "more words10");
-    appendLine(data, "more words11");
-    appendLine(data, "");
-    appendLine(data, "more words12");
-    appendLine(data, "more words13");
-    appendLine(data, "");
-    appendLine(data, "more words14");
-    appendLine(data, "more words15");
-    appendLine(data, "more words16");
-    appendLine(data, "");
-    appendLine(data, "more words17");
-    appendLine(data, "once again, stuff is written on a single line in attempt to make it overflow the width of the editor!");
-    appendLine(data, "more words18");
-    appendLine(data, "");
-    appendLine(data, "more words19");
-    appendLine(data, "");
-    appendLine(data, "more words20");
-    appendLine(data, "");
-    appendLine(data, "This is the final line");
-    appendLine(data, "");
+    if (strlen(input_file) > 0) {
+        int32_t v = readFile(data, input_file);
+        if (v < 0) {
+            appendLine(data, "Read file failed");
+        }
+    } else {
+        appendLine(data, "Type some text!");
+    }
 }
 
 static int getChar() {
     int key;
     do {
         key = congetc();        
-    } while (key == EOF);
+    } while (key == CONEOF);
     return key;
 }
 
@@ -508,9 +519,7 @@ static int deleteChar(Data *data) {
     return 1;
 }
 
-static void run() {   
-    Data *data = &global_data;
-    dataInit(data);
+static void run(Data *data) {   
     refresh(data);
     redrawLines(data, 1, data->linesHeight);
     updateStatusLineAndSetCursor(data);
@@ -625,13 +634,19 @@ typedef struct {
 } Psb;
 
 int main(REG("a1") Psb *psb) {    
-    if (strlen(psb->arg) > 0) {
+/*    if (strlen(psb->arg) > 0) {
         conputc('"');
         conputs(psb->arg);
         conputc('"');        
-    }
+        DosCtx ctx;
+        if (0 == dosCreateCtx(&ctx, psb->arg)) {
+            conputs("File open ok!");
+        }
+    }*/
     conputs("\x1b[?1049h");
-    run();
+    Data *data = &global_data;
+    dataInit(data, psb->arg);    
+    run(data);
     conresetarea();
     connormal();
     concrson();

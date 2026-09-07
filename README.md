@@ -25,6 +25,18 @@ This repository is about my 68000-based SBC, working name
 * VGA graphics card/audio via peripheral port
 * Multiple partition support, in case 4 GB is not enough :)
 
+### Memory map
+
+    $000000-$0FFFFF  1 MB RAM
+    $100000-$7FFFFF  7 MB reserved for RAM 
+    $800000-$9FFFFF  2 MB reserved for a future expansion port
+    $A00000-$AFFFFF  Timer IRQ acknowledge
+    $B00001-$B0000F  16C550 UART (odd addresses)
+    $C00001-$C0003F  32 bytes graphics port (odd addresses)
+    $D00001-$D0000F  Output register (odd addresses)
+    $E00001-$E00001  Input register 
+    $F00000-$FFFFFF  1 MB ROM (64 KB repeated)
+
 ### Maybe in the future
 * Multitasking using the timer, user/supervisor mode split.
 

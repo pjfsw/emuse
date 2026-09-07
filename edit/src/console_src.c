@@ -4,7 +4,7 @@ int getChar() {
     int key;
     do {
         key = congetc();        
-    } while (key == EOF);
+    } while (key == CONEOF);
     return key;
 }
 

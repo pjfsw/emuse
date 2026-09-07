@@ -3,7 +3,7 @@
 
 #include "arch.h"
 
-#define EOF -1
+#define CONEOF -1
 
 // Clear entire line
 extern void conclrline(void);

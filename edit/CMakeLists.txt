@@ -11,6 +11,7 @@ set(ASM_SOURCES
     asm/entry.asm
     asm/memory.asm
     asm/console.asm
+    asm/dos.asm
 )
 
 set(C_SOURCES
