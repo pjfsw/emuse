@@ -138,10 +138,16 @@ static int readFile(Data *data, char *input_file) {
             if (c == '\r') {
                 continue;
             }
+            if (c == '\t') {
+               c = ' ';
+            }
+            if ((unsigned char)c >= 0x80) {
+                c = '?';
+            }
 
             tmps[linePos++] = c;
 
-            if (linePos >= MAX_LINE_LENGTH - 1) {
+            if (linePos == MAX_LINE_LENGTH - 1) {
                 tmps[linePos] = '\0';
                 appendLine(data, tmps);
                 linePos = 0;
@@ -262,10 +268,6 @@ static void updateStatusLineAndSetCursor(Data *data) {
     conputc('C');    
     putNumberPad(data->col+data->left+1, 3);
     connormal();
-    int len = getCurrentLength(data);
-    if (data->col > len) {
-        data->col = len;
-    }
     consetcrs(data->row+1, data->col+1);
     concrson();
 }
@@ -298,9 +300,17 @@ static void redrawLines(Data *data, int first, int last) {
         conclrline();
         if (row < data->count) {
             if (row == cur) {
-                char *c = getLineAt(data, row); 
-                strncpy(tmps, &c[data->left], data->width);
-                conputs(tmps);
+                char *c = getLineAt(data, row);
+                int len = strlen(c);
+                if (data->left < len) {
+                    int n = len - data->left;
+                    if (n > data->width) {
+                        n = data->width;
+                    }
+                    strncpy(tmps, &c[data->left], n);
+                    tmps[n] = 0;
+                    conputs(tmps);
+                }
             } else {
                 conputs(getLineAt(data, row));
             }
