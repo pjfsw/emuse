@@ -5,6 +5,8 @@ This repository is about my 68000-based SBC, working name
 
 [![SBC68k](docs/images/sbc68k_thumb.jpg)](docs/images/sbc68k.jpg)
 
+[Schematics](docs/images/sbc68k.pdf)
+
 ## System description
 
 ### Specifications
