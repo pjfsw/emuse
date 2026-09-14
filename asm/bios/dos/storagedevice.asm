@@ -30,7 +30,7 @@ SDInit:
 .sdInitInt:    
     lea OSVARS_BASE,a6
     lea OsDeviceList(a6),a1
-    moveq #SD_DEVICE_LIST_SIZE/4-1,d7
+    moveq #(SD_DEVICE_LIST_SIZE/4)-1,d7
 .loop:    
     clr.l (a1)+
     dbra d7,.loop

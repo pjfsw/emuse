@@ -17,7 +17,7 @@ PMInit:
 .pmInitInt:    
     lea OSVARS_BASE,a6
     lea OsPartitionList(a6),a1
-    moveq #PM_PART_LIST_SIZE/4-1,d7
+    move.w #(PM_PART_LIST_SIZE/4)-1,d7
 .loop:    
     clr.l (a1)+
     dbra d7,.loop
@@ -38,7 +38,7 @@ PMRegisterDevice:
     bsr.s .pmRegisterDeviceInt
     movem.l (sp)+,d2-d4/d6-d7/a2/a6
     rts
-.pmRegisterDeviceInt:    
+.pmRegisterDeviceInt:  
     lea OSVARS_BASE,a6
     move.l d0,d2
     lea OsDeviceList(a6),a0
@@ -56,7 +56,7 @@ PMRegisterDevice:
     bsr PMStoreDeviceError
     moveq #PM_ERR_DEVICE_ERROR,d0
     rts
-.readOk:    
+.readOk:        
     lea OsSectorBuffer(a6),a1
     cmp.w #$55aa,$1fe(a1)    ; Sanity check
     beq.s .isValidMbr

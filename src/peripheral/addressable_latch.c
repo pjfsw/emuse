@@ -33,6 +33,7 @@ void addrLatchWriteByte(void *userdata, uint32_t address, uint8_t byte) {
 void addrLatchWriteWord(void *userdata, uint32_t address, uint16_t word) {
     AddrLatch *latch = (AddrLatch*)userdata;
 
+    // TODO: This is wrong ??
     writeByte(latch,address>>1,(uint8_t)word);
 }
 

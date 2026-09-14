@@ -31,7 +31,7 @@ typedef struct {
     int width;
     int height;
     Audio audio;
-    Vga vga;
+    Vga *vga;
     SharedState sharedState;
     Debugger debugger;
     BooleanFunc ledFunc;
@@ -44,7 +44,7 @@ typedef struct {
     bool showHardware;
 } Application;
 
-bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
+bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
     void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata);
 void appRun(Application *app);
 void appDestroy(Application *app);

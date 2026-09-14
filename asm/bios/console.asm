@@ -2,7 +2,12 @@
 
 ConOpen:
     lea OSVARS_BASE+OsConsoleFunc,a0
-    bra TTYInit
+    bsr TTYInit
+    if GFXENABLED
+    bsr GfxInit
+    endif
+    rts
+
 
 ;____________________________________________________________
 ;

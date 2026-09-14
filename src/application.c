@@ -13,7 +13,7 @@ static bool initAudio(Application *app) {
     // Initialize audio system (20MHz CPU, 48kHz audio, 25.175MHz video)
     if (!audioInit(&app->audio, app->cpuFreq, app->sampleFreq, app->videoFreq,
                    app->mainTicker, app->mainTickerUserdata, 
-                   vgaTicker, &app->vga, 
+                   vgaTicker, app->vga, 
                    dummySampleSource, app, 
                    &app->sharedState)) {
         SDL_Log("Failed to initialize audio timing engine.");
@@ -25,15 +25,15 @@ static bool initAudio(Application *app) {
 }
 
 static void initVideo(Application *app) {
-    vgaInit(&app->vga, &app->sharedState);
+    vgaInit(app->vga, &app->sharedState);
     SDL_SetAtomicPointer(&app->sharedState.readyFramePtr, NULL);
 
     // Create a streaming texture matching our emulator's internal resolution
     app->emuTexture = SDL_CreateTexture(app->renderer,
         SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_STREAMING,
-        vgaGetWidth(&app->vga),
-        vgaGetHeight(&app->vga));
+        vgaGetWidth(app->vga),
+        vgaGetHeight(app->vga));
 }
 
 static void stoppedMode(Application *app) {
@@ -65,10 +65,11 @@ static void reset(Application *app) {
     audioReset(&app->audio);
 }
 
-bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
+bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
     void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata) {
     memset(app, 0, sizeof(Application));
     app->cpu = cpu;
+    app->vga = vga;
     app->mainTicker = mainTicker;
     app->mainTickerUserdata = mainTickerUserdata;
     app->resetFunc = resetFunc;
@@ -121,7 +122,7 @@ bool appInit(Application *app, Cpu *cpu, MainTicker mainTicker, void *mainTicker
     emuStatsInit(&app->stats, SDL_GetTicksNS());
 
     debuggerInit(&app->debugger, cpu->disassemblyFunc, cpu->cpuStateFunc, cpu->probeUserdata, app->renderer, &app->font, 
-        320, 3*vgaGetHeight(&app->vga)/2);
+        320, 3*vgaGetHeight(app->vga)/2);
 
     reset(app);
     app->running = true;
@@ -222,15 +223,15 @@ static void renderEmulatorOutput(Application *app) {
 
     if (readyFrame != NULL) {
         // 2. Upload the pixels to our emulator texture
-        SDL_UpdateTexture(app->emuTexture, NULL, readyFrame, vgaGetWidth(&app->vga) * sizeof(uint32_t));
+        SDL_UpdateTexture(app->emuTexture, NULL, readyFrame, vgaGetWidth(app->vga) * sizeof(uint32_t));
     } else if (app->is_stepping) {
         // Because the audio thread is locked out, it is 100% safe to read 
         // the active PPU memory mid-draw!
-        SDL_UpdateTexture(app->emuTexture, NULL, app->vga.activeWriteBuffer, vgaGetWidth(&app->vga) * sizeof(uint32_t));
+        SDL_UpdateTexture(app->emuTexture, NULL, app->vga->activeWriteBuffer, vgaGetWidth(app->vga) * sizeof(uint32_t));
     }
 
     // --- 3. Draw the emulator texture to the screen ---
-    SDL_FRect destRect = {0, 0, vgaGetWidth(&app->vga), vgaGetHeight(&app->vga)};
+    SDL_FRect destRect = {0, 0, vgaGetWidth(app->vga), vgaGetHeight(app->vga)};
     SDL_RenderTexture(app->renderer, app->emuTexture, NULL, &destRect);
 }
 
@@ -268,11 +269,11 @@ static void renderTargetTexture(Application *app) {
 static void renderHardware(Application *app, int y, int height) {
     SDL_SetRenderDrawBlendMode(app->renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 160);
-    SDL_FRect rect = {.x = 0, .y = y, .w = vgaGetWidth(&app->vga), .h = height};
+    SDL_FRect rect = {.x = 0, .y = y, .w = vgaGetWidth(app->vga), .h = height};
     SDL_RenderFillRect(app->renderer, &rect);
     const int ledWidth = 24;
     const int ledHeight = height-2;
-    rect.x = vgaGetWidth(&app->vga) - ledWidth - 1;
+    rect.x = vgaGetWidth(app->vga) - ledWidth - 1;
     rect.y = y+1;
     rect.w = ledWidth;
     rect.h = ledHeight;
@@ -286,11 +287,11 @@ static void renderHardware(Application *app, int y, int height) {
 }
 
 static void renderFps(Application *app, int y, int height) {
-    emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(&app->vga));
+    emuStatsUpdate(&app->stats, app->audio.totalCyclesRun, SDL_GetTicksNS(), vgaGetFrameCount(app->vga));
     char buf[80];
     SDL_SetRenderDrawBlendMode(app->renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 160);
-    SDL_FRect rect = {.x = 0, .y = y, .w = vgaGetWidth(&app->vga), .h = height};
+    SDL_FRect rect = {.x = 0, .y = y, .w = vgaGetWidth(app->vga), .h = height};
     SDL_RenderFillRect(app->renderer, &rect);
     snprintf(buf,
         sizeof(buf),
@@ -319,7 +320,7 @@ static void render(Application* app) {
     renderEmulatorOutput(app);
 
     int height = 18;
-    int y = vgaGetHeight(&app->vga) - height;
+    int y = vgaGetHeight(app->vga) - height;
 
     if (!app->is_stepping && app->showSpeed) {
         renderFps(app, y, height);

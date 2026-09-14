@@ -134,3 +134,4 @@ menuMsg:
     include console.asm
     include biosram.asm
     include decimal.asm
+    include gfx.asm

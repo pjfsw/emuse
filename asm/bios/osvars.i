@@ -61,11 +61,12 @@ OsDeviceList:       rs.b SD_DEVICE_LIST_SIZE
 OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
+OsGfxVars:          rs.w 1
 OsConsoleFunc:      rs.b ConsoleFuncSizeof
 OsMmcCmdArg:        rs.b 4
 OsBootMediaStatus:  rs.w 1
 OsAllocatorStart:   rs.l 1
 OsSizeof:           rs.b 0
 
- printt "OsSizeof:"
- printv OsSizeof
+    printt "OsSizeof:"
+    printv OsSizeof

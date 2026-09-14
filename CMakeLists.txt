@@ -25,9 +25,14 @@ set(ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/asm/bios/bios.asm")
 set(ASM_BIN "${CMAKE_CURRENT_BINARY_DIR}/bios.bin")
 set(ASM_SYM "${CMAKE_CURRENT_BINARY_DIR}/bios.sym")
 
+if(NOT DEFINED GFXENABLED)
+    set(GFXENABLED 0)
+endif()
+message(STATUS "GFXENABLED=${GFXENABLED}")
+
 add_custom_command(
     OUTPUT ${ASM_BIN}
-    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces -Iinclude -Idos -L ${ASM_SYM} ${ASM_SRC} -o ${ASM_BIN}
+    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces -DGFXENABLED=${GFXENABLED} -Iinclude -Idos -L ${ASM_SYM} ${ASM_SRC} -o ${ASM_BIN}
     DEPENDS ${ASM_SRC}
     COMMENT "Assembling 68k boot code with vasm"
 )

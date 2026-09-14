@@ -55,6 +55,7 @@ size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
 
 static const uint32_t UART_BASE = 0xb00000;
 static const uint32_t AREG_BASE = 0xd00000;
+static const uint32_t GFX_BASE = 0xc00000;
 static const uint32_t OVR_ADDRESS = AREG_BASE + 9;
 static const uint32_t SPI_CS_ADDRESS = AREG_BASE + 13;
 static const uint32_t SPI_MOSI_CLK_ADDRESS = AREG_BASE + 15;
@@ -207,9 +208,15 @@ int main(int argc, char* argv[]) {
     mappingKey.conditionFuncUserdata = NULL;
     busAddReadFunc(&bus, iregReadByte, iregReadWord, mappingKey);
 
+    Vga vga;
+    mappingKey.start = GFX_BASE;
+    mappingKey.end = GFX_BASE + 0x100000;
+    mappingKey.userdata = &vga;
+    busAddWriteFunc(&bus, vgaWriteByte, vgaWriteWord, mappingKey);
+
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;
-    if (!appInit(&app, &cpu.cpu, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg)) {
+    if (!appInit(&app, &cpu.cpu, &vga, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg)) {
         return 1;
     }
     appRun(&app);

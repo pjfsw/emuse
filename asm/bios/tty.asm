@@ -12,11 +12,11 @@ TTYInit:
     dbra d7,.fillJumps
     
     move.l #UARTPutChar,2+ConsolePutcFunc(a0)   
+    move.l #TTYNormalText,2+ConsoleNormalTextFunc(a0)
+    move.l #TTYBoldText,2+ConsoleBoldTextFunc(a0)    
+    move.l #TTYClear,2+ConsoleClearFunc(a0)
     move.l #UARTGetChar,2+ConsoleGetcFunc(a0)
     move.l #TTYPuts,2+ConsolePutsFunc(a0)
-    move.l #TTYClear,2+ConsoleClearFunc(a0)
-    move.l #TTYNormalText,2+ConsoleNormalTextFunc(a0)
-    move.l #TTYBoldText,2+ConsoleBoldTextFunc(a0)
     move.l #TTYReverseText,2+ConsoleReverseTextFunc(a0)
     move.l #TTYUnderlinedText,2+ConsoleUnderlinedTextFunc(a0)
     move.l #TTYCursorDown,2+ConsoleCurDnFunc(a0)
@@ -26,7 +26,6 @@ TTYInit:
     move.l #TTYSetCursor,2+ConsoleCursorFunc(a0)
     move.l #TTYClearEol,2+ConsoleClearEolFunc(a0)
     move.l #TTYClearLine,2+ConsoleClearLineFunc(a0)
-
     bra UARTInit
 
 TTYDummy:
@@ -190,3 +189,7 @@ EscapeCode:
     even
 
     include uart.asm
+
+    if GFXENABLED
+    include gfx.asm
+    endif

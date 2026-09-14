@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "vga.h"
+#include <stdio.h>
 
 #define H_VISIBLE 640
 #define H_PITCH 1024
@@ -54,7 +55,7 @@ void vgaInit(Vga *vga, SharedState *sharedState) {
     }*/
     vga->sharedState = sharedState;
     vga->activeWriteBuffer = vga->bufferA;
-    vga->dummyColor = 0xFF0000FF;  // Start with solid Red (RGBA)    
+    vga->pollutionTimer = 0;
 }
 
 static uint32_t rgbmToRgb32(uint32_t rgbm) {
@@ -67,12 +68,20 @@ static uint32_t rgbmToRgb32(uint32_t rgbm) {
 
 static void renderPixel(Vga *vga) {
     int currentPixel = vga->y * H_VISIBLE + vga->x;    
-    int scaledY = vga->y >> 1;
-    int scaledX = vga->x >> 1;
-    int subPixel = 3 - (scaledX & 3);
-    uint8_t colorByte = vga->vram[(scaledY << 8) + (scaledX >> 2)];
-    uint8_t colorIdx = (colorByte >> (subPixel*2)) & 3;
-    uint32_t rgbm = (uint32_t)vga->palette[colorIdx & 15];
+    int scaledY = vga->y;
+    int scaledX = vga->x;
+    int subPixel = 7 - (scaledX & 7);
+    if (subPixel == 7) {
+        if (vga->pollutionTimer > 0) {
+            vga->shiftByte = vga->writtenByte;
+            vga->pollutionTimer--;
+        } else {
+            vga->shiftByte = vga->vram[(scaledY & 15) + ((scaledY >> 4) << (7+4)) + ((scaledX >> 3) << 4)];
+        }
+    }
+    uint8_t colorIdx = (vga->shiftByte & 0x80) >> 7;
+    vga->shiftByte <<= 1;
+    uint32_t rgbm = colorIdx ? 0xf6 : 0;  // (uint32_t)vga->palette[colorIdx & 15];
     uint32_t color = rgbmToRgb32(rgbm);
     vga->activeWriteBuffer[currentPixel] = color;
 }
@@ -102,6 +111,26 @@ void vgaTicker(void *userdata, int ticks) {
     for (int i = 0; i < ticks; i++) {
         tick(vga);
     }
+}
+
+void vgaWriteByte(void *userdata, uint32_t address, uint8_t byte) {
+    Vga *vga = (Vga*)userdata;
+
+    address = (address >> 1) & 0x1f;
+    if (address == VGA_REG_DATA) {
+        vga->vram[vga->nextAddress] = byte;
+        vga->nextAddress++;
+        vga->writtenByte = byte;
+        vga->pollutionTimer = 2;
+    } else if (address == VGA_REG_ADDR_HI) {
+        vga->nextAddress = (vga->nextAddress & (uint16_t)0x00ff) | ((uint16_t)byte)<<8;
+    } else if (address == VGA_REG_ADDR_LO) {
+        vga->nextAddress = (vga->nextAddress & (uint16_t)0xff00) | (uint16_t)byte;
+    }    
+}
+
+void vgaWriteWord(void *userdata, uint32_t address, uint16_t word) {
+    vgaWriteByte(userdata, (address&0xFFFFFFFE)+1, word & 0xff);
 }
 
 uint32_t vgaGetFrameCount(Vga *vga) {
