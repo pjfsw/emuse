@@ -73,7 +73,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
+target_link_libraries(${PROJECT_NAME} PRIVATE m SDL3::SDL3)
 
 # Define the path to the boot bin so the C code knows where to find it
 target_compile_definitions(${PROJECT_NAME} PRIVATE 

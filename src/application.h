@@ -42,6 +42,7 @@ typedef struct {
     bool showSpeed;   
     bool showMemory;
     bool showHardware;
+    bool pixelPerfect;
 } Application;
 
 bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "application.h"
 #include "texture.h"
@@ -198,6 +199,9 @@ static void handleEvents(Application* app) {
             if (key == SDLK_F2) {
                 app->showHardware = !app->showHardware;
             }
+            if (key == SDLK_F3) {
+                app->pixelPerfect = !app->pixelPerfect;
+            }            
             // --- Single Step Execution ---
             if ((key == SDLK_F5) || (key == SDLK_F6) && app->is_stepping) {
                 singleStep(app);
@@ -235,21 +239,40 @@ static void renderEmulatorOutput(Application *app) {
     SDL_RenderTexture(app->renderer, app->emuTexture, NULL, &destRect);
 }
 
+
+static float calculateScale(int sourceW, int sourceH,
+                            int targetW, int targetH,
+                            bool pixelPerfect) {
+    float scaleX = (float)targetW / sourceW;
+    float scaleY = (float)targetH / sourceH;
+    float scale = (scaleX < scaleY) ? scaleX : scaleY;
+
+    if (pixelPerfect) {
+        scale = floorf(scale);
+        if (scale < 1.0f) {
+            scale = 1.0f;
+        }
+    }
+
+    return scale;
+}
+
 static void renderTargetTexture(Application *app) {
     SDL_SetRenderTarget(app->renderer, NULL);
-    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(app->renderer, 6, 6, 6, 255);
     SDL_RenderClear(app->renderer);
 
     // 3. Get the current size of the window/renderer
     int winW, winH;
     SDL_GetRenderOutputSize(app->renderer, &winW, &winH);
 
+    float scale = calculateScale(app->width, app->height, winW, winH, app->pixelPerfect);
     // 4. Calculate the scaling factor
-    float scaleX = (float)winW / app->width;
-    float scaleY = (float)winH / app->height;
+    //float scaleX = (float)winW / app->width;
+    //float scaleY = (float)winH / app->height;
 
     // Use the smaller scale to ensure the image fits entirely inside the window
-    float scale = (scaleX < scaleY) ? scaleX : scaleY;
+    //float scale = (scaleX < scaleY) ? scaleX : scaleY;
 
     // 5. Calculate the final dimensions and center position
     SDL_FRect destRect;
@@ -258,9 +281,9 @@ static void renderTargetTexture(Application *app) {
     if (app->is_stepping) {
         destRect.x = winW - destRect.w;
     } else {
-        destRect.x = (winW - destRect.w) / 2.0f;  // Center horizontally
+        destRect.x = (int)((winW - destRect.w) / 2.0f);  // Center horizontally
     }
-    destRect.y = (winH - destRect.h) / 2.0f;  // Center vertically
+    destRect.y = (int)((winH - destRect.h) / 2.0f);  // Center vertically
 
     // 6. Draw the target texture into the calculated bounding box
     SDL_RenderTexture(app->renderer, app->target, NULL, &destRect);
@@ -314,7 +337,7 @@ static void render(Application* app) {
 
     SDL_SetRenderTarget(app->renderer, app->target);    
     // Clear to Black
-    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(app->renderer, 0,0,0, 255);
     SDL_RenderClear(app->renderer);    
 
     renderEmulatorOutput(app);
