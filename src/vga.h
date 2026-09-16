@@ -8,6 +8,7 @@
 #define VGA_REG_DATA 0
 #define VGA_REG_ADDR_HI 1
 #define VGA_REG_ADDR_LO 2
+#define VGA_COL_BASE 16
 
 typedef struct {
     // --- Emulator Video State ---

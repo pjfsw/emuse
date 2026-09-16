@@ -32,6 +32,10 @@ GFXBASE     equ $c00000
 GFXDATA     equ 1
 GFXADDRHI   equ 3
 GFXADDRLO   equ 5
+GFXCOL0     equ 33
+GFXCOL1     equ 35
+GFXCOL2     equ 37
+GFXCOL3     equ 39
 
 SYSTEM_BSS_BASE equ $000400 
 ALLOCATOR_BASE  equ $001000 

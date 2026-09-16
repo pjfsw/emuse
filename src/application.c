@@ -35,6 +35,7 @@ static void initVideo(Application *app) {
         SDL_TEXTUREACCESS_STREAMING,
         vgaGetWidth(app->vga),
         vgaGetHeight(app->vga));
+    SDL_SetTextureScaleMode(app->emuTexture, SDL_SCALEMODE_PIXELART);        
 }
 
 static void stoppedMode(Application *app) {
@@ -90,8 +91,8 @@ bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *
 
     // Get desktop display mode to calculate 3/4 size
     const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
-    int w = (mode->w * 3) / 4;
-    int h = (mode->h * 3) / 4;
+    int w = (mode->w * 2) / 3;
+    int h = (mode->h * 2) / 3;
 
     Uint32 window_flags = SDL_WINDOW_RESIZABLE;
 
@@ -106,7 +107,7 @@ bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *
     if (!(app->target = textureCreate(app->renderer, app->width, app->height))) {
         return false;
     }
-    SDL_SetTextureScaleMode(app->target, SDL_SCALEMODE_NEAREST);    
+    SDL_SetTextureScaleMode(app->target, SDL_SCALEMODE_PIXELART);    
 
     fontInit(&app->font, app->renderer);
 

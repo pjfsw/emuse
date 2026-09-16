@@ -66,22 +66,37 @@ static uint32_t rgbmToRgb32(uint32_t rgbm) {
     return ((r*255/7)<<24)|((g*255/7)<<16)|((b*255/7)<<8)|0xff;
 }
 
+static const int blockHeightShift=3;
+static const int blockHeight=1<<blockHeightShift;
+static const int pixelsPerByteShift = 2; // 1bpp = 3, 2bpp = 2, 4bpp = 1, 8bpp = 0
+
 static void renderPixel(Vga *vga) {
     int currentPixel = vga->y * H_VISIBLE + vga->x;    
-    int scaledY = vga->y;
-    int scaledX = vga->x;
-    int subPixel = 7 - (scaledX & 7);
+    int scaledY = vga->y >> 1;
+    int scaledX = vga->x >> 1;
+    int subPixel = 7 - (vga->x & 7);
+
     if (subPixel == 7) {
         if (vga->pollutionTimer > 0) {
             vga->shiftByte = vga->writtenByte;
             vga->pollutionTimer--;
         } else {
-            vga->shiftByte = vga->vram[(scaledY & 15) + ((scaledY >> 4) << (7+4)) + ((scaledX >> 3) << 4)];
+            
+            int byteX = scaledX >> pixelsPerByteShift;
+
+            vga->shiftByte = vga->vram[(scaledY & (blockHeight - 1)) +
+                                       ((scaledY >> blockHeightShift) << (9 - pixelsPerByteShift + blockHeightShift)) +
+                                       (byteX << blockHeightShift)];
+            //vga->shiftByte =
+                //vga->vram[(scaledY & (blockHeight - 1)) + ((scaledY >> blockHeightShift) << (6 + blockHeightShift)) +
+                          //((scaledX >> 3) << blockHeightShift)];
         }
     }
-    uint8_t colorIdx = (vga->shiftByte & 0x80) >> 7;
-    vga->shiftByte <<= 1;
-    uint32_t rgbm = colorIdx ? 0xf6 : 0;  // (uint32_t)vga->palette[colorIdx & 15];
+    uint8_t colorIdx = (vga->shiftByte & 0xc0) >> 6;
+    if ((subPixel & 1) == 0) {
+        vga->shiftByte <<= 2;
+    }
+    uint32_t rgbm = (uint32_t)vga->palette[colorIdx & 3];
     uint32_t color = rgbmToRgb32(rgbm);
     vga->activeWriteBuffer[currentPixel] = color;
 }
@@ -126,7 +141,9 @@ void vgaWriteByte(void *userdata, uint32_t address, uint8_t byte) {
         vga->nextAddress = (vga->nextAddress & (uint16_t)0x00ff) | ((uint16_t)byte)<<8;
     } else if (address == VGA_REG_ADDR_LO) {
         vga->nextAddress = (vga->nextAddress & (uint16_t)0xff00) | (uint16_t)byte;
-    }    
+    } else if (address >= VGA_COL_BASE) {
+        vga->palette[address & 15] = byte;
+    }
 }
 
 void vgaWriteWord(void *userdata, uint32_t address, uint16_t word) {
