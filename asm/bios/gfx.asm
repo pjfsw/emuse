@@ -9,10 +9,10 @@ GfxInit:
     move.l #GfxClear,2+ConsoleClearFunc(a0)
     lea GFXBASE,a0
     ; RRGGGBBM
-    move.b #$00,GFXCOL0(a0)
-    move.b #$52,GFXCOL1(a0)  
-    move.b #$fe,GFXCOL2(a0)
-    move.b #$f6,GFXCOL3(a0)
+    move.b #$00,GFXCOL0R(a0)
+    move.b #$52,GFXCOL1R(a0)  
+    move.b #$fe,GFXCOL2R(a0)
+    move.b #$f6,GFXCOL3R(a0)
     bra GfxClear
 
 GFX_BLOCK_HEIGHT_SHIFT  equ 3
