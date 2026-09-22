@@ -9,8 +9,7 @@ GfxInit:
     move.l #GfxClear,2+ConsoleClearFunc(a0)
     lea GFXBASE,a0
     ; RRGGGBBM
-    ; 00001010
-    move.b #$0c,GFXCOL0(a0)
+    move.b #$00,GFXCOL0(a0)
     move.b #$52,GFXCOL1(a0)  
     move.b #$fe,GFXCOL2(a0)
     move.b #$f6,GFXCOL3(a0)
