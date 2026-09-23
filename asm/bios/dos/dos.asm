@@ -10,7 +10,7 @@ DOSInit:
     lea InitStorageErrorMsg(pc),a1
     jsr CONPUTS(a6)
     move.l d7,d0
-    bsr PrintErrorCode
+    bsr DosPrintErrorCode
     rts
 .storageOk:
     rts
@@ -44,7 +44,7 @@ GetCurrentDosState:
     rts
 
 
-PrintErrorCode:
+DosPrintErrorCode:
     jsr CONPUTHEX16(a6)
     move.b #')',d0
     jsr CONPUTC(a6)

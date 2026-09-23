@@ -205,3 +205,6 @@ ConClearLine:
     jmp ConsoleClearLineFunc(a0)
 
     include "tty.asm"
+    if GFXENABLED
+    include "gfx.asm"
+    endif
