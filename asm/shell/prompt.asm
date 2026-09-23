@@ -2,9 +2,9 @@
 ; Display prompt and read data
 ; A0 - pointer to shell data struct
 Prompt:
-    movem.l a4-a6/d2/d6-d7,-(sp)
+    movem.l a4-a6/d2-d3/d6-d7,-(sp)
     bsr.s .prompt
-    movem.l (sp)+,a4-a6/d2/d6-d7
+    movem.l (sp)+,a4-a6/d2-d3/d6-d7
     rts
 .prompt:
     move.l a0,a5    ; Prompt variable pointer in a5
@@ -27,7 +27,7 @@ Prompt:
 .waitForChar:
     bsr PromptWaitKey
     cmp.b #27,d0
-    beq.s .readEscapeSequence
+    beq .readEscapeSequence
     cmp.b #$7f,d0
     beq.s .eraseChar
     cmp.b #13,d0
@@ -38,11 +38,31 @@ Prompt:
     blo.s .waitForChar
     cmp.b #127,d0
     bhi.s .waitForChar
-    move.b d0,(a4,d6.w)    
+    cmp.w d7,d6
+    bne.s .insertChar
+    bsr.s .appendChar
+    bra.s .waitForChar
+.insertChar:    
+    ; Insert the character
+    move.w d7,d1
+    sub.w d6,d1
+    move.w d1,d2    ; For redrawing later
+    lea (a4,d7.w),a0
+    lea 1(a0),a1
+.shiftRight:
+    move.b -(a0),-(a1)
+    dbra d1,.shiftRight    
+    bsr.s .appendChar
+    bsr.s .redrawRemainingLine
+    bra.s .waitForChar
+    
+.appendChar:
+    move.b d0,(a4,d6.w)
+    jsr CONPUTC(a6)
     addq.w #1,d6
     addq.w #1,d7    
-    jsr CONPUTC(a6) ; CONPUTC
-    bra.s .waitForChar
+    rts
+
 .lineBreak:
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
@@ -88,6 +108,10 @@ Prompt:
     beq.s .moveLeft
     cmp.b #'C',d0
     beq.s .moveRight
+    cmp.b #'H',d0
+    beq.s .moveHome
+    cmp.b #'F',d0
+    beq.s .moveEnd
     bra .waitForChar
 .moveLeft:
     tst.l d6
@@ -103,7 +127,22 @@ Prompt:
     moveq #1,d0
     jsr CONCRSRIGHT(a6)
     bra .waitForChar
-    
+.moveHome:
+    tst.w d6
+    beq .waitForChar
+    move.w d6,d0
+    jsr CONCRSLEFT(a6)
+    moveq #0,d6
+    bra .waitForChar
+.moveEnd:
+    cmp.w d6,d7
+    beq .waitForChar
+    move.w d7,d0
+    sub.w d6,d0
+    jsr CONCRSRIGHT(a6)
+    move.w d7,d6
+    bra .waitForChar
+
 PromptWaitKey:    
     jsr CONGETC(a6)
     tst.l d0
