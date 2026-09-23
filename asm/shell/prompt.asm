@@ -1,5 +1,25 @@
+;
+; Display prompt and read data
+; A0 - pointer to shell data struct
 Prompt:
+    movem.l a4-a5/d6-d7,-(sp)
+    bsr.s .prompt
+    movem.l (sp)+,a4-a5/d6-d7
+    rts
+.prompt:
+    move.l a0,a5    ; Prompt variable pointer in a5
+    lea ShellInputBuffer(a5),a4 ; Prompt buffer in a4
+    
+    move.l a4,a0
+
+    ; Clear prompt buffer
+    moveq #MAX_CMDLINE_LENGTH/4-1,d7
+.clrPrompt:
+    clr.l (a0)+
+    dbra d7,.clrPrompt
+
     bsr PrintPrompt
+
 .waitForChar:    
     jsr CONGETC(a6)
     tst.l d0

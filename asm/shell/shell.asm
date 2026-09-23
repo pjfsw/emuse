@@ -2,8 +2,7 @@
     include rootlib.i
     include errcode.i
     include psb.i
-
-MAX_CMDLINE_LENGTH equ PSB_ARG_LENGTH 
+    include shellvars.i
 
 START equ $1000
     org START
@@ -28,12 +27,19 @@ START equ $1000
     lea ReadBufferPtr(pc),a0
     move.l d0,(a0)
 
+    move.l #ShellSizeof,d0
+    jsr MEMALLOC(a6)
+    lea ShellVars(pc),a0
+    move.l d0,(a0)
+
     lea LineBreakMsg(pc),a1
     jsr CONPUTS(a6)
     bsr ClearCommandLine
     lea CommandLine(pc),a4  ; Command line buffer
 MainLoop: 
-    bsr Prompt
+    move.l ShellVars(pc),a0
+    bsr Prompt        
+    bsr CopyCommandLineInput
     bsr ParseCommandLine
     bsr ClearCommandLine
     bra.s MainLoop    
@@ -59,6 +65,22 @@ CheckInternalCommand:
     moveq #-1,d0
     rts
 
+CopyCommandLineInput:
+    move.l ShellVars(pc),a0
+    lea ShellInputBuffer(a0),a0
+    lea CommandLine(pc),a1
+    moveq #MAX_CMDLINE_LENGTH-1,d7
+.skipInitialSpace:
+    move.b (a0),d0
+    cmp.b #' ',d0
+    bne.s .copyByte
+    adda.l #1,a0
+    dbra d7,.skipInitialSpace
+.copyByte:
+    move.b (a0)+,(a1)+
+    dbra d7,.copyByte
+    rts        
+    
 ParseCommandLine:
     movem.l a2/a3,-(sp)
     bsr.s .parseCommandLine
@@ -66,7 +88,6 @@ ParseCommandLine:
     rts
 .parseCommandLine:    
     lea CommandLine(pc),a1
-    bsr TrimLeadingSpaces
     tst.b (a1)
     bne.s .cmdLineNotEmpty
     rts
@@ -104,22 +125,10 @@ ParseCommandLine:
     rts
 
 .internalCommandFound:
-    bsr TrimLeadingSpaces
     move.l 4(a2),a2 ; Jump vector
     jsr (a2)
     tst.l d0
     bne PrintError
-    rts
-
-; Move pointer A1 to first non space character
-TrimLeadingSpaces:
-    move.b (a1),d0
-    beq.s .endOfString
-    cmp.b #' ',d0
-    bne.s .endOfString
-    adda.l #1,a1
-    bra.s TrimLeadingSpaces    
-.endOfString:
     rts
 
 ClearCommandLine:
@@ -204,6 +213,7 @@ DecBuffer:
     include printutil.asm
     include prompt.asm
 
+ShellVars:  dc.l 0
 CommandLine:    blk.b MAX_CMDLINE_LENGTH,0
 ResolvedCmd:    blk.b MAX_CMDLINE_LENGTH,0
 CommandStartup: dc.l 0
