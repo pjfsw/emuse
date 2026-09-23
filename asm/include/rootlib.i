@@ -5,9 +5,37 @@ ROOTLIB_VERSION equ 1
 CONCLRLINE  equ -160
 CONCLREOL   equ -154
 CONSETCRS   equ -148
+
+;____________________________________________________________
+;
+; CONCRSLEFT - Move cursor left
+; Input:  D0: Number of steps to move 0-99 (>99 is undefined)
+; Output:
+;____________________________________________________________
 CONCRSLEFT  equ -142
+
+;____________________________________________________________
+;
+; CONCRSRIGHT - Move cursor right
+; Input:  D0: Number of steps to move 0-99 (>99 is undefined)
+; Output:
+;____________________________________________________________
 CONCRSRIGHT equ -136
+
+;____________________________________________________________
+;
+; CONCRSUP - Move cursor up
+; Input:  D0: Number of steps to move 0-99 (>99 is undefined)
+; Output:
+;____________________________________________________________
 CONCRSUP    equ -130
+
+;____________________________________________________________
+;
+; CONCRSDOWN - Move cursor down
+; Input:  D0: Number of steps to move 0-99 (>99 is undefined)
+; Output:
+;____________________________________________________________
 CONCRSDOWN  equ -124
 CONUNDER    equ -118
 CONREVERSE  equ -112

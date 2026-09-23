@@ -125,6 +125,11 @@ ParseCommandLine:
     rts
 
 .internalCommandFound:
+    cmp.b #' ',(a1)
+    bne.s .internalArgumentOk
+    adda.l #1,a1
+    bra .internalCommandFound
+.internalArgumentOk:
     move.l 4(a2),a2 ; Jump vector
     jsr (a2)
     tst.l d0
