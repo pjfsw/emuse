@@ -27,12 +27,16 @@ ExecuteCommand:
     bsr.s ExecuteCommand2
     move.l (sp)+,a0
     move.l d0,d2    ; Save error code
-    move.l ROOTLIB_BASE,a6
     jsr MEMFREE(a6) ; Free process startup header
     move.l d2,d0
     rts
 
 ExecPreparePsb:
+    move.l d7,-(sp)
+    bsr.s .execPreparePsb
+    move.l (sp)+,d7
+    rts
+.execPreparePsb:
     moveq #PsbSizeOf/2-1,d7       
     move.l a2,a0
 .clearPsb:
@@ -57,6 +61,11 @@ ExecPreparePsb:
     rts
    
 ExecuteCommand2:
+    movem.l d2/a3-a4/a6,-(sp)
+    bsr.s .executeCommand2
+    movem.l (sp)+,d2/a3-a4/a6
+    rts
+.executeCommand2:
     lea ResolvedCmd(pc),a3
     move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a0
@@ -76,10 +85,10 @@ ExecuteCommand2:
     move.l a0,a3    
 ;    bsr .debugPrint
     move.l ProcHunkStart(a3),a0
-    movem.l a2-a6,-(sp)
+    movem.l d2-d7/a2-a6,-(sp)
     move.l a2,a1        ; Pointer to PSB in A1
     jsr (a0)
-    movem.l (sp)+,a2-a6
+    movem.l (sp)+,d2-d7/a2-a6
     move.l d0,d2
     move.l a3,a0
     move.l ROOTLIB_BASE,a6

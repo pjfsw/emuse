@@ -32,44 +32,11 @@ START equ $1000
     jsr CONPUTS(a6)
     bsr ClearCommandLine
     lea CommandLine(pc),a4  ; Command line buffer
-MainLoop:    
-    bsr PrintPrompt
-.waitForChar:    
-    jsr CONGETC(a6)
-    tst.l d0
-    bmi.s .waitForChar    
-    cmp.b #$7f,d0
-    beq.s .eraseChar
-    cmp.b #13,d0
-    beq.s .lineBreak
-    cmp.w #MAX_CMDLINE_LENGTH-1,d6
-    bhs.s .waitForChar
-    cmp.b #32,d0
-    blo.s .waitForChar
-    cmp.b #127,d0
-    bhi.s .waitForChar
-    move.b d0,(a4,d6.w)    
-    addq.w #1,d6
-    jsr CONPUTC(a6) ; CONPUTC
-    bra.s .waitForChar
-.lineBreak:
-    lea LineBreakMsg(pc),a1
-    jsr CONPUTS(a6)
+MainLoop: 
+    bsr Prompt
     bsr ParseCommandLine
     bsr ClearCommandLine
-    bra MainLoop    
-.eraseChar:
-    tst.w d6
-    beq.s .waitForChar
-    subq.w #1,d6
-    clr.b (a4,d6.w)
-    move.b #8,d0
-    jsr CONPUTC(a6)
-    move.b #32,d0
-    jsr CONPUTC(a6)
-    move.b #8,d0
-    jsr CONPUTC(a6)
-    bra .waitForChar
+    bra.s MainLoop    
 
 ; Check internal command as provided in A0 with the command line provided in A1
 CheckInternalCommand:
@@ -155,17 +122,6 @@ TrimLeadingSpaces:
 .endOfString:
     rts
 
-PrintPrompt:
-    lea MsgPrompt1(pc),a1
-    jsr CONPUTS(a6)    
-    jsr CONBOLD(a6)
-    lea CurrentDir,a1
-    jsr CONPUTS(a6)
-    jsr CONNORMAL(a6)
-    lea MsgPrompt2(pc),a1
-    jmp CONPUTS(a6) ; CONPUTS
-
-
 ClearCommandLine:
     moveq #MAX_CMDLINE_LENGTH/4-1,d7
     lea CommandLine(pc),a0
@@ -180,12 +136,6 @@ PrintErrorCode:
     jsr CONPUTHEX32(a6)
     lea LineBreakMsg(pc),a1
     jmp CONPUTS(a6)
-
-MsgPrompt1:
-    dc.b "[",0
-MsgPrompt2:
-    dc.b "]$ ",0
-    even
 
 PrintSpace:
     move.b #' ',d0
@@ -252,10 +202,7 @@ DecBuffer:
     include free.asm
     include part.asm
     include printutil.asm
-
-CurrentDir:
-    dc.b "/",0
-    blk.b 10,0
+    include prompt.asm
 
 CommandLine:    blk.b MAX_CMDLINE_LENGTH,0
 ResolvedCmd:    blk.b MAX_CMDLINE_LENGTH,0
