@@ -27,6 +27,7 @@ ExecuteCommand:
     bsr.s ExecuteCommand2
     move.l (sp)+,a0
     move.l d0,d2    ; Save error code
+    move.l ROOTLIB_BASE,a6
     jsr MEMFREE(a6) ; Free process startup header
     move.l d2,d0
     rts
@@ -119,7 +120,5 @@ ExecAddExtensionIfNeeded:
     clr.b (a0)
     rts
 
-
-
     incdir "../storage"
-    include "dumpmemory.asm"
+;    include "dumpmemory.asm"
