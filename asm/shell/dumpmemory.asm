@@ -11,7 +11,6 @@
 ;   000208BA: ...
 ;
 ; Preserves all registers except condition codes.
-
 DumpMemory:
     movem.l d2-d7/a2-a5,-(sp)
 
