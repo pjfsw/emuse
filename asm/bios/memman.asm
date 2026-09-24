@@ -170,10 +170,37 @@ MemFree:
 ; Returns number of bytes RAM free in D0
 ;____________________________________________________________
 MemAvail:
+    move.l d2,-(sp)
+    bsr.s .memAvail
+    move.l (sp)+,d2
+    rts
+.memAvail:
     lea OSVARS_BASE,a0
-    move.l OsRamSize(a0),d0     ; Max RAM amount
+    ;move.l OsRamSize(a0),d0     ; Max RAM amount
+    moveq #0,d0  ; total free
     lea OSVARS_BASE,a0
     move.l OsAllocatorStart(a0),a0
+.loop:
+    ; End of current allocation
+    move.l a0,d1
+    add.l MEMMAN_SIZE(a0),d1
+
+    ; Find end of gap
+    move.l MEMMAN_NEXT(a0),d2
+    beq.s .lastBlock    
+
+    ; Add gap to total free amount
+    sub.l d1,d2
+    add.l d2,d0
+    
+    move.l MEMMAN_NEXT(a0),a0
+    bra.s .loop
+.lastBlock:
+    move.l MEMMAN_CEILING,d2
+    sub.l d1,d2
+    add.l d2,d0
+    rts
+
 .findLastAllocation:
     tst.l MEMMAN_NEXT(a0)
     beq.s .lastSlotFound
