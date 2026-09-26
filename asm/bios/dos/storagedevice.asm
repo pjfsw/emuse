@@ -125,7 +125,7 @@ SDDeviceNumberToStructInA1:
 ;____________________________________________________________
 ; SDReadSector
 ;
-; Read a sector from the device
+; Read a sector on the device
 ;
 ; D0: Device number
 ; D1: Sector number
@@ -158,7 +158,7 @@ SDReadSector:
 ;____________________________________________________________
 ; SDWriteSector
 ;
-; Read a sector from the device
+; Write a sector on the device
 ;
 ; D0: Device handle (as returned by SDFindDevice)
 ; D1: Sector number

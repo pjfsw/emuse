@@ -16,13 +16,13 @@
 
 _dosCreateCtx:
     DOS_OPEN
-    jsr DOS_CREATE_CONTEXT(a5)
+    jsr DOS_CREATE_CONTEXT(a6)
     DOS_CLOSE
     rts
 
 _dosReadFile:
     DOS_OPEN
-    jsr DOS_READ_FILE(a5)
+    jsr DOS_READ_FILE(a6)
     DOS_CLOSE
     rts
     

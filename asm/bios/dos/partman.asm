@@ -212,7 +212,38 @@ PMStoreDeviceError:
     move.w d0,DosExtErrorCode(a0)
     rts
 
+;____________________________________________________________
+;
+; PMWriteSector
+;
+; WRite sector from partition 
+
+; D0 Partition index
+; D1 Sector number relative to partition
+; A0: Pointer to 512 byte sector buffer
+;
+; Return: D0 = 0: OK, D0 != 0: Error 
+;____________________________________________________________
 PMWriteSector:
+    move.l a6,-(sp)
+    bsr.s .pmWriteSectorInt
+    move.l (sp)+,a6
+    rts
+.pmWriteSectorInt:
+    lea OSVARS_BASE,a6    
+    bsr findPartitionFromIndex
+    tst.l d0
+    beq.s .foundPartition
+    rts
+.foundPartition:
+    add.l PM_PSTART(a1),d1
+    move.l PM_DEVICE(a1),d0
+    bsr SDWriteSector
+    tst.l d0
+    beq.s .readOk
+    bsr PMStoreDeviceError
+    moveq #PM_ERR_DEVICE_ERROR,d0
+.readOk:
     rts
 
     include storagedevice.asm

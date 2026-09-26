@@ -2,6 +2,8 @@
 ;
 ; Jump table for the root library
 ;____________________________________________________________
+    jmp PMWriteSector       ; -214
+    jmp PMReadSector        ; -208
     jmp FMChangeDirectory   ; -202
     jmp PMGetPartitionInfo  ; -196
     jmp PMGetPartitionCount ; -190

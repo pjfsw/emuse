@@ -26,6 +26,35 @@ PM_SIZEOF    rs.b 0
 ROOTLIB_BASE equ $000004
 ROOTLIB_VERSION_OFFSET equ -4
 ROOTLIB_VERSION equ 1
+
+;____________________________________________________________
+;
+; DOS_WRITE_PART_SECTOR
+;
+; WRite sector on partition 
+
+; D0 Partition index
+; D1 Sector number relative to partition
+; A0: Pointer to 512 byte sector buffer
+;
+; Return: D0 = 0: OK, D0 != 0: Error 
+;____________________________________________________________
+DOS_WRITE_PART_SECTOR equ -214
+
+;____________________________________________________________
+;
+; DOS_READ_PART_SECTOR
+;
+; Read sector from partition 
+
+; D0 Partition index
+; D1 Sector number relative to partition
+; A0: Pointer to 512 byte sector buffer
+;
+; Return: D0 = 0: OK, D0 != 0: Error 
+;____________________________________________________________
+DOS_READ_PART_SECTOR equ -208
+
 ;____________________________________________________________
 ;
 ; DOS_CHANGE_DIR - Change the current working directory 
