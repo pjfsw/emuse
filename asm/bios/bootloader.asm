@@ -1,6 +1,5 @@
     incdir include
     include "rootlib.i"
-    include "doslib.i"
 BootLoader:
     lea OSVARS_BASE,a0
     tst.w OsBootMediaStatus(a0)
@@ -10,10 +9,6 @@ BootLoader:
     jmp CONPUTS(a6)
 .bootMediaInitialized:
     move.l ROOTLIB_BASE,a6
-    move.l #DOS_LIB_ID,d0
-    move.l #DOS_LIB_VERSION,d1
-    jsr LIBOPEN(a6)
-    move.l d0,a6
     lea OSVARS_BASE,a0
     lea OsDosState(a0),a0
     lea DosPathContext(a0),a2

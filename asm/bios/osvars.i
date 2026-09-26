@@ -3,7 +3,6 @@
     include "fat16.i"
     include "partman.i"
     include "fileman.i"
-    include "doslib.i"
     include "dirent.i"
 
 BOOT_LOADER_BASE equ $001000 

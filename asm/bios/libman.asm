@@ -10,13 +10,6 @@ LMInit:
 ; Ouptut: D0 pointer to library base or -1 if unsuccessful
 ;____________________________________________________________
 LMOpenLibrary:
-    cmp.l #DOS_LIB_ID,d0
-    bne.s .fail
-    cmp.l #1,d1
-    bhi.s .fail
-    move.l #JT_DOS_LIB_BASE,d0
-    rts
-.fail:
     moveq #-1,d0
     rts
 

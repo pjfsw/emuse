@@ -11,16 +11,6 @@ START equ $1000
     move.l ROOTLIB_BASE,a6    
     lea DosLoadingMsg(pc),a1
     jsr CONPUTS(a6)
-    move.l #DOS_LIB_ID,d0
-    moveq #1,d1
-    jsr LIBOPEN(a6)
-    tst.l d0
-    bpl.s .dosLibOk
-    rts
-.dosLibOk:
-    lea DosLibBase(pc),a0
-    move.l d0,(a0)
-    move.l (a0),a5    
 
     move.l #READBUFFER_SIZE,d0
     jsr MEMALLOC(a6)
@@ -198,8 +188,6 @@ LineBreakMsg:
     dc.b 13,10,0    
     even
 
-DosLibBase:
-    dc.l 0
 READBUFFER_SIZE EQU 2048
 ReadBufferPtr:
     dc.l 0

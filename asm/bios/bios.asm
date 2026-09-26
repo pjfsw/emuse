@@ -25,7 +25,6 @@ loop\@:
 
     org $f00400        ; Move past the vector table    
 
-    include "jt_dos.asm"
     include "jt_root.asm"   ; MUST BE IMMEDIATELY ABOVE "Start"
 Start:
     move.b #OVR_OFF,OVR_REG       

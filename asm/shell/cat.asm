@@ -1,14 +1,13 @@
     incdir ../storage
     incdir ../lib
     include dirent.i
-    include doslib.i
     include errcode.i
 
 ; A1 Command line
 ExecuteCat:
-    movem.l d2/d7/a4-a6,-(sp)
+    movem.l d2/d7/a5-a6,-(sp)
     bsr.s .executeCat
-    movem.l (sp)+,d2/d7/a4-a6
+    movem.l (sp)+,d2/d7/a5-a6
     rts
 .executeCat:
     tst.b (a1)
@@ -18,9 +17,8 @@ ExecuteCat:
     move.l ROOTLIB_BASE,a6
     move.l #READBUFFER_SIZE,d2    ; Read buffer size
     move.l ReadBufferPtr(pc),a5     ; Read buffer
-    move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a0
-    jsr DOS_CREATE_CONTEXT(a4)
+    jsr DOS_CREATE_CONTEXT(a6)
     tst.l d0
     beq.s .resolveOk
     rts
@@ -34,7 +32,7 @@ ExecuteCat:
     lea DirectoryCtx(pc),a0
     move.l a5,a1
     move.l d2,d0
-    jsr DOS_READ_FILE(a4)
+    jsr DOS_READ_FILE(a6)
     tst.l d0
     beq.s .readDone
     bpl.s .readOk

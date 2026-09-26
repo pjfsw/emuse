@@ -2,9 +2,15 @@
 ;
 ; Jump table for the root library
 ;____________________________________________________________
-
+    jmp FMChangeDirectory   ; -202
+    jmp PMGetPartitionInfo  ; -196
+    jmp PMGetPartitionCount ; -190
+    jmp FMLoadExecutable ; -184
+    jmp FMReadFile      ; -178
+    jmp FMReadDir       ; -172
+    jmp FMCreateContext ; -166
 JT_ConClearLine:    ; -160
-    jmp ConClearLine     
+    jmp ConClearLine 
 JT_ConClearEol:     ; -154
     jmp ConClearEol
 JT_ConSetCursor:    ; -148

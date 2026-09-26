@@ -67,16 +67,14 @@ ExecuteCommand2:
     rts
 .executeCommand2:
     lea ResolvedCmd(pc),a3
-    move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a0
     move.l a3,a1
-    jsr DOS_CREATE_CONTEXT(a4)
+    jsr DOS_CREATE_CONTEXT(a6)
     tst.l d0
     beq.s .resolveOk
     rts
 .resolveOk:
     lea DirectoryCtx(pc),a0
-    move.l DosLibBase(pc),a6
     jsr DOS_LOAD_PROCESS(a6)
     tst.l d0 
     beq.s .loadOk1

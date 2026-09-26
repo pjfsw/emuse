@@ -15,17 +15,16 @@ ExecuteCd:
 .pathProvided:
     move.l ROOTLIB_BASE,a6    
     lea CurrentDir,a5
-    move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a3
     lea DirEntry(pc),a2
     move.l a3,a0
-    jsr DOS_CREATE_CONTEXT(a4)
+    jsr DOS_CREATE_CONTEXT(a6)
     tst.l d0
     beq.s .resolveOk
     rts
 .resolveOk:
     move.l a3,a0
-    jsr DOS_CHANGE_DIR(a4)
+    jsr DOS_CHANGE_DIR(a6)
     tst.l d0
     beq.s .chdirOk
     rts
@@ -38,13 +37,13 @@ ExecuteCd:
 
     move.l a3,a0
     lea .parentDir(pc),a1
-    jsr DOS_CREATE_CONTEXT(a4)
+    jsr DOS_CREATE_CONTEXT(a6)
     beq.s .readNextDirEntry
     bra.s .done
 .readNextDirEntry:
     move.l a3,a0
     move.l a2,a1
-    jsr DOS_READ_DIR(a4)
+    jsr DOS_READ_DIR(a6)
     cmp.l #0,d0
     bmi.s .done
     beq.s .done

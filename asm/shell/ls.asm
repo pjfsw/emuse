@@ -1,7 +1,6 @@
     incdir ../storage
     incdir ../lib
     include dirent.i
-    include doslib.i
     include errcode.i
 
 ; A1 Command line
@@ -12,9 +11,8 @@ ExecuteLs:
     rts
 .executeLs:
     move.l ROOTLIB_BASE,a6
-    move.l DosLibBase(pc),a4
     lea DirectoryCtx(pc),a0
-    jsr DOS_CREATE_CONTEXT(a4)
+    jsr DOS_CREATE_CONTEXT(a6)
     tst.l d0
     beq.s .resolveOk
     rts
@@ -28,7 +26,7 @@ ExecuteLs:
 .nextEntry:    
     lea DirectoryCtx(pc),a0
     move.l a3,a1
-    jsr DOS_READ_DIR(a4)
+    jsr DOS_READ_DIR(a6)
     cmp.l #0,d0
     beq.s .endOfDir
     bpl.s .dirEntryOk

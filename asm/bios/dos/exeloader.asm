@@ -55,15 +55,7 @@ FMLoadExecutable:
     move.l a0,a5    ; DOS context
     lea DosTemp(a5),a5  ; Temp long word
 
-    move.l ROOTLIB_BASE,a3
-    move.l #DOS_LIB_ID,d0
-    moveq #1,d1
-    jsr LIBOPEN(a3)
-    move.l d0,a6
-    tst.l d0
-    bpl.s .dosLibOk
-    rts
-.dosLibOk:
+    move.l ROOTLIB_BASE,a6
     moveq #8,d0       
     bsr ExeStreamRead
     bpl.s .ok1
@@ -104,7 +96,7 @@ FMLoadExecutable:
     move.l d5,d0
     lsl.l #2,d0
     add.l #ProcSizeof,d0   
-    jsr MEMALLOC(a3)
+    jsr MEMALLOC(a6)
     tst.l d0
     bne.s .memoryOk
     moveq #DOS_ERR_OUT_OF_MEMORY,d0
