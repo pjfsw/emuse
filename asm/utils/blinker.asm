@@ -10,18 +10,16 @@ loop\@:
     bne.s loop\@
     endm
 
-GETC equ -52
-
-
 ;START equ $10000
     ;org START
     code
 
-    move.w sr,OldSR
+    lea OldSR(pc),a0
+    move.w sr,(a0)
     move.w #$2700,sr          ; disable while configuring    
-    lea DummyISR,a0
+    lea DummyISR(pc),a0
     move.l a0,IRQV_BLANK
-    lea TimerISR,a0
+    lea TimerISR(pc),a0
     move.l a0,IRQV_TIMER
     move.b #TIMER_150HZ,OREG+TIMER_FREQ ; 150 Hz
     move.b #0,OREG+TIMER_ACT  ; Disable timer
@@ -30,22 +28,22 @@ GETC equ -52
 
     move.l $4.w,a6
 
-    lea Msg,a1
+    lea Msg(pc),a1
     jsr CONPUTS(a6)
 
 .flushChars:
-    jsr GETC(a6)
+    jsr CONGETC(a6)
     bpl.s .flushChars
 
 .waitForChar:    
-    jsr GETC(a6)
+    jsr CONGETC(a6)
     tst.l d0
     bmi.s .waitForChar    
 
     move.w #$2700,sr          ; disable while configuring    
     move.b #0,OREG+TIMER_ACT  ; disable timer
     tst.b TIMERACK            ; Acknowledge interrupt    
-    move.w OldSR,sr           ; restore interrupt
+    move.w OldSR(pc),sr       ; restore interrupt
     move.b #0,OREG+SPI_CS     ; turn off led
     moveq #0,d0
     rts
@@ -53,15 +51,16 @@ GETC equ -52
     
 TimerISR:
     movem.l d0-d1/a0-a1,-(sp)
-    lea BlinkCount,a0
+    lea BlinkCount(pc),a0
     move.b (a0),d0
     subq.b #1,d0
     move.b d0,(a0)
     bne .1
     move.b #75,(a0)
-    move.b BlinkState,d0    
+    lea BlinkState(pc),a0
+    move.b (a0),d0    
     eor.b #3,d0
-    move.b d0,BlinkState
+    move.b d0,(a0)
     move.b d0,OREG+SPI_CS
 .1:
     tst.b TIMERACK      ; Acknowledge interrupt
@@ -71,8 +70,6 @@ TimerISR:
 DummyISR:
     rte    
 
-    data
-
 Msg:
     dc.b "Hello world",13,10,0    
     
@@ -80,8 +77,5 @@ BlinkState:
     dc.b 0
 BlinkCount:
     dc.b 75
-
-    bss
-
 OldSR:
     ds.w 1
