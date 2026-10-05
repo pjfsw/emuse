@@ -87,6 +87,13 @@ static uint32_t aluOr(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs
     return (uint32_t)result;
 }
 
+static uint32_t aluEor(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint64_t result = (uint64_t)((uint64_t)a ^ (uint64_t)b);    
+    setFlag(regs, SR_FLAGS_V, false);
+    setFlag(regs, SR_FLAGS_C, false);
+    return (uint32_t)result;
+}
+
 static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
     uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
     setAddFlags(result, size, regs);
@@ -382,6 +389,13 @@ int decodeOri(
     di->mnemonic = "ORI";
     di->aluFunc = aluOr;
 
+    return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
+}
+
+int decodeEori(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "EORI";
+    di->aluFunc = aluEor;
     return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
 }
 

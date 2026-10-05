@@ -9,6 +9,7 @@
 #include "addressable_latch.h"
 #include "uart.h"
 #include "mmc.h"
+#include "timer.h"
 #include "input_reg.h"
 #include "sector_storage.h"
 #include "file_inject.h"
@@ -38,6 +39,9 @@ void readArgs(Args *args, int argc, char *argv[]) {
                 break;
         }
     }
+    printf("Cfg->CPU speed: %d MHz (change with -z <speed>)\n", args->cpuFreq);
+    printf("Cfg->ROM file:  \"%s\" (change with -r <romfile>\n", args->romFile);
+    printf("Cfg->MMC image: \"%s\" (change with -m <mmcimage>\n", args->mmcFile);
 }
 
 size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
@@ -53,9 +57,13 @@ size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
     return bytesRead;
 }
 
+static const uint32_t TIMER_ACK_BASE = 0xa00000;
 static const uint32_t UART_BASE = 0xb00000;
 static const uint32_t AREG_BASE = 0xd00000;
 static const uint32_t GFX_BASE = 0xc00000;
+
+static const uint32_t TIMER_ACT_ADDRESS = AREG_BASE + 5;
+static const uint32_t TIMER_FREQ_ADDRESS = AREG_BASE + 7;
 static const uint32_t OVR_ADDRESS = AREG_BASE + 9;
 static const uint32_t SPI_CS_ADDRESS = AREG_BASE + 13;
 static const uint32_t SPI_MOSI_CLK_ADDRESS = AREG_BASE + 15;
@@ -91,8 +99,22 @@ static bool getMmcSi(void *userdata) {
     return (addrLatchGetValue(latch, SPI_MOSI_CLK_ADDRESS) & 2) == 2;
 }
 
+static bool isTimerActive(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return (addrLatchGetValue(latch, TIMER_ACT_ADDRESS) & 1) == 1;
+}
+
+static int getTimerSetting(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return addrLatchGetValue(latch, TIMER_FREQ_ADDRESS) & 3;
+}
+
 int main(int argc, char* argv[]) {
     Args args;
+    puts("\n****************************************************");
+    puts("** EmuSE (Emulator of Motorola 68000) version 0.1 **");
+    puts("** Copyright (C) 2026 Johan Fransson              **");
+    puts("****************************************************");
     readArgs(&args, argc, argv);
     Application app = {0};
 
@@ -180,7 +202,6 @@ int main(int argc, char* argv[]) {
     mappingKey.conditionFuncUserdata = &outReg;
     busAddReadFunc(&bus, memoryReadByte, memoryReadWord, mappingKey);
    
-
     Memory ram;
     uint32_t ramSize = 1048576;
     memoryInit(&ram, ramSize);
@@ -213,6 +234,18 @@ int main(int argc, char* argv[]) {
     mappingKey.end = GFX_BASE + 0x100000;
     mappingKey.userdata = &vga;
     busAddWriteFunc(&bus, vgaWriteByte, vgaWriteWord, mappingKey);
+
+    Timer timer;
+    timerInit(&timer, args.cpuFreq, isTimerActive, &outReg, getTimerSetting, &outReg);
+    mappingKey.start = TIMER_ACK_BASE;
+    mappingKey.end = TIMER_ACK_BASE + 0x100000;
+    mappingKey.userdata = &timer;
+    mappingKey.conditionFunc = NULL;
+    mappingKey.conditionFuncUserdata = NULL;
+    busAddReadFunc(&bus, timerReadByte, timerReadWord, mappingKey);
+    busAddWriteFunc(&bus, timerWriteByte, timerWriteWord, mappingKey);
+    busAddClockFunc(&bus, timerClock, &timer);
+    busAddInterruptFunc(&bus, 3, timerIsInterrupt, &timer);    
 
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;
