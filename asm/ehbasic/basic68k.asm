@@ -407,8 +407,13 @@ code_start:
 
 ; to tell EhBASIC where and how much RAM it has pass the address in a0 and the size
 ; in d0. these values are at the end of the .inc file
+    move.l sp,save_sp
 
-    MOVEA.l    #ram_addr,a0        ; tell BASIC where RAM starts
+    move.l ROOTLIB_BASE,a6
+    move.l #ram_size,d0
+    jsr MEMALLOC(a6)
+    move.l d0,a0
+    ;MOVEA.l    #ram_addr,a0        ; tell BASIC where RAM starts
     MOVE.l    #ram_size,d0        ; tell BASIC how big RAM is
 
 ; end of simulator specific code
@@ -486,7 +491,7 @@ LAB_sizok
     MOVE.b    d0,Nullct(a3)        ; default NULL count
     MOVE.b    d0,TPos(a3)            ; clear terminal position
     MOVE.b    d0,ccflag(a3)        ; allow CTRL-C check
-    bsr printDebug
+    ;bsr printDebug
     MOVE.w    d0,prg_strt-2(a3)        ; clear start word
 
     MOVE.w    d0,BHsend(a3)        ; clear value to string end word
@@ -9425,5 +9430,6 @@ LAB_SMSG
     ;SECTION bss,bss
 
     even
-ram_addr:   
-        ds.b ram_size
+ram_addr:   ds.l 1
+save_sp:    ds.l 1
+        ;ds.b ram_size
