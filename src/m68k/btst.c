@@ -1,6 +1,8 @@
 #include "btst.h"
 #include "sourcedest.h"
 
+#include <stdio.h>
+
 static int executeBtst(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
     int cycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &value);
@@ -39,4 +41,10 @@ int decodeBtstImmediate(
     }
     cycles += eaCycles;
     return cycles;
+}
+
+int decodeBtst(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+        printf("BTST Dx,Dx not implemented\n");
+        return -1;
 }

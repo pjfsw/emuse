@@ -84,6 +84,55 @@ static void setShiftTargetRegister(uint16_t opcode, EffectiveAddress *ea) {
     ea->xn = dstReg;
 }
 
+static void arithmeticShiftLeft(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
+    uint32_t v = *value;
+    uint32_t sign = 1u << (bits - 1);
+    bool carry = false;
+    bool overflow = false;
+
+    for (int i = 0; i < count; i++) {
+        bool oldSign = (v & sign) != 0;
+
+        carry = oldSign;
+        v = (v << 1) & mask;
+
+        bool newSign = (v & sign) != 0;
+        if (oldSign != newSign) {
+            overflow = true;
+        }
+    }
+
+    setFlag(registers, SR_FLAGS_C, carry);
+    setFlag(registers, SR_FLAGS_X, carry);
+    setFlag(registers, SR_FLAGS_V, overflow);
+
+    *value = v;
+}
+
+static void arithmeticShiftRight(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
+    uint32_t v = *value;
+    uint32_t sign = 1u << (bits - 1);
+    bool carry = false;
+
+    for (int i = 0; i < count; i++) {
+        carry = (v & 1) != 0;
+
+        v >>= 1;
+
+        if (v & (sign >> 1)) {
+            v |= sign;
+        }
+    }
+
+    v &= mask;
+
+    setFlag(registers, SR_FLAGS_C, carry);
+    setFlag(registers, SR_FLAGS_X, carry);
+    setFlag(registers, SR_FLAGS_V, false);
+
+    *value = v;
+}
+
 static void shiftLeft(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
     uint32_t v = *value;
     bool carry;
@@ -101,6 +150,8 @@ static void shiftLeft(uint32_t *value, M68kRegisters *registers, uint32_t mask, 
 
     setFlag(registers, SR_FLAGS_C, carry);
     setFlag(registers, SR_FLAGS_X, carry);
+    setFlag(registers, SR_FLAGS_V, false);
+
     *value = v;
 }
 
@@ -121,6 +172,8 @@ static void shiftRight(uint32_t *value, M68kRegisters *registers, uint32_t mask,
 
     setFlag(registers, SR_FLAGS_C, carry);
     setFlag(registers, SR_FLAGS_X, carry);
+    setFlag(registers, SR_FLAGS_V, false);
+
     *value = v & mask;
 }
 
@@ -154,8 +207,6 @@ static int executeShift(
     uint32_t value = src & mask;
     int count = di->src.immediate;
 
-    setFlag(registers, SR_FLAGS_V, false);
-
     if (count == 0) {
         /* LSL/LSR with register count zero clear C but leave X unchanged. */
         setFlag(registers, SR_FLAGS_C, false);
@@ -180,6 +231,20 @@ static int executeLsr(DecodedInstruction *di, M68kRegisters *registers,
 {
     return executeShift(di, registers, rwFunc, userdata, shiftRight);
 }
+
+static int executeAsl(DecodedInstruction *di, M68kRegisters *registers,
+                      RwFunc *rwFunc, void *userdata)
+{
+    return executeShift(di, registers, rwFunc, userdata, arithmeticShiftLeft);
+}
+
+
+static int executeAsr(DecodedInstruction *di, M68kRegisters *registers,
+                      RwFunc *rwFunc, void *userdata)
+{
+    return executeShift(di, registers, rwFunc, userdata, arithmeticShiftRight);
+}
+
 
 
 int decodeRoxrEa(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
@@ -229,5 +294,23 @@ int decodeLsr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
     di->execFunc = executeLsr;
     setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
     setShiftTargetRegister(opcode, &di->dst);    
+    return 0;
+}
+
+int decodeAsl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ASL";
+    di->execFunc = executeAsl;
+    setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
+    setShiftTargetRegister(opcode, &di->dst);    
+    printf("ASL\n");
+    return 0;
+}
+
+int decodeAsr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ASR";
+    di->execFunc = executeAsr;
+    setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
+    setShiftTargetRegister(opcode, &di->dst);    
+    printf("ASR\n");
     return 0;
 }

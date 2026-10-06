@@ -138,8 +138,16 @@ typedef struct {
 // LSL !
 
 static const DecodeRule rules[] = {
+    /*
+    TODO 
+    { 0xffff, 0x003c, decodeOriCcr,  IF_MOVE_TO_SR },
+    { 0xffff, 0x023c, decodeAndiCcr, IF_MOVE_TO_SR },
+    { 0xffff, 0x0a3c, decodeEoriCcr, IF_MOVE_TO_SR },
+    { 0xffff, 0x007c, decodeOriSr,   IF_MOVE_TO_SR },
+    { 0xffff, 0x027c, decodeAndiSr,  IF_MOVE_TO_SR },
+    { 0xffff, 0x0a7c, decodeEoriSr,  IF_MOVE_TO_SR },    */
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
-    { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},
+    { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},    
     { 0xfff8, 0x4840, decodeSwap, IF_SINGLE_DEST },
     { 0xfff8, 0x4880, decodeExtw, IF_SINGLE_DEST },
     { 0xfff8, 0x48c0, decodeExtl, IF_SINGLE_DEST },
@@ -149,6 +157,7 @@ static const DecodeRule rules[] = {
     { 0xffc0, 0x40c0, decodeMoveFromSr, IF_MOVE_FROM_SR },
     { 0xffc0, 0x46c0, decodeMoveToSr, IF_MOVE_TO_SR},
     { 0xffc0, 0x0800, decodeBtstImmediate, IF_MOVE}, 
+    { 0xf1c0, 0x0100, decodeBtst, IF_MOVE },
     { 0xffc0, 0xe4c0, decodeRoxrEa, IF_MOVE},
     { 0xffc0, 0xe5c0, decodeRoxlEa, IF_MOVE},
     { 0xff00, 0x0600, decodeAddi, IF_MOVE },
@@ -160,6 +169,8 @@ static const DecodeRule rules[] = {
     { 0xff00, 0x4a00, decodeTst, IF_SINGLE_SRC},
     { 0xff00, 0x0c00, decodeCmpi, IF_MOVE },
     { 0xfb80, 0x4880, decodeMovem, IF_MOVEM}, 
+    { 0xf118, 0xe000, decodeAsr,  IF_MOVE },
+    { 0xf118, 0xe100, decodeAsl,  IF_MOVE },    
     { 0xf118, 0xe008, decodeLsr, IF_MOVE},
     { 0xf118, 0xe108, decodeLsl, IF_MOVE},
     { 0xf118, 0xe010, decodeRoxr, IF_MOVE},
