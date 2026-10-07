@@ -42,11 +42,15 @@ PrintError:
     dc.l PM_ERR_DEVICE_ERROR,.deviceErrorMsg
     dc.l PM_ERR_DEVICE_NOT_FOUND,.deviceNotFoundMsg
     dc.l PM_ERR_PARTITION_NOT_FOUND,.partNotFoundMsg
+    dc.l $88020000,.invalidPathMsg  ; From fileman.asm - todo change bios to use errcode.i 
+
     dc.l 0,0
 .genericErrorMsg:
     dc.b "Code ",0
 .errorMsg:
     dc.b "Err: ",0
+.invalidPathMsg:
+    dc.b "Invalid path",0    
 .notDirectoryMsg:
     dc.b "Not a directory",0
 .notRegularFileMsg:
