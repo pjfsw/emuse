@@ -30,6 +30,8 @@ Prompt:
     beq .readEscapeSequence
     cmp.b #$7f,d0
     beq.s .eraseChar
+    cmp.b #8,d0
+    beq.s .eraseChar
     cmp.b #13,d0
     beq.s .lineBreak
     cmp.w #MAX_CMDLINE_LENGTH-1,d7
@@ -102,7 +104,14 @@ Prompt:
 .readEscapeSequence:
     bsr PromptWaitKey
     cmp.b #'[',d0
+    beq.s .readEscapeSequence2
+    cmp.b #'O',d0    
     bne .waitForChar
+    bsr PromptWaitKey
+    cmp.b #'F',d0
+    beq.s .moveEnd
+    bra .waitForChar
+.readEscapeSequence2:    
     bsr PromptWaitKey
     cmp.b #'D',d0
     beq.s .moveLeft
@@ -112,7 +121,14 @@ Prompt:
     beq.s .moveHome
     cmp.b #'F',d0
     beq.s .moveEnd
+    cmp.b #'1',d0
+    beq.s .waitHome2
     bra .waitForChar
+.waitHome2:
+    bsr PromptWaitKey
+    cmp.b #'~',d0
+    beq.s .moveHome
+    bra .waitForChar    
 .moveLeft:
     tst.l d6
     beq .waitForChar
