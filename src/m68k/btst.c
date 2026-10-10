@@ -1,7 +1,8 @@
 #include "btst.h"
-#include "sourcedest.h"
 
 #include <stdio.h>
+
+#include "sourcedest.h"
 
 static int executeBtst(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
@@ -16,7 +17,7 @@ static int executeBtst(DecodedInstruction *di, M68kRegisters *registers, RwFunc 
 
     bit &= (di->dst.mode == AM_DREG) ? 31 : 7;
     int isSet = value & (1 << bit);
-    
+
     setFlag(registers, SR_FLAGS_Z, isSet == 0);
     if (cycleCount < 0) {
         return -1;
@@ -54,10 +55,7 @@ int decodeBtstImmediate(
 }
 
 int decodeBtst(
-    uint16_t opcode, DecodedInstruction *di,
-    M68kRegisters *registers, RwFunc *rwFunc,
-    void *readWriteUserdata)
-{
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
 
     uint16_t bitReg = (opcode >> 9) & 7;
@@ -74,3 +72,26 @@ int decodeBtst(
     return getEffectiveAddress(registers, dstMode, dstReg, di->size, &di->dst, readWordFunc, readWriteUserdata);
 }
 
+int decodeBsetImmediate(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    printf("BSET not implemented\n");
+    return -1;
+}
+
+int decodeBset(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    printf("BSET not implemented\n");
+    return -1;
+}
+
+int decodeBclrImmediate(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    printf("BCLR not implemented\n");
+    return -1;
+}
+
+int decodeBclr(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    printf("BCLR not implemented\n");
+    return -1;
+}
