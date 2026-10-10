@@ -121,8 +121,11 @@ static int readFile(Data *data, char *input_file) {
     for (;;) {
         int32_t read = dosReadFile(&ctx, fileBuf, sizeof(fileBuf));
 
-        if (read <= 0) {
+        if (read < 0) {
             return read;
+        }
+        if (read == 0) {
+            break;
         }
 
         for (int32_t i = 0; i < read; i++) {
