@@ -153,6 +153,9 @@ static void toggleStepping(Application *app) {
 
 static void singleStep(Application *app) {
     // Because audioIsBusy == 0, we have 100% exclusive access to the system.
+    if (app->cpu->crashed) {
+        return;
+    }
     int cycles = app->audio.mainTicker(app->audio.mainTickerUserdata);
     if (cycles <= 0) {
         return;
@@ -204,7 +207,7 @@ static void handleEvents(Application* app) {
                 app->pixelPerfect = !app->pixelPerfect;
             }            
             // --- Single Step Execution ---
-            if ((key == SDLK_F5) || (key == SDLK_F6) && app->is_stepping) {
+            if (((key == SDLK_F5) || (key == SDLK_F6)) && app->is_stepping) {
                 singleStep(app);
             }
             if (mod & SDL_KMOD_CTRL) {

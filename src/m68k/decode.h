@@ -47,7 +47,8 @@ typedef enum {
     IF_SINGLE_SRC,
     IF_LEA,
     IF_MOVEM,
-    IF_JUMP
+    IF_JUMP,
+    IF_BIT
 } InstructionFamily;
 
 typedef struct {

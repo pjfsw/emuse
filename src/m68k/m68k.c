@@ -172,6 +172,13 @@ static void disassembleMove(DecodedInstruction *di, Instruction *instruction) {
     disassembleEa(instruction, &di->dst, di->size);
 }
 
+static void disassembleBit(DecodedInstruction *di, Instruction *instruction) {
+    addPadding(instruction);
+    addDisassembly(instruction, " ", SYM_SYMBOL);
+    disassembleEa(instruction, &di->src, di->size);
+    addDisassembly(instruction, ",", SYM_SYMBOL);
+    disassembleEa(instruction, &di->dst, di->size);
+}
 typedef void (*RegisterDisassemblyFunc)(Instruction *instruction, uint16_t regNo);
 
 typedef struct {
@@ -327,6 +334,9 @@ static void disassemble(M68k *cpu, M68kRegisters *regs, char *address, Instructi
             break;
         case IF_JUMP:
             disassembleJump(&di, regs->pc, instruction);
+            break;
+        case IF_BIT:
+            disassembleBit(&di, instruction);
             break;
         case IF_UNKNOWN:
             char s[100];

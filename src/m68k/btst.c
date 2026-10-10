@@ -6,7 +6,17 @@
 static int executeBtst(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
     int cycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &value);
-    int isSet = value & (1 << di->src.immediate);
+
+    int bit;
+    if (di->src.mode == AM_DREG) {
+        bit = registers->d[di->src.xn];  // Adapt register field name
+    } else {
+        bit = di->src.immediate;
+    }
+
+    bit &= (di->dst.mode == AM_DREG) ? 31 : 7;
+    int isSet = value & (1 << bit);
+    
     setFlag(registers, SR_FLAGS_Z, isSet == 0);
     if (cycleCount < 0) {
         return -1;
@@ -44,7 +54,23 @@ int decodeBtstImmediate(
 }
 
 int decodeBtst(
-    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-        printf("BTST Dx,Dx not implemented\n");
-        return -1;
+    uint16_t opcode, DecodedInstruction *di,
+    M68kRegisters *registers, RwFunc *rwFunc,
+    void *readWriteUserdata)
+{
+    ReadWordFunc readWordFunc = rwFunc->rw;
+
+    uint16_t bitReg = (opcode >> 9) & 7;
+    uint16_t dstMode = (opcode >> 3) & 7;
+    uint16_t dstReg = opcode & 7;
+
+    di->execFunc = executeBtst;
+    di->mnemonic = "BTST";
+    di->size = (dstMode == AM_DREG) ? IS_LONG : IS_BYTE;
+
+    di->src.mode = AM_DREG;
+    di->src.xn = bitReg;
+
+    return getEffectiveAddress(registers, dstMode, dstReg, di->size, &di->dst, readWordFunc, readWriteUserdata);
 }
+
