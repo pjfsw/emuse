@@ -302,7 +302,6 @@ int decodeAsl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
     di->execFunc = executeAsl;
     setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
     setShiftTargetRegister(opcode, &di->dst);    
-    printf("ASL\n");
     return 0;
 }
 
@@ -311,6 +310,5 @@ int decodeAsr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
     di->execFunc = executeAsr;
     setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
     setShiftTargetRegister(opcode, &di->dst);    
-    printf("ASR\n");
     return 0;
 }
