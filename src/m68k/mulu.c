@@ -1,6 +1,29 @@
 #include "mulu.h"
 #include "sourcedest.h"
 
+static int executeMuls(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t src;
+
+    int cycles = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &src);
+    if (cycles < 0) {
+        return -1;
+    }
+
+    int32_t lhs = (int16_t)(registers->d[di->dst.xn] & 0xffff);
+    int32_t rhs = (int16_t)(src & 0xffff);
+    int32_t result = lhs * rhs;
+
+    registers->d[di->dst.xn] = (uint32_t)result;
+
+    setFlag(registers, SR_FLAGS_N, result < 0);
+    setFlag(registers, SR_FLAGS_Z, result == 0);
+    setFlag(registers, SR_FLAGS_V, false);
+    setFlag(registers, SR_FLAGS_C, false);
+    /* X unchanged */
+
+    return cycles + 70; /* approximate for now */
+}
+
 static int executeMulu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t src;
 
@@ -39,4 +62,16 @@ int decodeMulu(
     di->dst.xn = dstReg;
 
     return getEffectiveAddress(registers, srcMode, srcReg, IS_WORD, &di->src, rwFunc->rw, readWriteUserdata);
+}
+
+int decodeMuls(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    int cycles = decodeMulu(opcode, di, registers, rwFunc, readWriteUserdata);
+    if (cycles < 0) {
+        return -1;
+    }
+
+    di->mnemonic = "MULS";
+    di->execFunc = executeMuls;
+    return cycles;
 }

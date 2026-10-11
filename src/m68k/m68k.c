@@ -522,10 +522,11 @@ int m68kClock(void *userdata) {
         return handleInterrupt(cpu, level);
     }
 
+    uint32_t savedPc = cpu->registers.pc;
     int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
     if (cycles <= 0) {
         cpu->cpu.crashed = true;
-        printf("### CPU crash at decode step (opcode $%04x)\n", di.opcode);
+        printf("### CPU crash at decode step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
         return - 1;
     }
     int execCycles = -1;
@@ -534,7 +535,15 @@ int m68kClock(void *userdata) {
     }
     if (execCycles < 0) {
         cpu->cpu.crashed = true;
-        printf("### CPU crash at execution step\n");
+        printf("### CPU crash at execution step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
+        return -1;
+    }
+    if (cpu->registers.pc & 1) {
+        cpu->cpu.crashed =true;
+        printf("### Emulator error, PC has odd value (last opcode $%04x, old PC=$%08x, new PC=$%08x\n",
+            di.opcode,
+            savedPc,
+            cpu->registers.pc);
         return -1;
     }
     cycles += execCycles;

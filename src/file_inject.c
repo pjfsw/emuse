@@ -125,7 +125,7 @@ int inject_file(uint8_t *sd_image, const char *filename) {
     uint16_t cluster = read_le16(sd_image + dir_offset + 26);
     uint64_t data_offset = fat16_cluster_offset(sd_image, cluster);
 
-    printf("Found %s dir offset at %08x, data offset at %08x\n", filename, dir_offset, data_offset);
+    printf("Found %s dir offset at %08lx, data offset at %08lx\n", filename, dir_offset, data_offset);
 
     FILE *file = fopen(filename, "rb");
 

@@ -169,7 +169,8 @@ static const DecodeRule rules[] = {
     { 0xff00, 0x0000, decodeOri, IF_MOVE},
     { 0xff00, 0x0200, decodeAndi, IF_MOVE},
     { 0xff00, 0x4200, decodeClr, IF_SINGLE_DEST},
-    { 0xff00, 0x4600, decodeNot,  IF_SINGLE_DEST },    
+    { 0xff00, 0x4400, decodeNeg, IF_SINGLE_DEST },     
+    { 0xff00, 0x4600, decodeNot,  IF_SINGLE_DEST },   
     { 0xff00, 0x4a00, decodeTst, IF_SINGLE_SRC},
     { 0xff00, 0x0c00, decodeCmpi, IF_MOVE },
     { 0xfb80, 0x4880, decodeMovem, IF_MOVEM}, 
@@ -186,6 +187,7 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xb0c0, decodeCmpa, IF_MOVE }, // CMPA.W
     { 0xf1c0, 0xb1c0, decodeCmpa, IF_MOVE }, // CMPA.L
     { 0xf1c0, 0xc0c0, decodeMulu, IF_MOVE },
+    { 0xf1c0, 0xc1c0, decodeMuls, IF_MOVE },    
     { 0xf1c0, 0x80c0, decodeDivu, IF_MOVE },
     { 0xf1c0, 0x81c0, decodeDivs, IF_MOVE },
 

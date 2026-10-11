@@ -25,6 +25,37 @@ static int execNot(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwF
     return cycleCount;
 }
 
+static int execNeg(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    uint32_t value;
+    int cycleCount = readSource(di, registers, &di->dst, rwFunc, readWriteUserdata, &value);
+    if (cycleCount < 0) {
+        return -1;
+    }
+
+    uint32_t mask = di->size == 0 ? 0xff : di->size == 1 ? 0xffff : 0xffffffff;
+
+    uint32_t signBit = (mask >> 1) + 1;
+    uint32_t operand = value & mask;
+    uint32_t result = (0u - operand) & mask;
+
+    int writeCycles = writeDest(di, registers, rwFunc, readWriteUserdata, result);
+    if (writeCycles < 0) {
+        return -1;
+    }
+
+    cycleCount += writeCycles;
+
+    // CCR:
+    // X and C: set if operand != 0
+    // V: set if negating minimum signed value
+    // N: set if result is negative
+    // Z: set if result is zero
+
+    // Update CCR here using your existing flag helpers.
+
+    return cycleCount;
+}
+
 static int decodeCommon(
     uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     ReadWordFunc readWordFunc = rwFunc->rw;
@@ -54,3 +85,9 @@ int decodeNot(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers,
 
     return decodeCommon(opcode, di, registers, rwFunc, readWriteUserdata);
 }
+
+int decodeNeg(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "NEG";
+    di->execFunc = execNeg;
+    return decodeCommon(opcode, di, registers, rwFunc, readWriteUserdata);
+}    

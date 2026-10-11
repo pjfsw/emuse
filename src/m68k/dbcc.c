@@ -1,5 +1,6 @@
 #include "dbcc.h"
 #include "condition.h"
+#include <stdio.h>
 
 static int executeDbcc(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     bool result = checkCondition(di->condition, registers);
@@ -39,6 +40,9 @@ int decodeDbcc(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers
     uint16_t reg = opcode & 7;
     getEffectiveAddress(registers, AM_DREG, reg, IS_WORD, &di->src, readWordFunc, readWriteUserdata);
     di->displacement = (int32_t)(int16_t)readWordFunc(readWriteUserdata, registers->pc) - 2;
+    if (di->displacement & 1) {
+        printf("%04x: Displacement %04x\n", opcode, di->displacement);
+    }
     // !! Displacement is taken from the PC after the opcode word not after the extension word
     di->size = IS_WORD;
     increasePc(registers);
