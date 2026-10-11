@@ -158,6 +158,7 @@ int main(int argc, char* argv[]) {
         inject_file(storage.data, "edit/build/edit.exe");
         inject_file(storage.data, "build/blinker.exe");
         inject_file(storage.data, "build/system.bin");
+        inject_file(storage.data, "build/basic68k.exe");
         cardInserted = true;
     }
 

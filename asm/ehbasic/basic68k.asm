@@ -384,18 +384,27 @@ LAB_FILENAME
 
 printDebug:
     movem.l d0-d7/a0-a6,-(sp)
-    bsr.s .printDebug
-    movem.l (sp)+,d0-d7/a0-a6
-    rts
-.printDebug:
-    lea initmsg,a1
     move.l ROOTLIB_BASE,a6
+    move.l d1,d0
+    jsr CONPUTHEX32(a6)
+    lea .debugMsg(pc),a1
     jsr CONPUTS(a6)
-    move.l #prg_strt,d0
-    jmp CONPUTHEX32(a6)
-initmsg:
-    dc.b "Debug",13,10,0
+    ;move.w #$7fff,d7
+    ;move.w #$f,d6
+;.g2:
+;.gg:
+    ; Dummy loop to allow flushing serial data
+    ;dbra d7,.gg
+    ;dbra d6,.g2
+    movem.l (sp)+,d0-d7/a0-a6
+    rts    
+.debugMsg:
+    dc.b "Debug",13,10,0    
     even
+.debugSp:
+    dc.l 0
+save_sp:    dc.l 0
+
 code_start:
                                 ; Set up ACIA parameters
         ;LEA.L   ACIA_1,A0       ; A0 points to console ACIA
@@ -491,7 +500,6 @@ LAB_sizok
     MOVE.b    d0,Nullct(a3)        ; default NULL count
     MOVE.b    d0,TPos(a3)            ; clear terminal position
     MOVE.b    d0,ccflag(a3)        ; allow CTRL-C check
-    ;bsr printDebug
     MOVE.w    d0,prg_strt-2(a3)        ; clear start word
 
     MOVE.w    d0,BHsend(a3)        ; clear value to string end word
@@ -878,8 +886,10 @@ LAB_1301
     MOVE.w    -(a1),-(a2)            ; decrement pointers and copy word
     DBF        d1,LAB_1301            ; decrement & loop
 
+
     SWAP        d1                ; swap high word to low word
     DBF        d1,LAB_12FF            ; decrement high count and loop until done
+
 
 ; space is opened up, now copy the crunched line from the input buffer into the space
 
@@ -9431,5 +9441,4 @@ LAB_SMSG
 
     even
 ram_addr:   ds.l 1
-save_sp:    ds.l 1
         ;ds.b ram_size

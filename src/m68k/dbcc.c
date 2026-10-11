@@ -10,10 +10,10 @@ static int executeDbcc(DecodedInstruction *di, M68kRegisters *registers, RwFunc 
     int cycles;
 
     if (!result) {
-        int16_t value = (int16_t)*reg;
-        value = value - 1;        
-        shouldBranch = (value != -1);
-        *reg = (*reg & 0xffff0000) | (int32_t)(value);
+        uint16_t value = (uint16_t)*reg;
+        value--;
+        shouldBranch = (value != 0xffff);
+        *reg = (*reg & 0xffff0000u) | value;
         cycles = shouldBranch ? 6 : 10;
     } else {
         shouldBranch = false;
