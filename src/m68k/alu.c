@@ -13,9 +13,13 @@ static void setAddFlags(uint64_t result, uint16_t size, M68kRegisters *regs) {
     bool carry = (uint64_t)result != (uint64_t)realResult;
     setFlag(regs, SR_FLAGS_C, carry);
     setFlag(regs, SR_FLAGS_X, carry);
-    //printf("%lx %lx %d %x\n", result, realResult, carry, regs->sr);
 }
 
+static void setOverflow(uint64_t a, uint64_t b, uint64_t result, uint16_t size, M68kRegisters *regs) {
+    uint32_t sign = (size == IS_BYTE) ? 0x80 : ((size == IS_WORD) ? 0x8000 : 0x80000000u);
+    bool overflow = (~(a ^ b) & (a ^ (uint32_t)result) & sign) != 0;
+    setFlag(regs, SR_FLAGS_V, overflow);    
+}
 
 static uint32_t aluSub(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
     uint32_t mask;
@@ -95,15 +99,24 @@ static uint32_t aluEor(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *reg
 }
 
 static uint32_t aluAdd(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
-    uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b);    
+    uint32_t mask = (size == IS_BYTE)? 0xff : ((size == IS_WORD) ? 0xffff : 0xffffffff);
+    uint64_t maskedA = (uint64_t)(a & mask);
+    uint64_t maskedB = (uint64_t)(b & mask); 
+    uint64_t result = maskedA + maskedB;
     setAddFlags(result, size, regs);
+    setOverflow(maskedA, maskedB, result, size, regs);
     return (uint32_t)result;
 }
 
 static uint32_t aluAddx(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint32_t mask = (size == IS_BYTE)? 0xff : ((size == IS_WORD) ? 0xffff : 0xffffffff);
+
     uint64_t x = getFlag(regs, SR_FLAGS_X) ? 1 : 0;
-    uint64_t result = (uint64_t)((uint64_t)a + (uint64_t)b + x);    
+    uint64_t maskedA = (uint64_t)(a & mask);
+    uint64_t maskedB = (uint64_t)(b & mask); 
+    uint64_t result =  maskedA + maskedB + x;    
     setAddFlags(result, size, regs);
+    setOverflow(maskedA, maskedB, result, size, regs);
     return (uint32_t)result;
 }
 
@@ -119,11 +132,17 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
         return -1;
     }
     cycleCount += destCycleCount;
+    bool oldZ = getFlag(registers, SR_FLAGS_Z);    
     dst = di->aluFunc(src,dst, di->size, registers);
     int writeCycleCount = writeDest(di, registers, rwFunc, readWriteUserdata, dst);
     if (writeCycleCount < 0) {
         return -1;        
     }
+    if (di->aluFunc == aluAddx) {
+        uint32_t mask = (di->size == IS_BYTE)? 0xff : ((di->size == IS_WORD) ? 0xffff : 0xffffffff);
+        bool resultZero = (dst & mask) == 0;
+        setFlag(registers, SR_FLAGS_Z, oldZ && resultZero);
+    }    
     cycleCount += writeCycleCount;
     return cycleCount;
 }

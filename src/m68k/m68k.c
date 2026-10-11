@@ -505,6 +505,13 @@ static int handleInterrupt(M68k *cpu, uint8_t level) {
     return 44;
 }
 
+static void showRegisters(M68kRegisters *registers) {
+    printf("SR = %04x\n", registers->sr);
+    for (int i = 0; i < 8; i++) {
+        printf("D%d = %08x    A%d = %08x\n", i, registers->d[i], i, registers->a[i]);
+    }
+}
+
 int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
@@ -527,6 +534,7 @@ int m68kClock(void *userdata) {
     if (cycles <= 0) {
         cpu->cpu.crashed = true;
         printf("### CPU crash at decode step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
+        showRegisters(&cpu->registers);
         return - 1;
     }
     int execCycles = -1;
@@ -536,6 +544,7 @@ int m68kClock(void *userdata) {
     if (execCycles < 0) {
         cpu->cpu.crashed = true;
         printf("### CPU crash at execution step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
+        showRegisters(&cpu->registers);
         return -1;
     }
     if (cpu->registers.pc & 1) {
@@ -544,6 +553,7 @@ int m68kClock(void *userdata) {
             di.opcode,
             savedPc,
             cpu->registers.pc);
+        showRegisters(&cpu->registers);
         return -1;
     }
     cycles += execCycles;

@@ -2166,6 +2166,7 @@ LAB_1831
     BEQ        LAB_18BD            ; if ";" continue with PRINT processing
 
     BSR        LAB_EVEX            ; evaluate expression
+
     TST.b        Dtypef(a3)            ; test data type, $80=string, $40=integer,
                             ; $00=float
     BMI.s        LAB_1829            ; branch if string
@@ -2731,6 +2732,7 @@ LAB_1B43                        ;
 LAB_1ACD
     MOVE.w    d1,-(sp)            ; push precedence value
     BSR        LAB_GVAL            ; get value from line
+
     MOVE.b    #$00,comp_f(a3)        ; clear compare function flag
 LAB_1ADB
     BSR        LAB_GBYT            ; scan memory
@@ -2762,9 +2764,10 @@ LAB_1AE0
 LAB_1AFA
     TST.b        comp_f(a3)            ; test compare function flag
     BNE.s        LAB_1B2A            ; branch if compare function
-
                             ; was < TK_GT so is operator or lower
     ADD.b    #(TK_GT-TK_PLUS),d0        ; add # of operators (+ - * / ^ AND OR EOR)
+;    nop                        
+
     BCC.s        LAB_1B78            ; branch if < + operator
 
     BNE.s        LAB_1B0B            ; branch if not + token
@@ -4192,6 +4195,7 @@ LAB_RTST
     MOVE.l    a0,-(a4)            ; string address on stack
     MOVE.l    a4,FAC1_m(a3)        ; string descriptor pointer in FAC1
     MOVE.b    #$80,Dtypef(a3)        ; save data type flag, $80=string
+    ;bsr printDebug
     RTS
 
 
