@@ -27,7 +27,10 @@ loop\@:
 
     include "jt_root.asm"   ; MUST BE IMMEDIATELY ABOVE "Start"
 Start:
-    move.b #OVR_OFF,OVR_REG       
+    move.b #OVR_OFF,OVR_REG      
+
+    ;bsr TestAddAddx 
+    ;bsr TestSubSubx
 
     move.w #$2700,sr    ; disable interrupts while configuring    
     lea Start,a6
@@ -133,3 +136,5 @@ menuMsg:
     include console.asm
     include biosram.asm
     include decimal.asm
+    include addtest.asm
+    include subtest.asm
