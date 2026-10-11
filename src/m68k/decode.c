@@ -187,6 +187,11 @@ static const DecodeRule rules[] = {
     { 0xf1c0, 0xb108, decodeCmpm, IF_MOVE },  // CMPM
     { 0xf1c0, 0xb0c0, decodeCmpa, IF_MOVE }, // CMPA.W
     { 0xf1c0, 0xb1c0, decodeCmpa, IF_MOVE }, // CMPA.L
+    // EOR
+    { 0xf1c0, 0xb100, decodeEor, IF_MOVE },
+    { 0xf1c0, 0xb140, decodeEor, IF_MOVE },
+    { 0xf1c0, 0xb180, decodeEor, IF_MOVE },    
+    
     { 0xf1c0, 0xc0c0, decodeMulu, IF_MOVE },
     { 0xf1c0, 0xc1c0, decodeMuls, IF_MOVE },    
     { 0xf1c0, 0x80c0, decodeDivu, IF_MOVE },
