@@ -57,6 +57,41 @@ static int executeRor(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     return rotate(di, registers, rwFunc, readWriteUserdata, rotateRight);
 }
 
+static void rotateExtendRight(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
+    uint32_t v = *value;
+    uint32_t sign = 1u << (bits - 1);
+    bool x = getFlag(registers, SR_FLAGS_X);
+
+    for (int i = 0; i < count; i++) {
+        bool carry = (v & 1) != 0;
+        v = (v >> 1) | (x ? sign : 0);
+        x = carry;
+    }
+
+    *value = v & mask;
+
+    setFlag(registers, SR_FLAGS_X, x);
+    setFlag(registers, SR_FLAGS_C, x);
+    setFlag(registers, SR_FLAGS_V, false);
+}
+
+static void rotateExtendLeft(uint32_t *value, M68kRegisters *registers, uint32_t mask, int bits, int count) {
+    uint32_t v = *value;
+    bool x = getFlag(registers, SR_FLAGS_X);
+
+    for (int i = 0; i < count; i++) {
+        bool carry = (v & (1u << (bits - 1))) != 0;
+        v = ((v << 1) | (x ? 1u : 0u)) & mask;
+        x = carry;
+    }
+
+    *value = v;
+
+    setFlag(registers, SR_FLAGS_X, x);
+    setFlag(registers, SR_FLAGS_C, x);
+    setFlag(registers, SR_FLAGS_V, false);
+}
+
 static void setShiftModeSizeAndValue(uint16_t opcode, M68kRegisters *registers, EffectiveAddress *ea, InstructionSize *size) {
     uint16_t source = (opcode >> 5) & 1;
     uint16_t amount = (opcode >> 9) & 7;
@@ -208,13 +243,13 @@ static int executeShift(
     int count = di->src.immediate;
 
     if (count == 0) {
-        /* LSL/LSR with register count zero clear C but leave X unchanged. */
-        setFlag(registers, SR_FLAGS_C, false);
+        bool isRox = (shiftFunc == rotateExtendRight) || (shiftFunc == rotateExtendLeft);
+        setFlag(registers, SR_FLAGS_C, isRox ? getFlag(registers, SR_FLAGS_X) : false);
     } else {
         shiftFunc(&value, registers, mask, bits, count);
     }
 
-    writeDest(di, registers, rwFunc, readWriteUserdata, value);
+    writeDest(di, registers, rwFunc, readWriteUserdata, value);    
 
     return cycleCount + 2 + count * 2;
 }
@@ -245,7 +280,15 @@ static int executeAsr(DecodedInstruction *di, M68kRegisters *registers,
     return executeShift(di, registers, rwFunc, userdata, arithmeticShiftRight);
 }
 
+static int executeRoxr(DecodedInstruction *di, M68kRegisters *registers,
+                       RwFunc *rwFunc, void *userdata) {
+    return executeShift(di, registers, rwFunc, userdata, rotateExtendRight);
+}
 
+static int executeRoxl(DecodedInstruction *di, M68kRegisters *registers,
+                       RwFunc *rwFunc, void *userdata) {
+    return executeShift(di, registers, rwFunc, userdata, rotateExtendLeft);
+}
 
 int decodeRoxrEa(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     return -1;
@@ -256,14 +299,23 @@ int decodeRoxlEa(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registe
     return -1;
 }
 
-int decodeRoxr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    return -1;
+int decodeRoxr(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ROXR";
+    di->execFunc = executeRoxr;
+    setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
+    setShiftTargetRegister(opcode, &di->dst);
+    return 0;
 }
 
-int decodeRoxl(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
-    return -1;
+int decodeRoxl(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "ROXL";
+    di->execFunc = executeRoxl;
+    setShiftModeSizeAndValue(opcode, registers, &di->src, &di->size);
+    setShiftTargetRegister(opcode, &di->dst);
+    return 0;
 }
-
 
 int decodeRor(uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     di->mnemonic = "ROR";

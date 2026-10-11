@@ -406,3 +406,11 @@ int decodeAddi(
 
     return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
 }
+
+int decodeSubi(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "SUBI";
+    di->aluFunc = aluSub;
+
+    return decodeAluImmediate(opcode, di, registers, rwFunc, readWriteUserdata);
+}
