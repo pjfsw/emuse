@@ -60,7 +60,7 @@ OsDeviceList:       rs.b SD_DEVICE_LIST_SIZE
 OsPartitionList:    rs.b PM_PART_LIST_SIZE
 OsVolumeList:       rs.b FM_LIST_SIZE
 OsDosState:         rs.b DosSizeof
-OsGfxVars:          rs.w 1
+OsGfxVars:          rs.w 3
 OsConsoleFunc:      rs.b ConsoleFuncSizeof
 OsMmcCmdArg:        rs.b 4
 OsBootMediaStatus:  rs.w 1

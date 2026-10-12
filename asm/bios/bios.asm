@@ -136,5 +136,5 @@ menuMsg:
     include console.asm
     include biosram.asm
     include decimal.asm
-    include addtest.asm
-    include subtest.asm
+    ;include addtest.asm
+    ;include subtest.asm

@@ -8,12 +8,15 @@
 #define VGA_REG_DATA 0
 #define VGA_REG_ADDR_HI 1
 #define VGA_REG_ADDR_LO 2
-#define VGA_COL_BASE 16
+#define VGA_REG_ATTR 3
+#define VGA_YSCROLL 4
+#define VGA_FONTBANK 6
 
 typedef struct {
     // --- Emulator Video State ---
-    uint8_t vram[0x20000];    
-    uint8_t palette[16];
+    uint8_t vram[0x20000];  
+    uint8_t cram[0x20000];  
+    //uint8_t palette[16];
     uint32_t bufferA[VGA_WIDTH * VGA_HEIGHT];
     uint32_t bufferB[VGA_WIDTH * VGA_HEIGHT];
     uint32_t *activeWriteBuffer;
@@ -23,7 +26,13 @@ typedef struct {
     uint32_t frameCount;
     uint16_t nextAddress;    
     uint8_t writtenByte;
+    uint8_t writtenAttr;
     uint8_t shiftByte;
+    uint8_t charByte;
+    uint8_t attrByte;
+    uint8_t color;
+    uint8_t fontBank;
+    uint8_t yScroll;
     uint8_t pollutionTimer;
 } Vga;
 

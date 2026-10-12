@@ -1,6 +1,9 @@
     include "osvars.i"
     include "hardware.i"
 
+GfxScrollOffset  EQU 2
+GfxTextY         EQU 4
+
 GfxInit:    
     lea OSVARS_BASE+OsConsoleFunc,a0
     move.l #GfxPutChar,2+ConsolePutcFunc(a0)
@@ -8,19 +11,24 @@ GfxInit:
     move.l #GfxBoldText,2+ConsoleBoldTextFunc(a0)
     move.l #GfxClear,2+ConsoleClearFunc(a0)
     lea GFXBASE,a0
+    lea GfxFont,a1        
+    move.b #$0f,GFXFONTBANK(a0) ; Font at 0xF000
+    clr.b GFXADDRLO(a0)
+    move.b #$f0,GFXADDRHI(a0)
+    move.w #255*4,d0
+.copyFont:
+    move.b (a1)+,GFXDATA(a0)
+    move.b (a1)+,GFXDATA(a0)
+    move.b (a1)+,GFXDATA(a0)
+    move.b (a1)+,GFXDATA(a0)
+    dbra d0,.copyFont
+
     ; RRGGGBBM
-    move.b #$00,GFXCOL0R(a0)
-    move.b #$52,GFXCOL1R(a0)  
-    move.b #$fe,GFXCOL2R(a0)
-    move.b #$f6,GFXCOL3R(a0)
+    ;move.b #$00,GFXCOL0R(a0)
+    ;move.b #$52,GFXCOL1R(a0)  
+    ;move.b #$fe,GFXCOL2R(a0)
+    ;move.b #$f6,GFXCOL3R(a0)
     bra GfxClear
-
-GFX_BLOCK_HEIGHT_SHIFT  equ 3
-GFX_BLOCK_HEIGHT        equ (1<<GFX_BLOCK_HEIGHT_SHIFT)
-GFX_COLUMNS             equ 80
-GFX_STRIDE              equ 128
-GFX_BYTES_PER_BLOCK_ROW equ GFX_STRIDE*GFX_BLOCK_HEIGHT
-
 
 GfxPutChar:
     movem.l d0-d7/a0-a6,-(sp)
@@ -34,41 +42,40 @@ GfxPutChar:
     cmp.b #10,d0
     beq.s .lineBreak
     cmp.b #13,d0
-    bne.s .ok
-    rts
-.ok:    
-    and.l #$ff,d0
-    lsl.w #GFX_BLOCK_HEIGHT_SHIFT,d0
-    lea GfxFont(pc),a0
-    add.l d0,a0
-    moveq #GFX_BLOCK_HEIGHT-1,d7
-.renderChar:
-    move.b (a0)+,GFXDATA(a1)
-    dbra d7,.renderChar
+    beq.s .done
 
+    ; Set destination address
     move.w (a2),d1
-    add.w #GFX_BLOCK_HEIGHT,d1            ; Skip the bytes we just rendered
-    move.w d1,(a2)
-    and.w #GFX_BYTES_PER_BLOCK_ROW-1,d1    ; offset within 2048 4-byte character row
-    cmp.w #GFX_COLUMNS*GFX_BLOCK_HEIGHT,d1          ; 80 * 16
-    bne.s .noWrap
-    bra.s .lineBreak
-.noWrap:
+    move.b d1,GFXADDRLO(a1)
+    lsr.w #8,d1
+    move.b d1,GFXADDRHI(a1)
+
+    move.b d0,GFXDATA(a1)
+
+ ; Advance cursor
+    addq.w #1,(a2)
+
+    ; Wrap at column 80
+    move.w (a2),d1
+    and.w #$7F,d1
+    cmp.w #80,d1
+    beq.s .lineBreak
+
+.done:
     rts
 
 .lineBreak:
-    move.w (a2),d0
-    ; Round up to next $400-byte VRAM row
-    add.w #GFX_BYTES_PER_BLOCK_ROW,d0
-    and.w #-(GFX_BYTES_PER_BLOCK_ROW),d0
-    move.w d0,(a2)
-    move.w d0,d1
+    move.w (a2),d1
+    add.w #$80,d1
+    and.w #$0F80,d1
+    move.w d1,(a2)
+    ; Round up to next $80-byte VRAM row
+    move.w d1,d0
     move.b d0,GFXADDRLO(a1)
     lsr.w #8,d0
     move.b d0,GFXADDRHI(a1)
 
-    move.b #0,d0
-    move.w #(GFX_BYTES_PER_BLOCK_ROW/8)-1,d7
+    moveq #15,d7   ; 128/8 = 16
 .clrLine:
     clr.b GFXDATA(a1)            
     clr.b GFXDATA(a1)            
@@ -84,12 +91,36 @@ GfxPutChar:
     lsr.w #8,d1
     move.b d1,GFXADDRHI(a1)
 
+    ; Check scrolling
+    move.w GfxTextY(a2),d1
+    addq.w #1,d1
+    cmp.w #30,d1
+    blo.s .noScroll
+
+    ; First scroll occurs when TextY reaches 30
+    move.w d1,d2
+    sub.w #29,d2
+    and.w #31,d2
+
+    ; Convert character row to scroll register units
+    lsl.w #3,d2
+    move.b d2,GFXSCROLLY(a1)
+.noScroll:    
+    move.w d1,GfxTextY(a2)
     rts
 
 GfxBoldText:
+    move.l a1,-(sp)
+    lea GFXBASE,a1
+    move.b #$0F,GFXATTR(a1)
+    move.l a1,(sp)+
     rts
 
 GfxNormalText:
+    move.l a1,-(sp)
+    lea GFXBASE,a1
+    move.b #$07,GFXATTR(a1)
+    move.l a1,(sp)+
     rts
 
 GfxClear:
@@ -102,16 +133,21 @@ GfxClear:
     clr.b GFXADDRHI(a0)
     clr.b GFXADDRLO(a0)
     moveq #0,d0
-    move.w #32767,d7
+    move.w #2047,d7
 .clrVram:    
     move.b d0,GFXDATA(a0)
     move.b d0,GFXDATA(a0)
     dbra d7,.clrVram
     clr.b GFXADDRHI(a0)
     clr.b GFXADDRLO(a0)
-    lea OSVARS_BASE,a1
-    clr.w OsGfxVars(a1)
+    move.b #$07,GFXATTR(a0)    
+    clr.b GFXSCROLLY(a0)    
+
+    lea OSVARS_BASE+OsGfxVars,a1
+    clr.w (a1)
+    clr.w GfxScrollOffset(a1)
+    clr.w GfxTextY(a1)
     rts
 
 GfxFont:
-    INCBIN "font.bin"
+    INCBIN "IBM_VGA_8x16.bin"
