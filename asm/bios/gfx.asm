@@ -10,6 +10,7 @@ GfxInit:
     move.l #GfxNormalText,2+ConsoleNormalTextFunc(a0)
     move.l #GfxBoldText,2+ConsoleBoldTextFunc(a0)
     move.l #GfxClear,2+ConsoleClearFunc(a0)
+    move.l #GfxMoveLeft,2+ConsoleCurLtFunc(a0)
     lea GFXBASE,a0
     lea GfxFont,a1        
     move.b #$0f,GFXFONTBANK(a0) ; Font at 0xF000
@@ -39,13 +40,16 @@ GfxPutChar:
     lea OSVARS_BASE,a2
     lea OsGfxVars(a2),a2
     lea GFXBASE,a1
+    cmp.b #8,d0
+    beq.s .backspace
     cmp.b #10,d0
     beq.s .lineBreak
     cmp.b #13,d0
     beq.s .done
-
-    ; Set destination address
     move.w (a2),d1
+
+.writeChar:
+    ; Set destination address
     move.b d1,GFXADDRLO(a1)
     lsr.w #8,d1
     move.b d1,GFXADDRHI(a1)
@@ -62,6 +66,25 @@ GfxPutChar:
     beq.s .lineBreak
 
 .done:
+    rts
+
+.backspace:
+    move.w (a2),d1
+    subq.w #1,d1
+    and.w #$FFF,d1
+    move.w d1,d2
+    and.w #$7F,d2
+    cmp.w #80,d2
+    blo.s .backspaceWrite
+
+    sub.w #48,d1              ; $7F -> $4F (column 79)    
+.backspaceWrite:
+    move.b #' ',d0
+    move.w d1,(a2)
+    move.b d1,GFXADDRLO(a1)
+    lsr.w #8,d1
+    move.b d1,GFXADDRHI(a1)
+    move.b d0,GFXDATA(a1)
     rts
 
 .lineBreak:
@@ -121,6 +144,24 @@ GfxNormalText:
     lea GFXBASE,a1
     move.b #$07,GFXATTR(a1)
     move.l a1,(sp)+
+    rts
+
+GfxMoveLeft:
+    movem.l d0-d7/a0-a6,-(sp)
+    bsr.s .gfxMoveLeft
+    movem.l (sp)+,d0-d7/a0-a6
+    rts
+.gfxMoveLeft:    
+    lea OSVARS_BASE,a2
+    lea OsGfxVars(a2),a2
+    lea GFXBASE,a1
+    move.w (a2),d1
+    subq.w #1,d1
+    and.w #$FFF,d1
+    move.w d1,(a2)
+    move.b d1,GFXADDRLO(a1)
+    lsr.w #8,d1
+    move.b d1,GFXADDRHI(a1)
     rts
 
 GfxClear:
