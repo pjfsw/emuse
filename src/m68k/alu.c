@@ -187,7 +187,7 @@ int decodeAddx(
         di->dst.mode = AM_DREG;
         di->dst.xn = dstReg;
     } else {       // ( -(An),-(An)
-        return 0;  // TODO
+        return -1;  // TODO
     }
     return eaCycles;
 }
@@ -210,7 +210,7 @@ int decodeSubx(
         di->dst.mode = AM_DREG;
         di->dst.xn = dstReg;
     } else {       // ( -(An),-(An)
-        return 0;  // TODO
+        return -1;  // TODO
     }
     return eaCycles;
 }
