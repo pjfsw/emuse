@@ -205,6 +205,14 @@ static const DecodeRule rules[] = {
     { 0xf1f8, 0xd108, decodeAddx, IF_MOVE }, /* byte */
     { 0xf1f8, 0xd148, decodeAddx, IF_MOVE }, /* word */
     { 0xf1f8, 0xd188, decodeAddx, IF_MOVE }, /* long */
+    /* SUBX Dx,Dy */
+    { 0xf1f8, 0x9100, decodeSubx, IF_MOVE }, /* byte */
+    { 0xf1f8, 0x9140, decodeSubx, IF_MOVE }, /* word */
+    { 0xf1f8, 0x9180, decodeSubx, IF_MOVE }, /* long */
+    /* SUBX -(Ax),-(Ay) */
+    { 0xf1f8, 0x9108, decodeSubx, IF_MOVE }, /* byte */
+    { 0xf1f8, 0x9148, decodeSubx, IF_MOVE }, /* word */
+    { 0xf1f8, 0x9188, decodeSubx, IF_MOVE }, /* long */
 
     { 0xf0c0, 0xd0c0, decodeAdda, IF_MOVE },
     { 0xf0c0, 0x90c0, decodeSuba, IF_MOVE },

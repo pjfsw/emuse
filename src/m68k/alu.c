@@ -120,6 +120,25 @@ static uint32_t aluAddx(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *re
     return (uint32_t)result;
 }
 
+static uint32_t aluSubx(uint32_t a, uint32_t b, uint16_t size, M68kRegisters *regs) {
+    uint32_t mask = (size == IS_BYTE)? 0xff : ((size == IS_WORD) ? 0xffff : 0xffffffff);
+    uint32_t signMask = (size == IS_BYTE) ? 0x80 : ((size == IS_WORD) ? 0x8000 : 0x80000000u);
+
+    uint64_t x = getFlag(regs, SR_FLAGS_X) ? 1 : 0;
+    uint64_t maskedA = (uint64_t)(a & mask);
+    uint64_t maskedB = (uint64_t)(b & mask);
+    uint64_t result = maskedB - maskedA - x;
+    uint64_t realResult = result & mask;
+    bool carry = result != realResult;
+    setFlag(regs, SR_FLAGS_C, carry);
+    setFlag(regs, SR_FLAGS_X, carry);
+    bool signA = (maskedA & signMask) != 0;
+    bool signB = (maskedB & signMask) != 0;
+    bool signR = (realResult & signMask) != 0;
+    setFlag(regs, SR_FLAGS_V, (signB != signA) && (signR != signB));
+    return (uint32_t)result;
+}
+
 static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t src;
     uint32_t dst;
@@ -138,7 +157,7 @@ static int executeAlu(DecodedInstruction *di, M68kRegisters *registers, RwFunc *
     if (writeCycleCount < 0) {
         return -1;        
     }
-    if (di->aluFunc == aluAddx) {
+    if (di->aluFunc == aluAddx || di->aluFunc == aluSubx) {
         uint32_t mask = (di->size == IS_BYTE)? 0xff : ((di->size == IS_WORD) ? 0xffff : 0xffffffff);
         bool resultZero = (dst & mask) == 0;
         setFlag(registers, SR_FLAGS_Z, oldZ && resultZero);
@@ -161,6 +180,29 @@ int decodeAddx(
     di->size = size;
     di->mnemonic = "ADDX";
     di->aluFunc = aluAddx;
+    int eaCycles = 0;
+    if (mode == 0) {  // Dn,Dn
+        di->src.mode = AM_DREG;
+        di->src.xn = srcReg;
+        di->dst.mode = AM_DREG;
+        di->dst.xn = dstReg;
+    } else {       // ( -(An),-(An)
+        return 0;  // TODO
+    }
+    return eaCycles;
+}
+
+int decodeSubx(
+    uint16_t opcode, DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    di->mnemonic = "SUBX";
+    di->execFunc = executeAlu;
+    di->aluFunc = aluSubx;
+    uint16_t mode = (opcode >> 3) & 7;
+    uint16_t srcReg = opcode & 7;
+    uint16_t opMode = (opcode >> 6) & 7;
+    uint16_t dstReg = (opcode >> 9) & 7;
+    uint16_t size = opMode & 3;
+    di->size = size;
     int eaCycles = 0;
     if (mode == 0) {  // Dn,Dn
         di->src.mode = AM_DREG;
