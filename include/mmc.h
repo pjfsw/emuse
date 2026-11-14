@@ -11,7 +11,12 @@ typedef enum {
     MMC_AFTER_COMMAND_RESPONSE,
     MMC_READ_SECTOR_TOKEN,
     MMC_READ_SECTOR,
-    MMC_READ_SECTOR_CRC
+    MMC_READ_SECTOR_CRC,
+    MMC_WRITE_SECTOR_START,
+    MMC_WRITE_SECTOR_TOKEN,
+    MMC_WRITE_SECTOR,
+    MMC_WRITE_SECTOR_CRC,
+    MMC_WRITE_SECTOR_RESPONSE
 } MmcState;
 
 typedef bool (*SectorFunc)(uint32_t sector, uint8_t *buffer, void *userdata);
@@ -23,6 +28,7 @@ typedef struct {
     void *sectorFuncUserdata;
     uint8_t sectorBuffer[512];    
     uint64_t command;
+    uint32_t writeSector;
     int clocks;
     int commandPtr;
     MmcState state;

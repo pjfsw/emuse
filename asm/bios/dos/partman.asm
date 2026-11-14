@@ -210,6 +210,7 @@ PMStoreDeviceError:
     move.l a6,-(sp)
     bsr GetCurrentDosState
     move.w d0,DosExtErrorCode(a0)
+    move.l (sp)+,a6
     rts
 
 ;____________________________________________________________

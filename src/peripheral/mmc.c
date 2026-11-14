@@ -156,6 +156,13 @@ static void stateWaitCommand(Mmc *mmc, uint8_t clk) {
                 mmc->readSectorFunc(sector, mmc->sectorBuffer, mmc->sectorFuncUserdata);
                 initStateWriteByte(mmc, MMC_READ_SECTOR_TOKEN);
                 return;
+            } else if (command == 0x58) { // Write sector
+                mmc->writeSector = (mmc->command >> 8) & 0xffffffff;
+                mmc->command = 0;
+                mmc->commandPtr = 0;
+                mmc->output = 0;
+                initStateWriteByte(mmc, MMC_WRITE_SECTOR_START);
+                return;
             } else if (command == 0x40) {
                 // Go back to init state
                 mmc->expectedCommand = 0;
@@ -245,7 +252,71 @@ static void stateReadSectorCrc(Mmc *mmc, uint8_t clk) {
         initStateWriteByte(mmc, MMC_READ_SECTOR_CRC);
     }
 }
+static void stateWriteSectorStart(Mmc *mmc, uint8_t clk) {
+    if (clk) {
+        return;
+    }
+    initStateWaitByte(mmc, MMC_WRITE_SECTOR_TOKEN);
+}
 
+static void stateWriteSectorToken(Mmc *mmc, uint8_t clk) {
+    if (clk) {
+        return;
+    }
+    if (mmc->lastByte == 0xff) {
+        // Still waiting for the data token
+        initStateWaitByte(mmc, MMC_WRITE_SECTOR_TOKEN);
+    } else if (mmc->lastByte == 0xfe) {
+        mmc->bytesLeft = 512;
+        initStateWaitByte(mmc, MMC_WRITE_SECTOR);
+    } else {
+        printf("MMC: Unexpected write token %02x\n", mmc->lastByte);
+        initStateWaitByte(mmc, MMC_WAIT_COMMAND);
+    }
+}
+
+static void stateWriteSector(Mmc *mmc, uint8_t clk) {
+    if (clk) {
+        return;
+    }
+    mmc->sectorBuffer[512-mmc->bytesLeft] = mmc->lastByte;
+    mmc->bytesLeft--;
+
+    if (mmc->bytesLeft > 0) {
+        initStateWaitByte(mmc, MMC_WRITE_SECTOR);
+    } else {
+        mmc->bytesLeft = 2;
+        initStateWaitByte(mmc, MMC_WRITE_SECTOR_CRC);
+    }
+}
+
+static void stateWriteSectorCrc(Mmc *mmc, uint8_t clk) {
+    if (clk) {
+        return;
+    }
+    mmc->bytesLeft--;   // CRC is ignored
+    if (mmc->bytesLeft > 0) {
+        initStateWaitByte(mmc, MMC_WRITE_SECTOR_CRC);
+    } else {
+        printf("MMC: Write sector %d\n", mmc->writeSector);
+        if (mmc->writeSectorFunc(mmc->writeSector, mmc->sectorBuffer, mmc->sectorFuncUserdata)) {
+            mmc->output = 0x05; // Data accepted
+        } else {
+            mmc->output = 0x0d; // Data rejected, write error
+        }
+        initStateWriteByte(mmc, MMC_WRITE_SECTOR_RESPONSE);
+    }
+}
+
+static void stateWriteSectorResponse(Mmc *mmc, uint8_t clk) {
+    if (clk) {
+        return;
+    }
+    // Write is instant, so never busy. MISO stays high while waiting for the next command.
+    mmc->command = 0;
+    mmc->commandPtr = 0;
+    initStateWaitByte(mmc, MMC_WAIT_COMMAND);
+}
 
 void mmcClock(void *userdata, int clocks) {
     Mmc *mmc = (Mmc*)userdata;    
@@ -283,7 +354,22 @@ void mmcClock(void *userdata, int clocks) {
             break;
         case MMC_READ_SECTOR_CRC:
             stateReadSectorCrc(mmc, clock);
-            break;            
+            break;
+        case MMC_WRITE_SECTOR_START:
+            stateWriteSectorStart(mmc, clock);
+            break;
+        case MMC_WRITE_SECTOR_TOKEN:
+            stateWriteSectorToken(mmc, clock);
+            break;
+        case MMC_WRITE_SECTOR:
+            stateWriteSector(mmc, clock);
+            break;
+        case MMC_WRITE_SECTOR_CRC:
+            stateWriteSectorCrc(mmc, clock);
+            break;
+        case MMC_WRITE_SECTOR_RESPONSE:
+            stateWriteSectorResponse(mmc, clock);
+            break;
     }    
     mmc->lastClock = clock;
 }

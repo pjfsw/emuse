@@ -2,6 +2,7 @@
     include "rootlib.i"
 
 START equ $1000
+PARTITION_INDEX equ 1
     org START
 
     move.l ROOTLIB_BASE,a6
@@ -17,8 +18,8 @@ Main:
     lea LineBreakMsg(pc),a1
     jsr CONPUTS(a6)
 
-    moveq #1,d0
-    move.l (a5),d1    
+    moveq #PARTITION_INDEX,d0
+    move.l (a5),d1
     lea SectorBuffer(pc),a0
     jsr DOS_READ_PART_SECTOR(a6)
 
@@ -94,8 +95,8 @@ PasteSector:
     jsr CONPUTS(a6)
     bra ShowPrompt
 .pasteSectorConfirmed:
-    moveq #1,d0
-    move.l (a5),d1    
+    moveq #PARTITION_INDEX,d0
+    move.l (a5),d1
     lea Clipboard(pc),a0
     jsr DOS_WRITE_PART_SECTOR(a6)
     bra Main
