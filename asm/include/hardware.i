@@ -8,27 +8,38 @@ IRQV_LVL7   equ $00007c ; Level 7
 
 EXEC_BASE   equ $4
 RAM_LIMIT   equ $800000
-OREG        equ $d00000
-OVR         equ 9
-OVR_REG     equ (OREG+OVR)
-OVR_ON      equ 0
-OVR_OFF     equ $2
 
+TIMERACK    equ $a00001
+GFXBASE     equ $c00000
+OREG        equ $d00000
+IREG        equ $e00001
+
+; Output registers
+SPI_AUX     equ 1
+GFX_MODE    equ 3
 TIMER_ACT   equ 5
 TIMER_FREQ  equ 7
+OVR         equ 9
+SNES        equ 11
+SPI_CS      equ 13
+SPI_MOSI_CLK equ 15
+
+; OVR Setting
+OVR_ON      equ 0
+OVR_OFF     equ $2
+OVR_REG     equ (OREG+OVR)
+
+; Timer Setting
 TIMER_75HZ  equ 1
 TIMER_150HZ equ 2
 TIMER_300HZ equ 3
 
-SPI_CS      equ 13
-SPI_MOSI_CLK equ 15
+; SPI selects
 SPI_CS_OFF  equ 0
 SPI_CS_MMC  equ 1
 SPI_CS_EXT  equ 2
 SPI_CS_ROM  equ 3
-TIMERACK    equ $a00001
-IREG        equ $e00001
-GFXBASE     equ $c00000
+
 GFXDATA     equ 1
 GFXADDRHI   equ 3
 GFXADDRLO   equ 5
