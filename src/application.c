@@ -68,7 +68,8 @@ static void reset(Application *app) {
 }
 
 bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
-    void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata) {
+    void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata,
+    SnesPad *snesPad) {
     memset(app, 0, sizeof(Application));
     app->cpu = cpu;
     app->vga = vga;
@@ -81,10 +82,13 @@ bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *
     app->sampleFreq = sampleFreq;
     app->ledFunc = ledFunc;
     app->ledFuncUserdata = ledFuncUserdata;
-    
+    app->snesPad = snesPad;
+
     app->width = 640;
     app->height = 480;
-    if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS)) {
+    // The user normally types in a terminal, so the emulator window is in the background
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+    if (!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_GAMEPAD)) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
         return false;
     }
@@ -135,7 +139,10 @@ bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *
 }
 
 void appDestroy(Application *app) {
-    audioDestroy(&app->audio); // Clean up the audio stream!    
+    audioDestroy(&app->audio); // Clean up the audio stream!
+    if (app->gamepad != NULL) {
+        SDL_CloseGamepad(app->gamepad);
+    }
     fontDestroy(&app->font);
     SDL_DestroyTexture(app->target);
     SDL_DestroyRenderer(app->renderer);
@@ -173,12 +180,65 @@ static void singleStep(Application *app) {
     SDL_Log("Single-stepped %d CPU cycles. Video ticked %d times.", cycles, videoTicks);
 }
 
-static void handleEvents(Application* app) {    
+// Map by position: SDL south/east/west/north = SNES B/A/Y/X
+static uint16_t gamepadButtonToSnes(Uint8 button) {
+    switch (button) {
+        case SDL_GAMEPAD_BUTTON_SOUTH:          return SNES_BUTTON_B;
+        case SDL_GAMEPAD_BUTTON_EAST:           return SNES_BUTTON_A;
+        case SDL_GAMEPAD_BUTTON_WEST:           return SNES_BUTTON_Y;
+        case SDL_GAMEPAD_BUTTON_NORTH:          return SNES_BUTTON_X;
+        case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:  return SNES_BUTTON_L;
+        case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return SNES_BUTTON_R;
+        case SDL_GAMEPAD_BUTTON_BACK:           return SNES_BUTTON_SELECT;
+        case SDL_GAMEPAD_BUTTON_START:          return SNES_BUTTON_START;
+        case SDL_GAMEPAD_BUTTON_DPAD_UP:        return SNES_BUTTON_UP;
+        case SDL_GAMEPAD_BUTTON_DPAD_DOWN:      return SNES_BUTTON_DOWN;
+        case SDL_GAMEPAD_BUTTON_DPAD_LEFT:      return SNES_BUTTON_LEFT;
+        case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:     return SNES_BUTTON_RIGHT;
+        default:                                return 0;
+    }
+}
+
+static void setSnesButtons(Application *app, uint16_t buttons) {
+    app->snesButtons = buttons;
+    snesPadSetButtons(app->snesPad, buttons);
+}
+
+static void handleGamepadEvent(Application *app, SDL_Event *event) {
+    if (event->type == SDL_EVENT_GAMEPAD_ADDED) {
+        if (app->gamepad == NULL) {
+            app->gamepad = SDL_OpenGamepad(event->gdevice.which);
+            if (app->gamepad != NULL) {
+                SDL_Log("Gamepad connected: %s", SDL_GetGamepadName(app->gamepad));
+            }
+        }
+        return;
+    }
+    if (app->gamepad == NULL || event->gdevice.which != SDL_GetGamepadID(app->gamepad)) {
+        return;
+    }
+    if (event->type == SDL_EVENT_GAMEPAD_REMOVED) {
+        SDL_Log("Gamepad disconnected");
+        SDL_CloseGamepad(app->gamepad);
+        app->gamepad = NULL;
+        setSnesButtons(app, 0);
+    } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+        setSnesButtons(app, app->snesButtons | gamepadButtonToSnes(event->gbutton.button));
+    } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
+        setSnesButtons(app, app->snesButtons & ~gamepadButtonToSnes(event->gbutton.button));
+    }
+}
+
+static void handleEvents(Application* app) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT) {
             app->running = false;
-        } 
+        }
+        else if (event.type == SDL_EVENT_GAMEPAD_ADDED || event.type == SDL_EVENT_GAMEPAD_REMOVED ||
+                 event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
+            handleGamepadEvent(app, &event);
+        }
         else if (event.type == SDL_EVENT_KEY_DOWN) {
             SDL_Keycode key = event.key.key;
             SDL_Keymod mod = event.key.mod;

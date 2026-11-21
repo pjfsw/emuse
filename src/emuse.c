@@ -11,6 +11,7 @@
 #include "mmc.h"
 #include "timer.h"
 #include "input_reg.h"
+#include "snes_pad.h"
 #include "sector_storage.h"
 #include "file_inject.h"
 
@@ -65,6 +66,7 @@ static const uint32_t GFX_BASE = 0xc00000;
 static const uint32_t TIMER_ACT_ADDRESS = AREG_BASE + 5;
 static const uint32_t TIMER_FREQ_ADDRESS = AREG_BASE + 7;
 static const uint32_t OVR_ADDRESS = AREG_BASE + 9;
+static const uint32_t SNES_ADDRESS = AREG_BASE + 11;
 static const uint32_t SPI_CS_ADDRESS = AREG_BASE + 13;
 static const uint32_t SPI_MOSI_CLK_ADDRESS = AREG_BASE + 15;
 
@@ -97,6 +99,16 @@ static bool getMmcCs(void *userdata) {
 static bool getMmcSi(void *userdata) {
     AddrLatch *latch = (AddrLatch*)userdata;
     return (addrLatchGetValue(latch, SPI_MOSI_CLK_ADDRESS) & 2) == 2;
+}
+
+static bool getSnesLatch(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return (addrLatchGetValue(latch, SNES_ADDRESS) & 1) == 1;
+}
+
+static bool getSnesClock(void *userdata) {
+    AddrLatch *latch = (AddrLatch*)userdata;
+    return (addrLatchGetValue(latch, SNES_ADDRESS) & 2) == 2;
 }
 
 static bool isTimerActive(void *userdata) {
@@ -221,8 +233,12 @@ int main(int argc, char* argv[]) {
     mmcInit(&mmc, &spi, sectorStorageReadSector, sectorStorageWriteSector, &storage, cardInserted);
     busAddClockFunc(&bus, mmcClock, &mmc);
     
+    SnesPad snesPad;
+    snesPadInit(&snesPad, getSnesLatch, getSnesClock, &outReg);
+    busAddClockFunc(&bus, snesPadClock, &snesPad);
+
     Ireg ireg;
-    iregInit(&ireg, &mmc);
+    iregInit(&ireg, &mmc, &snesPad);
     mappingKey.start = 0xe00000;
     mappingKey.end = 0xf00000;
     mappingKey.userdata = &ireg;
@@ -250,7 +266,7 @@ int main(int argc, char* argv[]) {
 
     const int sampleFreq = 48000;
     const int videoFreq = 25175000;
-    if (!appInit(&app, &cpu.cpu, &vga, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg)) {
+    if (!appInit(&app, &cpu.cpu, &vga, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg, &snesPad)) {
         return 1;
     }
     appRun(&app);

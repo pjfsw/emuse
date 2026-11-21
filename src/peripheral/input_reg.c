@@ -1,11 +1,12 @@
 #include "input_reg.h"
 
-void iregInit(Ireg *ireg, Mmc *mmc) {
+void iregInit(Ireg *ireg, Mmc *mmc, SnesPad *snesPad) {
     ireg->mmc = mmc;
+    ireg->snesPad = snesPad;
 }
 
 static uint8_t readByte(Ireg *ireg) {
-    return (mmcGetMiso(ireg->mmc)) << 7;
+    return ((mmcGetMiso(ireg->mmc)) << 7) | (snesPadGetData(ireg->snesPad) << 4);
 }
 
 uint8_t iregReadByte(void *userdata, uint32_t address) {

@@ -12,6 +12,7 @@
 #include "cpu.h"
 #include "reset.h"
 #include "booleanfunc.h"
+#include "snes_pad.h"
 
 typedef struct {
     Cpu *cpu;
@@ -36,6 +37,9 @@ typedef struct {
     Debugger debugger;
     BooleanFunc ledFunc;
     void *ledFuncUserdata;
+    SnesPad *snesPad;
+    SDL_Gamepad *gamepad;
+    uint16_t snesButtons;
     bool running;
     bool is_fullscreen;
     bool is_stepping; // true = paused, false = running  
@@ -46,7 +50,8 @@ typedef struct {
 } Application;
 
 bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
-    void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata);
+    void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata,
+    SnesPad *snesPad);
 void appRun(Application *app);
 void appDestroy(Application *app);
 
