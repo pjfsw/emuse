@@ -16,10 +16,10 @@ LAYOUT_ROWS   equ 11
     dbra d0,.delay\@
     endm
 
-START equ $1000
-    org START
+;START equ $1000
+    ;org START
 
-    ; code
+    code
 
     move.l ROOTLIB_BASE,a6
     jsr CONCLR(a6)
@@ -120,9 +120,9 @@ ReadController:
     eori.b #1,d2                       ; active low: 1 = pressed, 0 = released
     move.b d2,(a2)+
     move.b #0,(a1)                     ; clock low
-    SnesDelay
+    ;SnesDelay
     move.b #SNES_CLOCK,(a1)            ; rising edge shifts next bit
-    SnesDelay
+    ;SnesDelay
     dbra d1,.nextButton
 
     movem.l (sp)+,d2/a2
@@ -158,7 +158,7 @@ Layout:
     dc.b 0
     even
 
-    ;bss
+    bss
 SnesButtons: ds.b SNES_BUTTONS
 SnesPrev:    ds.b SNES_BUTTONS
     
