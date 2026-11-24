@@ -1,4 +1,4 @@
-    incdir "../include"
+    incdir "../../include"
     include rootlib.i
     include errcode.i
     include psb.i

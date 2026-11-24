@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
     if (strlen(args.mmcFile) > 0) {
         printf("Loading MMC file \"%s\"\n", args.mmcFile);
         loadFile(args.mmcFile, storage.data, mmcCapacity);
-        inject_file(storage.data, "edit/build/edit.exe");
+        inject_file(storage.data, "jofmodorese/apps/edit/build/edit.exe");
         inject_file(storage.data, "build/blinker.exe");
         inject_file(storage.data, "build/system.bin");
         inject_file(storage.data, "build/shell.exe");

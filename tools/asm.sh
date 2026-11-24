@@ -25,11 +25,11 @@ vasmm68k_mot \
     -Lnf \
     -no-opt \
     -spaces \
-    -I"asm/include" \
+    -I"jofmodorese/include" \
     "$INPUT" \
     -o "$BINFILE"
 
-python mkhex.py "$BINFILE" "$HEXFILE"
+python "$(dirname "$0")/mkhex.py" "$BINFILE" "$HEXFILE"
 
 echo "Generated:"
 echo "  $BINFILE"

@@ -21,7 +21,7 @@ LSTFILE="build/${BASENAME}.lst"
 vasmm68k_mot \
     -ignore-mult-inc \
     -Fhunkexe \
-    -Iasm/include \
+    -Ijofmodorese/include \
     -L "$LSTFILE" \
     -Lnf \
     -no-opt \
@@ -30,7 +30,7 @@ vasmm68k_mot \
     "$INPUT" \
     -o "$BINFILE"
 
-python mkhex.py "$BINFILE" "$HEXFILE"
+python "$(dirname "$0")/mkhex.py" "$BINFILE" "$HEXFILE"
 
 echo "Generated:"
 echo "  $BINFILE"

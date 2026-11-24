@@ -74,7 +74,7 @@ nobrk        EQU    0                ; null response to INPUT causes a break
 
 ;************************************************************************************
 
-    incdir "../include"
+    incdir "../../include"
     include "hardware.i"
     include "rootlib.i"
 

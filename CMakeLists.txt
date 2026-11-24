@@ -22,12 +22,12 @@ find_package(SDL3 REQUIRED)
 # This assumes 'vasmm68k_mot' and 'vlink' are in your PATH.
 # The BIOS is assembled to an object file and linked with vlink into a
 # raw binary (.bin) for the emulator to load into its RAM buffer.
-set(ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/asm/bios/bios.asm")
+set(ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/jofmodorese/bios/bios.asm")
 set(ASM_OBJ "${CMAKE_CURRENT_BINARY_DIR}/bios.o")
 set(ASM_BIN "${CMAKE_CURRENT_BINARY_DIR}/bios.bin")
 set(ASM_SYM "${CMAKE_CURRENT_BINARY_DIR}/bios.sym")
 set(ASM_MAP "${CMAKE_CURRENT_BINARY_DIR}/bios.map")
-set(ASM_LD  "${CMAKE_CURRENT_SOURCE_DIR}/asm/bios/bios.ld")
+set(ASM_LD  "${CMAKE_CURRENT_SOURCE_DIR}/jofmodorese/bios/bios.ld")
 
 if(NOT DEFINED GFXENABLED)
     set(GFXENABLED 0)
@@ -57,7 +57,7 @@ set(ROM_EVEN ${CMAKE_BINARY_DIR}/bios_even.bin)
 
 add_custom_command(
     OUTPUT ${ROM_EVEN} ${ROM_ODD}
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/split_rom.py
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/split_rom.py
             ${ROM_BIN}
             ${ROM_EVEN}
             ${ROM_ODD}
@@ -70,10 +70,10 @@ add_custom_target(split_rom ALL
 )
 
 # 3. Executable Setup
-file(GLOB_RECURSE SOURCES "src/*.c")
+file(GLOB_RECURSE SOURCES "emu/src/*.c")
 
 list(REMOVE_ITEM SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/exetest.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/emu/src/exetest.c"
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -81,7 +81,7 @@ add_dependencies(${PROJECT_NAME} generate_boot_code)
 
 # 4. Includes & Linking
 target_include_directories(${PROJECT_NAME} PRIVATE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/emu/include"
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE m SDL3::SDL3)
@@ -91,4 +91,4 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     BOOT_BIN_PATH="${ASM_BIN}"
 )
 
-add_subdirectory(edit)
+add_subdirectory(jofmodorese/apps/edit edit)

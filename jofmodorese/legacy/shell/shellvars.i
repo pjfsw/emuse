@@ -1,4 +1,4 @@
-    incdir "../include"
+    incdir "../../include"
     include psb.i
 
 MAX_CMDLINE_LENGTH equ PSB_ARG_LENGTH 

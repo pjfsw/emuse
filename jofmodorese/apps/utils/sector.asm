@@ -1,4 +1,4 @@
-    incdir "../include"
+    incdir "../../include"
     include "rootlib.i"
 
 START equ $1000

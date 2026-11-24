@@ -6,10 +6,18 @@ has an MMC/SDCard slot, connected to the hardware via SPI-interface, which is bi
 
 ## Repo overview
 The repo itself has three main purposes:
-- Firmware and applications for the SBC. The firmware and associated system files is located in asm/ and a text editor application is located in edit/ . It's mostly 68000 assembly but the editor contains C-code, compiled using vasm/vbcc.
-- An emulator of the SBC, written in C and SDL3, mostly located inside src/ folder, that mimics
+- Firmware, OS and applications for the SBC (Jofmodore SixtyEight), located in jofmodorese/. It's mostly 68000 assembly, but C code is compiled using vbcc/vasm/vlink.
+  - jofmodorese/include/: shared target include files (rootlib.i, hardware.i, ...)
+  - jofmodorese/bios/: ROM firmware (read-only storage support, kept stable)
+  - jofmodorese/boot/: system.asm, the SYSTEM.BIN loader started by the BIOS (raw image at $1000)
+  - jofmodorese/legacy/shell/: the legacy shell (SHELL.EXE, hunk format), frozen
+  - jofmodorese/kernel/: the new kernel (planned), mainly C
+  - jofmodorese/apps/: applications (edit/ in C, ehbasic/, utils/)
+- An emulator of the SBC, written in C and SDL3, located in emu/ (emu/src, emu/include), that mimics
 the hardware as closely as possible. It sets up a pts so that the enduser can communicate with the emulator using a terminal application such as picocom. The MMC is also emulated, and currently a dump of the FAT-16 image used in the hardware is stored in sdcard.bin. When I launch the 
-emulator manually, i use the command line "emuse.sh -m ./sdcard.bin" to attach the SDCard image.- Additional help files for the hardware, such as PLD descriptions, located in sbc68k/. This folder can be ignored.
+emulator manually, i use the command line "emuse.sh -m ./sdcard.bin" to attach the SDCard image.
+- Build, upload and EEPROM burn scripts are located in tools/ and are run from the repository root (e.g. tools/hunk.sh jofmodorese/legacy/shell/shell.asm).
+- Additional help files for the hardware, such as PLD descriptions, located in hw/. This folder can be ignored.
 
 The whole project can be run using CMake and is also integrated with VS Code.
 

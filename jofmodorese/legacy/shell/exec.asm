@@ -1,4 +1,4 @@
-    incdir "../include"
+    incdir "../../include"
     include "psb.i"
     include "errcode.i"
 

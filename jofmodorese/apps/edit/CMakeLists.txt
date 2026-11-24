@@ -21,7 +21,7 @@ set(C_SOURCES
 )
 
 set(ROOT_ASM_INCLUDE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../asm/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
 
 set(OBJECTS)

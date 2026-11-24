@@ -1,4 +1,4 @@
-    incdir "../include"    
+    incdir "../../include"    
     include "rootlib.i"
 
 START equ $1000
@@ -48,5 +48,5 @@ Allocate:
 SavedSlot:
     dc.l 0
 
-    incdir "../shell"
+    incdir "../../legacy/shell"
     include "dumpmemory.asm"
