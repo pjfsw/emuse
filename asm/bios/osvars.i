@@ -21,7 +21,7 @@ DosBuffer:      rs.b 512
 DosPathContext: rs.b 32
 DosTemp:        rs.b DOS_TEMP_AREA_SIZE
 DosHunkOffsets: rs.l PROC_MAX_HUNKS
-DosExtErrorCode:rs.b 2
+DosExtErrorCode: rs.b 2
 DosSizeof:      rs.b 0
 
     rsreset

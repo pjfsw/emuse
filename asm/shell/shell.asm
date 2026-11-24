@@ -4,8 +4,10 @@
     include psb.i
     include shellvars.i
 
-START equ $1000
-    org START
+;START equ $1000
+    ;org START
+
+    code
 
     ; End of BIOS init code        
     move.l ROOTLIB_BASE,a6    

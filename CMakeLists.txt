@@ -18,12 +18,16 @@ add_compile_options(
 # Ensure SDL3 is installed on your system (via brew, apt, or vcpkg)
 find_package(SDL3 REQUIRED)
 
-# 2. VASM Integration
-# This assumes 'vasmm68k_mot' is in your PATH. 
-# We output a raw binary (.bin) for the emulator to load into its RAM buffer.
+# 2. VASM / VLINK Integration
+# This assumes 'vasmm68k_mot' and 'vlink' are in your PATH.
+# The BIOS is assembled to an object file and linked with vlink into a
+# raw binary (.bin) for the emulator to load into its RAM buffer.
 set(ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/asm/bios/bios.asm")
+set(ASM_OBJ "${CMAKE_CURRENT_BINARY_DIR}/bios.o")
 set(ASM_BIN "${CMAKE_CURRENT_BINARY_DIR}/bios.bin")
 set(ASM_SYM "${CMAKE_CURRENT_BINARY_DIR}/bios.sym")
+set(ASM_MAP "${CMAKE_CURRENT_BINARY_DIR}/bios.map")
+set(ASM_LD  "${CMAKE_CURRENT_SOURCE_DIR}/asm/bios/bios.ld")
 
 if(NOT DEFINED GFXENABLED)
     set(GFXENABLED 0)
@@ -31,10 +35,17 @@ endif()
 message(STATUS "GFXENABLED=${GFXENABLED}")
 
 add_custom_command(
-    OUTPUT ${ASM_BIN}
-    COMMAND vasmm68k_mot -ignore-mult-inc -Fbin -nosym -no-opt -spaces -DGFXENABLED=${GFXENABLED} -Iinclude -Idos -L ${ASM_SYM} ${ASM_SRC} -o ${ASM_BIN}
+    OUTPUT ${ASM_OBJ}
+    COMMAND vasmm68k_mot -ignore-mult-inc -Fvobj -nosym -no-opt -spaces -DGFXENABLED=${GFXENABLED} -Iinclude -Idos -L ${ASM_SYM} ${ASM_SRC} -o ${ASM_OBJ}
     DEPENDS ${ASM_SRC}
     COMMENT "Assembling 68k boot code with vasm"
+)
+
+add_custom_command(
+    OUTPUT ${ASM_BIN}
+    COMMAND vlink -brawbin1 -T ${ASM_LD} -M${ASM_MAP} -o ${ASM_BIN} ${ASM_OBJ}
+    DEPENDS ${ASM_OBJ} ${ASM_LD}
+    COMMENT "Linking 68k boot code with vlink"
 )
 
 # Create a target for the binary so it builds automatically

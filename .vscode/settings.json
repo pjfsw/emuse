@@ -13,6 +13,7 @@
     "cstdint": "c",
     "branch.h": "c",
     "functional": "c",
-    "chrono": "c"
+    "chrono": "c",
+    "dos.h": "c"
   }
 }
