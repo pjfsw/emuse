@@ -4,6 +4,15 @@
     {
       "name": "linux",
       "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+      "includePath": [
+        "${workspaceFolder}/jofmodorese/kernel/include",
+        "${workspaceFolder}/jofmodorese/apps/edit/src",
+        "${workspaceFolder}/jofmodorese/apps/edit/include"
+      ],
+      "defines": [
+        "__reg(x)=",
+        "__NOINLINE__"
+      ],
       "intelliSenseMode": "gcc-x64",
       "cStandard": "c11",
       "compilerPath": "/usr/bin/gcc"

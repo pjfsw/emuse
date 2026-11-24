@@ -19,6 +19,7 @@ typedef struct {
     uint32_t cpuFreq;
     char romFile[1024];
     char mmcFile[1024];
+    bool startRunning;
 } Args;
 
 void readArgs(Args *args, int argc, char *argv[]) {
@@ -27,7 +28,7 @@ void readArgs(Args *args, int argc, char *argv[]) {
     args->cpuFreq = 14745600;
 
     int c;
-    while ((c = getopt(argc, argv, "z:r:m:")) != -1) {
+    while ((c = getopt(argc, argv, "z:r:m:g")) != -1) {
         switch(c) {
             case 'z':
                 args->cpuFreq = atoi(optarg);
@@ -38,11 +39,15 @@ void readArgs(Args *args, int argc, char *argv[]) {
             case 'm':
                 strcpy(args->mmcFile, optarg);
                 break;
+            case 'g':
+                args->startRunning = true;
+                break;
         }
     }
     printf("Cfg->CPU speed: %d MHz (change with -z <speed>)\n", args->cpuFreq);
     printf("Cfg->ROM file:  \"%s\" (change with -r <romfile>\n", args->romFile);
     printf("Cfg->MMC image: \"%s\" (change with -m <mmcimage>\n", args->mmcFile);
+    printf("Cfg->Start:     %s (start running with -g)\n", args->startRunning ? "running" : "paused");
 }
 
 size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
@@ -171,6 +176,7 @@ int main(int argc, char* argv[]) {
         inject_file(storage.data, "build/blinker.exe");
         inject_file(storage.data, "build/system.bin");
         inject_file(storage.data, "build/shell.exe");
+        inject_file(storage.data, "build/kernel/kernel.exe");
         inject_file(storage.data, "build/basic68k.exe");
         cardInserted = true;
     }
@@ -269,6 +275,9 @@ int main(int argc, char* argv[]) {
     const int videoFreq = 25175000;
     if (!appInit(&app, &cpu.cpu, &vga, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg, &snesPad)) {
         return 1;
+    }
+    if (args.startRunning) {
+        appResume(&app);
     }
     appRun(&app);
     appDestroy(&app);

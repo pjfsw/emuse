@@ -150,6 +150,13 @@ void appDestroy(Application *app) {
     SDL_Quit();
 }
 
+// Leave the initial paused state and start executing
+void appResume(Application *app) {
+    if (app->is_stepping && !app->cpu->crashed) {
+        runningMode(app);
+    }
+}
+
 static void toggleStepping(Application *app) {
     if (!app->is_stepping) {
         stoppedMode(app);

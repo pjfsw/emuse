@@ -52,6 +52,7 @@ typedef struct {
 bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *mainTickerUserdata, ResetFunc resetFunc,
     void *resetUserdata, int cpuFreq, int videoFreq, int sampleFreq, BooleanFunc ledFunc, void *ledFuncUserdata,
     SnesPad *snesPad);
+void appResume(Application *app);
 void appRun(Application *app);
 void appDestroy(Application *app);
 

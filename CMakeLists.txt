@@ -92,3 +92,4 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 add_subdirectory(jofmodorese/apps/edit edit)
+add_subdirectory(jofmodorese/kernel kernel)

@@ -14,6 +14,8 @@
     "branch.h": "c",
     "functional": "c",
     "chrono": "c",
-    "dos.h": "c"
+    "dos.h": "c",
+    "*.asm": "m68k",
+    "*.i": "m68k"
   }
 }
