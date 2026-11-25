@@ -1,5 +1,6 @@
 #include "move.h"
 #include "sourcedest.h"
+#include "sr.h"
 
 static int executeMove(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
@@ -72,7 +73,7 @@ static int executeMoveToSr(DecodedInstruction *di, M68kRegisters *registers, RwF
         return -1;
     }
     if (getFlag(registers, SR_FLAGS_S)) {
-        registers->sr = value;
+        setSr(registers, value);
     } else {
         // TODO!! Throw exception
         return -1;

@@ -14,11 +14,13 @@
 #include "move.h"
 #include "movem.h"
 #include "mulu.h"
+#include "nop.h"
 #include "pea.h"
 #include "rte.h"
 #include "rts.h"
 #include "shift.h"
 #include "sourcedest.h"
+#include "sr.h"
 #include "swap.h"
 #include "tst.h"
 
@@ -89,7 +91,8 @@ int getEffectiveAddress(M68kRegisters *registers, uint16_t mode, uint16_t reg, I
             increasePc(registers);
             return 8;
         } else if (reg == AM_EXT_ABS_SHORT) {
-            ea->address = (uint32_t)readWordFunc(readWriteUserdata, registers->pc);
+            // Sign extended: $8000-$ffff addresses $ff8000-$ffffff
+            ea->address = align24((uint32_t)(int32_t)(int16_t)readWordFunc(readWriteUserdata, registers->pc));
             increasePc(registers);
             return 4;
         } else if (reg == AM_EXT_PC_DISP) {
@@ -138,14 +141,14 @@ typedef struct {
 // LSL !
 
 static const DecodeRule rules[] = {
-    /*
-    TODO 
-    { 0xffff, 0x003c, decodeOriCcr,  IF_MOVE_TO_SR },
-    { 0xffff, 0x023c, decodeAndiCcr, IF_MOVE_TO_SR },
-    { 0xffff, 0x0a3c, decodeEoriCcr, IF_MOVE_TO_SR },
+    // Must come before ORI/ANDI/EORI, which match the same opcodes
+    { 0xffff, 0x003c, decodeOriCcr,  IF_TO_CCR },
+    { 0xffff, 0x023c, decodeAndiCcr, IF_TO_CCR },
+    { 0xffff, 0x0a3c, decodeEoriCcr, IF_TO_CCR },
     { 0xffff, 0x007c, decodeOriSr,   IF_MOVE_TO_SR },
     { 0xffff, 0x027c, decodeAndiSr,  IF_MOVE_TO_SR },
-    { 0xffff, 0x0a7c, decodeEoriSr,  IF_MOVE_TO_SR },    */
+    { 0xffff, 0x0a7c, decodeEoriSr,  IF_MOVE_TO_SR },
+    { 0xffff, 0x4e71, decodeNop, IF_IMPLIED},
     { 0xffff, 0x4e75, decodeRts, IF_IMPLIED},
     { 0xffff, 0x4e73, decodeRte, IF_IMPLIED},    
     { 0xfff8, 0x4840, decodeSwap, IF_SINGLE_DEST },

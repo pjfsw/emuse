@@ -143,15 +143,24 @@ static int writeDestWithFlagSetting(
         }
         postIncrement(di, registers, &di->dst);
     } else if (di->dst.mode == AM_EXT) {
-        if (di->dst.xn == AM_EXT_ABS_LONG) {
+        if ((di->dst.xn == AM_EXT_ABS_LONG) || (di->dst.xn == AM_EXT_ABS_SHORT)) {
             if (di->size == IS_LONG) {
+                if (setFlags) {
+                    setNZ(registers, (int32_t)value);
+                }
                 rwFunc->ww(readWriteUserdata, di->dst.address, value >> 16);
                 rwFunc->ww(readWriteUserdata, di->dst.address + 2, (uint16_t)value);
                 cycleCount = 8;
             } else if (di->size == IS_WORD) {
+                if (setFlags) {
+                    setNZ(registers, (int32_t)(int16_t)(value & 0xffff));
+                }
                 rwFunc->ww(readWriteUserdata, di->dst.address, (uint16_t)value);
                 cycleCount = 4;
             } else {
+                if (setFlags) {
+                    setNZ(registers, (int32_t)(int8_t)(value & 0xff));
+                }
                 rwFunc->wb(readWriteUserdata, di->dst.address, (uint8_t)value);
                 cycleCount = 4;
             }

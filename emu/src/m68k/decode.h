@@ -39,6 +39,7 @@ typedef enum {
     IF_UNKNOWN=0,
     IF_MOVE,
     IF_MOVE_TO_SR,
+    IF_TO_CCR,
     IF_MOVE_FROM_SR,
     IF_BRANCH,
     IF_DBCC,
