@@ -35,10 +35,20 @@ extern task_t *current;
 /* Create a task, returns NULL if no free slot */
 task_t *task_create(const char *name, task_entry_t entry);
 
-/* Start running the first ready task, does not return */
+/*
+ * Create the idle task and start running the first ready task,
+ * does not return. The idle task only runs when no other task is
+ * ready.
+ */
 void task_start(void);
 
 /* Give up the CPU to the next ready task (switch.asm) */
 void task_yield(void);
+
+/*
+ * Called on every timer tick, returns non-zero when the current
+ * task should be switched out (time slice used up).
+ */
+int sched_tick(void);
 
 #endif

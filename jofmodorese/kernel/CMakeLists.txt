@@ -13,6 +13,7 @@ set(ASM_SOURCES
     arch/m68k/bios.asm
     arch/m68k/isr.asm
     arch/m68k/switch.asm
+    arch/m68k/irq.asm
 )
 
 set(C_SOURCES
