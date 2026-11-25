@@ -31,9 +31,9 @@ _timer_isr:
 _isr_configure:
     move.w #$2700,sr          ; disable while configuring    
     lea _dummy_isr(pc),a0
-    move.l a0,IRQV_BLANK
+    move.l a0,IRQV_BLANK.w
     lea _timer_isr(pc),a0
-    move.l a0,IRQV_TIMER
+    move.l a0,IRQV_TIMER.w
     move.b #TIMER_150HZ,OREG+TIMER_FREQ ; 150 Hz
     move.b #0,OREG+TIMER_ACT  ; Disable timer
     move.b #1,OREG+TIMER_ACT  ; Enable timer

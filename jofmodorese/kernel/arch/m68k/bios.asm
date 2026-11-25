@@ -27,13 +27,9 @@
 ;____________________________________________________________
     macro BiosCall
     movem.l d2-d7/a2-a6,-(sp)
-    move.w sr,d1
-    move.w d1,-(sp)             ; Save SR
-    and.w #$0700,d1
-    cmp.w #$0300,d1
-    bhs.s .masked\@             ; Never lower the mask
-    move.w #$2300,sr
-.masked\@:
+    move.w sr,-(sp)              ; Save SR
+    ori.w #$0300,sr              ; Mask at least 3, never lowered
+;.masked\@:
     move.l ROOTLIB_BASE,a6
     jsr \1(a6)
     move.w (sp)+,sr             ; Restore SR
