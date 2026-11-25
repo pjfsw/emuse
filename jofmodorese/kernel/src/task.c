@@ -1,6 +1,7 @@
 #include "types.h"
 #include "bios.h"
 #include "task.h"
+#include "kstring.h"
 
 #define STACK_MAGIC     0xDEADBEEF
 #define TASK_INITIAL_SR 0x2200  /* Supervisor mode, interrupt mask 2 (see isr_configure) */
@@ -58,7 +59,7 @@ task_t *task_create(const char *name, task_entry_t entry) {
         t->id = i;
         t->wake_tick = 0;
         t->stack_base = stack;
-        t->name = name;
+        strlcpy(t->name, name, TASK_NAME_LEN);
         return t;
     }
     return NULL;

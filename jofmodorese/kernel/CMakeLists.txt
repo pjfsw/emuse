@@ -19,6 +19,7 @@ set(C_SOURCES
     src/main.c
     src/timer.c    
     src/task.c
+    src/kstring.c
 )
 
 set(ROOT_ASM_INCLUDE
@@ -29,10 +30,9 @@ set(KERNEL_INCLUDE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# vbcc runtime helpers (e.g. 32-bit division) are taken from libvc
-set(VBCC_LIB_DIR
-    ${CMAKE_CURRENT_SOURCE_DIR}/../apps/edit/lib
-)
+# No C library is linked. vbcc runtime helpers that the generated code
+# may call (e.g. __divs/__divu for 32-bit division and modulo on the
+# 68000) must be provided by the kernel itself when needed.
 
 file(GLOB KERNEL_HEADERS ${KERNEL_INCLUDE}/*.h ${ROOT_ASM_INCLUDE}/*.h)
 
@@ -106,8 +106,6 @@ add_custom_command(
             -M${CMAKE_CURRENT_BINARY_DIR}/kernel.map
             -o ${CMAKE_CURRENT_BINARY_DIR}/kernel.exe
             ${OBJECTS}
-            -L${VBCC_LIB_DIR}
-            -lvc
     DEPENDS ${OBJECTS}
     VERBATIM
 )

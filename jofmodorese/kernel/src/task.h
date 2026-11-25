@@ -5,6 +5,7 @@
 
 #define MAX_TASKS   16
 #define STACK_SIZE  2048    /* Bytes per task */
+#define TASK_NAME_LEN 16    /* Including terminator */
 
 typedef enum {
     TASK_FREE = 0,          /* Slot unused (BSS is cleared, so all slots start free) */
@@ -23,7 +24,7 @@ typedef struct task {
     uint16_t     id;
     uint32_t     wake_tick;
     uint32_t    *stack_base;  /* Lowest address of stack, holds STACK_MAGIC */
-    const char  *name;
+    char         name[TASK_NAME_LEN];  /* Copied, always zero-terminated */
 } task_t;
 
 typedef void (*task_entry_t)(void);
