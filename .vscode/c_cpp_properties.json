@@ -7,7 +7,8 @@
       "includePath": [
         "${workspaceFolder}/jofmodorese/kernel/include",
         "${workspaceFolder}/jofmodorese/apps/edit/src",
-        "${workspaceFolder}/jofmodorese/apps/edit/include"
+        "${workspaceFolder}/jofmodorese/apps/edit/include",
+        "${workspaceFolder}/jofmodorese/include"
       ],
       "defines": [
         "__reg(x)=",

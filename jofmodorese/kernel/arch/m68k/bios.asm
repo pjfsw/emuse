@@ -13,6 +13,7 @@
     xdef _bios_putc
     xdef _bios_puts
     xdef _bios_getc
+    xdef _bios_put_hex32
 
 ; void bios_putc(REG("d0") int c)
 _bios_putc:
@@ -35,5 +36,12 @@ _bios_getc:
     movem.l d2-d7/a2-a6,-(sp)
     move.l ROOTLIB_BASE,a6
     jsr CONGETC(a6)
+    movem.l (sp)+,d2-d7/a2-a6
+    rts
+
+_bios_put_hex32:
+    movem.l d2-d7/a2-a6,-(sp)
+    move.l ROOTLIB_BASE,a6
+    jsr CONPUTHEX32(a6)
     movem.l (sp)+,d2-d7/a2-a6
     rts

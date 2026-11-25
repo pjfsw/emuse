@@ -11,10 +11,14 @@ set(VLINK     vlink)
 set(ASM_SOURCES
     arch/m68k/entry.asm
     arch/m68k/bios.asm
+    arch/m68k/isr.asm
+    arch/m68k/switch.asm
 )
 
 set(C_SOURCES
     src/main.c
+    src/timer.c    
+    src/task.c
 )
 
 set(ROOT_ASM_INCLUDE
@@ -30,7 +34,7 @@ set(VBCC_LIB_DIR
     ${CMAKE_CURRENT_SOURCE_DIR}/../apps/edit/lib
 )
 
-file(GLOB KERNEL_HEADERS ${KERNEL_INCLUDE}/*.h)
+file(GLOB KERNEL_HEADERS ${KERNEL_INCLUDE}/*.h ${ROOT_ASM_INCLUDE}/*.h)
 
 set(OBJECTS)
 
@@ -44,6 +48,7 @@ foreach(src ${ASM_SOURCES})
         OUTPUT ${obj}
         COMMAND ${VASM}
                 -quiet
+                -no-opt
                 -I${ROOT_ASM_INCLUDE}
                 -Fhunk
                 -o ${obj}
@@ -66,6 +71,7 @@ foreach(src ${C_SOURCES})
         OUTPUT ${generated_asm}
         COMMAND ${VBCC}
                 -I${KERNEL_INCLUDE}
+                -I${ROOT_ASM_INCLUDE}
                 -quiet
                 -c99
                 -cpu=68000
