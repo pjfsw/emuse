@@ -489,10 +489,21 @@ static void postReset(M68k *m68k) {
     setSupervisor(m68k);
 }
 
-static int handleInterrupt(M68k *cpu, uint8_t level) {
+// Exception vector numbers
+#define VECTOR_ADDRESS_ERROR   3
+#define VECTOR_AUTOVECTOR_BASE 24   // Level 1-7 interrupt autovectors are 25-31
+
+// Special status word in the group 0 exception frame
+#define SSW_READ               0x0010   // R/W: 1 = read, 0 = write
+#define SSW_NOT_INSTRUCTION    0x0008   // I/N: 0 = instruction fetch, 1 = other access
+#define SSW_FC_SUPERVISOR      0x0004   // Function code FC2: supervisor access
+#define SSW_FC_PROGRAM         0x0002   // Function code FC1-FC0: 2 = program, 1 = data
+#define SSW_FC_DATA            0x0001
+
+// Enter supervisor mode for exception processing (switching a7 to the
+// supervisor stack). Returns the SR from before the exception.
+static uint16_t enterException(M68k *cpu) {
     M68kRegisters *regs = &cpu->registers;
-    RwFunc *rw = &cpu->rwFunc;    
-    void *readWriteUserdata = cpu->readWriteUserdata;
 
     uint16_t oldSr = regs->sr;
     if (!isSupervisor(cpu)) {
@@ -500,20 +511,82 @@ static int handleInterrupt(M68k *cpu, uint8_t level) {
         setSupervisor(cpu);
         regs->a[7] = regs->ssp;
     }
+    return oldSr;
+}
 
-    push(cpu, regs->pc & 0xffff);
-    push(cpu, (regs->pc >> 16) & 0xffff);
-    push(cpu, oldSr);       
+// Continue at the address in the exception vector
+static void jumpToVector(M68k *cpu, uint8_t vector) {
+    // 68000: vectors at address 0. A 68010+ would add the VBR here.
+    cpu->registers.pc = align24(readLong(cpu, vector * 4));
+}
 
+/*
+ * Start processing of a group 1/2 exception or an interrupt, with the
+ * 6-byte frame:
+ *
+ *   SP+0  SR
+ *   SP+2  PC (long)
+ *
+ * pcToPush is the return address in the frame. It depends on the
+ * exception: the next instruction for interrupts and traps, the
+ * faulting instruction for e.g. illegal instruction.
+ */
+static void raiseException(M68k *cpu, uint8_t vector, uint32_t pcToPush) {
+    uint16_t oldSr = enterException(cpu);
 
+    push(cpu, pcToPush & 0xffff);
+    push(cpu, (pcToPush >> 16) & 0xffff);
+    push(cpu, oldSr);
+
+    jumpToVector(cpu, vector);
+}
+
+/*
+ * Start processing of a group 0 exception (address error, bus error),
+ * with the 14-byte frame:
+ *
+ *   SP+0  Special status word: R/W, I/N and function code
+ *   SP+2  Access address (long)
+ *   SP+6  Instruction register (opcode of the faulting instruction)
+ *   SP+8  SR
+ *   SP+10 PC (long)
+ *
+ * The function code is derived from the mode at the time of the access
+ * and whether it was an instruction fetch (program) or data access.
+ * On a real 68000 the pushed PC is only approximate (2-10 bytes past
+ * the start of the faulting instruction), so handlers can not rely on
+ * it for restarting the instruction.
+ */
+static void raiseGroup0Exception(M68k *cpu, uint8_t vector, uint32_t accessAddress, bool read,
+    bool instructionFetch, uint16_t instructionRegister, uint32_t pcToPush) {
+    uint16_t ssw = 0;
+    if (isSupervisor(cpu)) {
+        ssw |= SSW_FC_SUPERVISOR;
+    }
+    ssw |= instructionFetch ? SSW_FC_PROGRAM : (SSW_FC_DATA | SSW_NOT_INSTRUCTION);
+    if (read) {
+        ssw |= SSW_READ;
+    }
+
+    uint16_t oldSr = enterException(cpu);
+
+    push(cpu, pcToPush & 0xffff);
+    push(cpu, (pcToPush >> 16) & 0xffff);
+    push(cpu, oldSr);
+    push(cpu, instructionRegister);
+    push(cpu, accessAddress & 0xffff);
+    push(cpu, (accessAddress >> 16) & 0xffff);
+    push(cpu, ssw);
+
+    jumpToVector(cpu, vector);
+}
+
+static int handleInterrupt(M68k *cpu, uint8_t level) {
+    M68kRegisters *regs = &cpu->registers;
+
+    raiseException(cpu, VECTOR_AUTOVECTOR_BASE + level, regs->pc);
     regs->sr &= ~0x0700;        // Clear interrupt level
     regs->sr |= level << 8;     // Set current level
-    uint32_t vector = (level + 24) * 4;
-    uint32_t newPc = rw->rw(readWriteUserdata, vector) << 16;
-    newPc |= rw->rw(readWriteUserdata, vector+2);
-    newPc = align24(newPc);
-
-    regs->pc = newPc;
     return 44;
 }
 

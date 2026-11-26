@@ -25,6 +25,7 @@ The whole project can be run using CMake and is also integrated with VS Code.
 - CPU instruction decoding and execution in C. 
 - Each 68k-instruction is executed atomically, and the number of cycles are 
   added after the execution, rather than per cycle emulation.
+- Group 0 exceptions push the address of the next instruction as PC; the instruction completes before the exception is raised.
 - Emulated memory and memory-mapped peripherals.
 - UART emulation with terminal integration.
 - Interrupt and exception handling.
