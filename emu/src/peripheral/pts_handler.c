@@ -74,7 +74,14 @@ PtsHandler *ptsHandlerCreate() {
     if(tcgetattr(fdm, &config) < 0) {
         perror("Failed to get termios config");
     } else {
-        config.c_lflag &= ~ECHO;
+        // Raw mode from the start, so output written before a terminal
+        // has opened the slave side is not translated (e.g. CR -> LF).
+        // Same as cfmakeraw() (not available with _XOPEN_SOURCE)
+        config.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+        config.c_oflag &= ~OPOST;
+        config.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+        config.c_cflag &= ~(CSIZE | PARENB);
+        config.c_cflag |= CS8;
         tcsetattr(fdm, 0, &config);
     }
     PtsHandler *pts = calloc(1, sizeof(PtsHandler));
@@ -83,7 +90,7 @@ PtsHandler *ptsHandlerCreate() {
 
     strncpy(pts->pts_name, ptsname(reader->fdm), PTS_NAME_MAX_LENGTH);
     printf("Serial interface available at pseudo terminal %s\n", pts->pts_name);
-    const char *symlinkName = "/tmp/emuse-uart";
+    const char *symlinkName = PTS_SYMLINK_NAME;
     if (unlink(symlinkName) < 0) {
         perror("Failed to remove symlink");
     }    

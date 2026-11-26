@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define PTS_SYMLINK_NAME "/tmp/emuse-uart"
+
 typedef struct PtsHandler PtsHandler; 
 
 PtsHandler *ptsHandlerCreate();

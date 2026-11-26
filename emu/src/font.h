@@ -9,6 +9,8 @@ typedef struct {
 
 void fontInit(Font *font, SDL_Renderer *renderer);
 
+const uint8_t *fontGlyphData(void);
+
 void fontDestroy(Font *font);
 
 void fontWrite(Font *font, char *str, int x, int y, uint32_t color);

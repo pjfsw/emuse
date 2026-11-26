@@ -4,6 +4,7 @@
 
 #include "application.h"
 #include "texture.h"
+#include "peripheral/pts_handler.h"
 
 static float dummySampleSource(void *userdata) {
     // Fake returning an audio sample (silence)
@@ -62,6 +63,15 @@ static void runningMode(Application *app) {
     SDL_Log("Emulator RESUMED. Audio thread in control.");
 }
 
+static void setShowTerminal(Application *app, bool show) {
+    app->showTerminal = show;
+    if (show) {
+        SDL_StartTextInput(app->window);
+    } else {
+        SDL_StopTextInput(app->window);
+    }
+}
+
 static void reset(Application *app) {
     app->resetFunc(app->resetUserdata);
     audioReset(&app->audio);
@@ -115,6 +125,11 @@ bool appInit(Application *app, Cpu *cpu, Vga *vga, MainTicker mainTicker, void *
 
     fontInit(&app->font, app->renderer);
 
+    if (!terminalInit(&app->terminal, PTS_SYMLINK_NAME, fontGlyphData())) {
+        return false;
+    }
+    setShowTerminal(app, true);
+
     // --- Init Emulator Sync State ---
     SDL_SetAtomicInt(&app->sharedState.runRequested, 1);
     SDL_SetAtomicInt(&app->sharedState.audioIsBusy, 0);
@@ -143,11 +158,50 @@ void appDestroy(Application *app) {
     if (app->gamepad != NULL) {
         SDL_CloseGamepad(app->gamepad);
     }
+    terminalDestroy(&app->terminal);
     fontDestroy(&app->font);
     SDL_DestroyTexture(app->target);
     SDL_DestroyRenderer(app->renderer);
     SDL_DestroyWindow(app->window);
     SDL_Quit();
+}
+
+// Connect the built-in terminal to the pseudo terminal, or release it for e.g. picocom
+void appSetTerminalAttached(Application *app, bool attached) {
+    if (attached) {
+        terminalAttach(&app->terminal);
+    } else {
+        terminalDetach(&app->terminal);
+    }
+}
+
+void appSetUploadFile(Application *app, const char *path) {
+    app->uploadFile = path;
+}
+
+static void setStatusMessage(Application *app, const char *message) {
+    snprintf(app->statusMessage, sizeof(app->statusMessage), "%s", message);
+    app->statusUntil = SDL_GetTicks() + 3000;
+}
+
+static const char *uploadFileName(Application *app) {
+    const char *slash = strrchr(app->uploadFile, '/');
+    return slash ? slash + 1 : app->uploadFile;
+}
+
+static void toggleUpload(Application *app) {
+    char message[81];
+    if (terminalIsUploading(&app->terminal)) {
+        terminalCancelUpload(&app->terminal);
+        setStatusMessage(app, "UPLOAD CANCELLED");
+    } else if (app->uploadFile == NULL) {
+        setStatusMessage(app, "NO UPLOAD FILE, START WITH -u <file>");
+    } else if (!terminalIsAttached(&app->terminal)) {
+        setStatusMessage(app, "TERMINAL DETACHED, CANNOT UPLOAD");
+    } else if (!terminalStartUpload(&app->terminal, app->uploadFile)) {
+        snprintf(message, sizeof(message), "FAILED TO READ %s", uploadFileName(app));
+        setStatusMessage(app, message);
+    }
 }
 
 // Leave the initial paused state and start executing
@@ -242,6 +296,11 @@ static void handleEvents(Application* app) {
         if (event.type == SDL_EVENT_QUIT) {
             app->running = false;
         }
+        else if (event.type == SDL_EVENT_TEXT_INPUT) {
+            if (app->showTerminal && !(SDL_GetModState() & SDL_KMOD_LALT)) {
+                terminalTextInput(&app->terminal, event.text.text);
+            }
+        }
         else if (event.type == SDL_EVENT_GAMEPAD_ADDED || event.type == SDL_EVENT_GAMEPAD_REMOVED ||
                  event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
             handleGamepadEvent(app, &event);
@@ -272,19 +331,33 @@ static void handleEvents(Application* app) {
             }
             if (key == SDLK_F3) {
                 app->pixelPerfect = !app->pixelPerfect;
+            }
+            if (key == SDLK_F12) {
+                setShowTerminal(app, !app->showTerminal);
             }            
             // --- Single Step Execution ---
             if (((key == SDLK_F5) || (key == SDLK_F6)) && app->is_stepping) {
                 singleStep(app);
             }
-            if (mod & SDL_KMOD_CTRL) {
+            // Ctrl+Shift, since plain Ctrl+letter belongs to the terminal
+            if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
                 if (key == SDLK_R) {
                     reset(app);
+                }
+                if (key == SDLK_D) {
+                    appSetTerminalAttached(app, !terminalIsAttached(&app->terminal));
+                }
+                if (key == SDLK_U) {
+                    toggleUpload(app);
                 }
                 if (key == SDLK_M) {
                     app->showMemory = !app->showMemory;
                     debuggerSetShowMemory(&app->debugger, app->showMemory);
                 }
+            }
+            // Keys that do not produce text input (Enter, arrows, Ctrl+letter, ...)
+            if (app->showTerminal) {
+                terminalKeyDown(&app->terminal, key, mod);
             }
         }
     }
@@ -296,7 +369,11 @@ static void renderEmulatorOutput(Application *app) {
     // --- 1. Atomically grab the finished frame AND clear the slot to NULL ---
     uint32_t *readyFrame = (uint32_t *)SDL_SetAtomicPointer((void **)&app->sharedState.readyFramePtr, NULL);
 
-    if (readyFrame != NULL) {
+    if (app->showTerminal) {
+        // Show the built-in terminal instead of the VGA output
+        bool cursorOn = (SDL_GetTicks() / 500) & 1;
+        SDL_UpdateTexture(app->emuTexture, NULL, terminalRender(&app->terminal, cursorOn), TERMINAL_WIDTH * sizeof(uint32_t));
+    } else if (readyFrame != NULL) {
         // 2. Upload the pixels to our emulator texture
         SDL_UpdateTexture(app->emuTexture, NULL, readyFrame, vgaGetWidth(app->vga) * sizeof(uint32_t));
     } else if (app->is_stepping) {
@@ -396,8 +473,29 @@ static void renderFps(Application *app, int y, int height) {
     fontWrite(&app->font, buf, 2, y + 1, 0xFFFFFFDF);
 }
 
+static void renderTerminalBanner(Application *app, char *text) {
+    SDL_SetRenderDrawBlendMode(app->renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(app->renderer, 0, 0, 0, 200);
+    SDL_FRect rect = {.x = 0, .y = 0, .w = app->width, .h = 18};
+    SDL_RenderFillRect(app->renderer, &rect);
+    fontWrite(&app->font, text, 2, 1, 0xFFFF55FF);
+}
+
+static void renderTerminalStatus(Application *app) {
+    char text[81];
+    if (terminalIsUploading(&app->terminal)) {
+        snprintf(text, sizeof(text), "UPLOADING %s %d%% (CTRL+SHIFT+U CANCELS)",
+            uploadFileName(app), terminalUploadProgress(&app->terminal));
+        renderTerminalBanner(app, text);
+    } else if (SDL_GetTicks() < app->statusUntil) {
+        renderTerminalBanner(app, app->statusMessage);
+    } else if (app->showTerminal && !terminalIsAttached(&app->terminal)) {
+        renderTerminalBanner(app, "TERMINAL DETACHED, PRESS [CTRL+SHIFT+D] TO ATTACH");
+    }
+}
+
 static void renderCrashed(Application *app) {
-    fontWrite(&app->font, "UNIMPLEMENTED INSTRUCTION, PRESS [CTRL+R] TO RESET", 0, app->height/2,0xff0000ff);
+    fontWrite(&app->font, "UNIMPLEMENTED INSTRUCTION, PRESS [CTRL+SHIFT+R] TO RESET", 0, app->height/2,0xff0000ff);
 }
 
 static void render(Application* app) {
@@ -426,6 +524,7 @@ static void render(Application* app) {
     if (app->cpu->crashed) {
         renderCrashed(app);
     }
+    renderTerminalStatus(app);
     renderTargetTexture(app);
 
     if (showDebug) {
@@ -453,6 +552,7 @@ void appRun(Application *app) {
             stoppedMode(app);
         }
         handleEvents(app);        
+        terminalUpdate(&app->terminal);
         
         // This is where you will eventually call your 68k execution step
         

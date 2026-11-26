@@ -25,6 +25,10 @@ void fontInit(Font *font, SDL_Renderer *renderer) {
     }
 }
 
+const uint8_t *fontGlyphData(void) {
+    return packed_font_data;
+}
+
 void fontDestroy(Font *font) {
     for (int i = 0; i < 256; i++) {
         SDL_DestroyTexture(font->font[i]);

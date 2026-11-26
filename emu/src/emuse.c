@@ -20,6 +20,8 @@ typedef struct {
     char romFile[1024];
     char mmcFile[1024];
     bool startRunning;
+    bool terminalDetached;
+    char uploadFile[1024];
 } Args;
 
 void readArgs(Args *args, int argc, char *argv[]) {
@@ -28,7 +30,7 @@ void readArgs(Args *args, int argc, char *argv[]) {
     args->cpuFreq = 14745600;
 
     int c;
-    while ((c = getopt(argc, argv, "z:r:m:g")) != -1) {
+    while ((c = getopt(argc, argv, "z:r:m:gdu:")) != -1) {
         switch(c) {
             case 'z':
                 args->cpuFreq = atoi(optarg);
@@ -42,12 +44,20 @@ void readArgs(Args *args, int argc, char *argv[]) {
             case 'g':
                 args->startRunning = true;
                 break;
+            case 'd':
+                args->terminalDetached = true;
+                break;
+            case 'u':
+                snprintf(args->uploadFile, sizeof(args->uploadFile), "%s", optarg);
+                break;
         }
     }
     printf("Cfg->CPU speed: %d MHz (change with -z <speed>)\n", args->cpuFreq);
     printf("Cfg->ROM file:  \"%s\" (change with -r <romfile>\n", args->romFile);
     printf("Cfg->MMC image: \"%s\" (change with -m <mmcimage>\n", args->mmcFile);
     printf("Cfg->Start:     %s (start running with -g)\n", args->startRunning ? "running" : "paused");
+    printf("Cfg->Upload:    \"%s\" (sent with Ctrl+Shift+U, change with -u <file>)\n", args->uploadFile);
+    printf("Cfg->Terminal:  %s (start detached with -d, toggle with Ctrl+Shift+D)\n", args->terminalDetached ? "detached" : "attached");
 }
 
 size_t loadFile(const char *filename, void *buffer, size_t maxSize) {
@@ -276,6 +286,8 @@ int main(int argc, char* argv[]) {
     if (!appInit(&app, &cpu.cpu, &vga, busClock, &bus, busReset, &bus, args.cpuFreq, videoFreq, sampleFreq, isLedActive, &outReg, &snesPad)) {
         return 1;
     }
+    appSetTerminalAttached(&app, !args.terminalDetached);
+    appSetUploadFile(&app, args.uploadFile[0] ? args.uploadFile : NULL);
     if (args.startRunning) {
         appResume(&app);
     }
