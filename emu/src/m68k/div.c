@@ -13,8 +13,8 @@ static int executeDivu(DecodedInstruction *di, M68kRegisters *registers, RwFunc 
     uint32_t dividend = registers->d[di->dst.xn];
 
     if (divisor == 0) {
-        // TODO raise exception
-        return -1;
+        di->exception = VECTOR_ZERO_DIVIDE;
+        return 0;
     } 
     uint32_t quotient = dividend / divisor;
     uint32_t remainder = dividend % divisor;

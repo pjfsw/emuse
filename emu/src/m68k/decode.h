@@ -29,6 +29,14 @@ typedef enum {
 #define AM_EXT_ABS_LONG 0x01
 #define AM_EXT_IMMEDIATE 0x04
 
+#define VECTOR_ADDRESS_ERROR        0x03
+#define VECTOR_ILLEGAL_INSTRUCTION  0x04
+#define VECTOR_ZERO_DIVIDE          0x05
+#define VECTOR_PRIVILEGE_VIOLATION  0x08
+#define VECTOR_LINE_A_EMULATOR      0x0a
+#define VECTOR_LINE_F_EMULATOR      0x0b
+#define NO_EXCEPTION                0xff
+
 typedef enum {
     IS_BYTE=0,
     IS_WORD,
@@ -79,6 +87,8 @@ struct DecodedInstruction {
     uint16_t condition;
     AluFunc aluFunc;
     ExecFunc execFunc;
+    uint32_t faultAddress;
+    uint8_t exception;    
 };
 
 

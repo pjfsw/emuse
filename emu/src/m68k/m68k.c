@@ -490,7 +490,6 @@ static void postReset(M68k *m68k) {
 }
 
 // Exception vector numbers
-#define VECTOR_ADDRESS_ERROR   3
 #define VECTOR_AUTOVECTOR_BASE 24   // Level 1-7 interrupt autovectors are 25-31
 
 // Special status word in the group 0 exception frame
@@ -590,6 +589,24 @@ static int handleInterrupt(M68k *cpu, uint8_t level) {
     return 44;
 }
 
+static int handleException(M68k *cpu,DecodedInstruction *di, uint32_t instructionPc) {
+    switch (di->exception) {
+        case VECTOR_ADDRESS_ERROR:
+            return 0;
+            // todo raiseGroup0Exception(cpu, VECTOR_ADDRESS_ERROR, di->);
+            break;
+        case VECTOR_ILLEGAL_INSTRUCTION:
+        case VECTOR_PRIVILEGE_VIOLATION:
+        case VECTOR_LINE_A_EMULATOR:
+        case VECTOR_LINE_F_EMULATOR:
+            raiseException(cpu, di->exception, instructionPc);  // the faulting instruction
+            return 34;
+        default:
+            raiseException(cpu, di->exception, cpu->registers.pc);
+            return 34;
+    }
+}
+
 static void showRegisters(M68kRegisters *registers) {
     printf("SR = %04x\n", registers->sr);
     for (int i = 0; i < 8; i++) {
@@ -600,6 +617,7 @@ static void showRegisters(M68kRegisters *registers) {
 int m68kClock(void *userdata) {
     M68k *cpu = (M68k *)userdata;    
     DecodedInstruction di;
+    di.exception = NO_EXCEPTION;
     if (cpu->cpu.crashed) {
         return -1;
     }
@@ -621,7 +639,7 @@ int m68kClock(void *userdata) {
         printf("### CPU crash at decode step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
         showRegisters(&cpu->registers);
         return - 1;
-    }
+    }    
     int execCycles = -1;
     if (di.execFunc != NULL) {        
         execCycles = di.execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
@@ -631,7 +649,10 @@ int m68kClock(void *userdata) {
         printf("### CPU crash at execution step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
         showRegisters(&cpu->registers);
         return -1;
+    } else if (di.exception != NO_EXCEPTION) {
+        return cycles + execCycles + handleException(cpu, &di, savedPc);
     }
+
     if (cpu->registers.pc & 1) {
         cpu->cpu.crashed =true;
         printf("### Emulator error, PC has odd value (last opcode $%04x, old PC=$%08x, new PC=$%08x\n",
