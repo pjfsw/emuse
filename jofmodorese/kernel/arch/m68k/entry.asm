@@ -11,7 +11,7 @@
     section "CODE",code
 
     xdef _start
-    xref _main
+    xref _kmain
 
 _start:
-    jmp _main
+    jmp _kmain

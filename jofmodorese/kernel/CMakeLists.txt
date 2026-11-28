@@ -17,10 +17,11 @@ set(ASM_SOURCES
 )
 
 set(C_SOURCES
-    src/main.c
+    src/kmain.c
     src/timer.c    
     src/task.c
     src/kstring.c
+    src/panic.c
 )
 
 set(ROOT_ASM_INCLUDE

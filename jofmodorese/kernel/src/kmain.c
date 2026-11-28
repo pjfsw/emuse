@@ -30,12 +30,22 @@ static void counter_task(void) {
     }
 }
 
-int main(void)
+static void crashing_task(void) {
+    uint8_t *ptr = 0x10000;
+    while (1) {
+        uint16_t *ptr2 = ptr;
+        bios_put_hex16(*ptr2);
+        ptr++;
+    }
+}
+
+int kmain(void)
 {
-    bios_puts("\r\nJofmodore SE kernel\r\n");
+    bios_puts("\r\nJofmodore SE kernel\r\n");    
     isr_configure();
     task_create("counter", counter_task);
     task_create("hello world", hello_world_task);
+    task_create("crashing task", crashing_task);
     task_start();
     return 0;
 }

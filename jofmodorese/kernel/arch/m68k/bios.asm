@@ -18,6 +18,7 @@
     xdef _bios_puts
     xdef _bios_getc
     xdef _bios_put_hex32
+    xdef _bios_put_hex16
 
 ;____________________________________________________________
 ;
@@ -52,3 +53,7 @@ _bios_getc:
 ; void bios_put_hex32(REG("d0") uint32_t value)
 _bios_put_hex32:
     BiosCall CONPUTHEX32
+
+; void bios_put_hex16(REG("d0") uint16_t value)
+_bios_put_hex16:
+    BiosCall CONPUTHEX16
