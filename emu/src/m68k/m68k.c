@@ -474,6 +474,67 @@ static int getCpuState(void *userdata, CpuState *gpRegisters, int maxLines, CpuS
     return actualLines;
 }
 
+/*
+ * Memory access wrappers. Instructions access memory through these,
+ * so that a word/long access to an odd address is detected in one
+ * place. The address error is only recorded here: the instruction
+ * runs to completion, then m68kClock raises the exception. As on a
+ * real 68000 the misaligned access is not performed, and neither is
+ * any later access of the same instruction (reads return 0).
+ *
+ * Accesses made while not executing (e.g. the disassembler) are passed
+ * through unchecked.
+ */
+static void recordAddressError(M68k *cpu, uint32_t address, bool read) {
+    if (!cpu->fault.pending) {
+        cpu->fault.pending = true;
+        cpu->fault.address = address;
+        cpu->fault.read = read;
+    }
+}
+
+static uint8_t checkedReadByte(void *userdata, uint32_t address) {
+    M68k *cpu = (M68k *)userdata;
+    if (cpu->executing && cpu->fault.pending) {
+        return 0;
+    }
+    return cpu->busRwFunc.rb(cpu->busUserdata, address);
+}
+
+static uint16_t checkedReadWord(void *userdata, uint32_t address) {
+    M68k *cpu = (M68k *)userdata;
+    if (cpu->executing) {
+        if (address & 1) {
+            recordAddressError(cpu, address, true);
+        }
+        if (cpu->fault.pending) {
+            return 0;
+        }
+    }
+    return cpu->busRwFunc.rw(cpu->busUserdata, address);
+}
+
+static void checkedWriteByte(void *userdata, uint32_t address, uint8_t byte) {
+    M68k *cpu = (M68k *)userdata;
+    if (cpu->executing && cpu->fault.pending) {
+        return;
+    }
+    cpu->busRwFunc.wb(cpu->busUserdata, address, byte);
+}
+
+static void checkedWriteWord(void *userdata, uint32_t address, uint16_t word) {
+    M68k *cpu = (M68k *)userdata;
+    if (cpu->executing) {
+        if (address & 1) {
+            recordAddressError(cpu, address, false);
+        }
+        if (cpu->fault.pending) {
+            return;
+        }
+    }
+    cpu->busRwFunc.ww(cpu->busUserdata, address, word);
+}
+
 static uint16_t readWord(M68k *m68k, uint32_t address) {
     return m68k->rwFunc.rw(m68k->readWriteUserdata, address);
 }
@@ -580,33 +641,6 @@ static void raiseGroup0Exception(M68k *cpu, uint8_t vector, uint32_t accessAddre
     jumpToVector(cpu, vector);
 }
 
-static int handleInterrupt(M68k *cpu, uint8_t level) {
-    M68kRegisters *regs = &cpu->registers;
-
-    raiseException(cpu, VECTOR_AUTOVECTOR_BASE + level, regs->pc);
-    regs->sr &= ~0x0700;        // Clear interrupt level
-    regs->sr |= level << 8;     // Set current level
-    return 44;
-}
-
-static int handleException(M68k *cpu,DecodedInstruction *di, uint32_t instructionPc) {
-    switch (di->exception) {
-        case VECTOR_ADDRESS_ERROR:
-            return 0;
-            // todo raiseGroup0Exception(cpu, VECTOR_ADDRESS_ERROR, di->);
-            break;
-        case VECTOR_ILLEGAL_INSTRUCTION:
-        case VECTOR_PRIVILEGE_VIOLATION:
-        case VECTOR_LINE_A_EMULATOR:
-        case VECTOR_LINE_F_EMULATOR:
-            raiseException(cpu, di->exception, instructionPc);  // the faulting instruction
-            return 34;
-        default:
-            raiseException(cpu, di->exception, cpu->registers.pc);
-            return 34;
-    }
-}
-
 static void showRegisters(M68kRegisters *registers) {
     printf("SR = %04x\n", registers->sr);
     for (int i = 0; i < 8; i++) {
@@ -614,10 +648,124 @@ static void showRegisters(M68kRegisters *registers) {
     }
 }
 
-int m68kClock(void *userdata) {
-    M68k *cpu = (M68k *)userdata;    
+/*
+ * Raise an address error. An address error while pushing its own frame
+ * (odd supervisor stack pointer) is a double fault: a real 68000 halts.
+ * Returns the cycles, or -1 if the CPU halted.
+ */
+static int raiseAddressError(M68k *cpu, uint32_t address, bool read, bool instructionFetch,
+    uint16_t instructionRegister, uint32_t pcToPush) {
+    cpu->fault.pending = false;
+    raiseGroup0Exception(cpu, VECTOR_ADDRESS_ERROR, address, read, instructionFetch, instructionRegister, pcToPush);
+    if (cpu->fault.pending) {
+        cpu->cpu.crashed = true;
+        printf("### CPU halted: double bus fault (address error at $%08x during exception processing)\n",
+            cpu->fault.address);
+        showRegisters(&cpu->registers);
+        return -1;
+    }
+    return 50;
+}
+
+// An address error while pushing the frame of a group 1/2 exception or an
+// interrupt (odd supervisor stack pointer) starts address error processing
+static int checkExceptionFault(M68k *cpu, int cycles, uint16_t instructionRegister) {
+    if (cpu->fault.pending) {
+        return raiseAddressError(cpu, cpu->fault.address, cpu->fault.read, false, instructionRegister,
+            cpu->registers.pc);
+    }
+    return cycles;
+}
+
+static int handleInterrupt(M68k *cpu, uint8_t level) {
+    M68kRegisters *regs = &cpu->registers;
+
+    raiseException(cpu, VECTOR_AUTOVECTOR_BASE + level, regs->pc);
+    regs->sr &= ~0x0700;        // Clear interrupt level
+    regs->sr |= level << 8;     // Set current level
+    return checkExceptionFault(cpu, 44, cpu->lastOpcode);
+}
+
+/*
+ * Raise the group 1/2 exception requested by an instruction. Returns the
+ * cycles of the exception processing (the 4 cycles of the opcode fetch
+ * are already counted), or -1 if the CPU halted.
+ */
+static int handleException(M68k *cpu, DecodedInstruction *di, uint32_t instructionPc) {
+    int cycles;
+    switch (di->exception) {
+        case VECTOR_ILLEGAL_INSTRUCTION:
+        case VECTOR_PRIVILEGE_VIOLATION:
+        case VECTOR_LINE_A_EMULATOR:
+        case VECTOR_LINE_F_EMULATOR:
+            raiseException(cpu, di->exception, instructionPc);      // The faulting instruction
+            cycles = 30;
+            break;
+        case VECTOR_ZERO_DIVIDE:
+            raiseException(cpu, di->exception, cpu->registers.pc);  // The next instruction
+            cycles = 34;
+            break;
+        default:
+            raiseException(cpu, di->exception, cpu->registers.pc);  // The next instruction
+            cycles = 30;
+            break;
+    }
+    return checkExceptionFault(cpu, cycles, di->opcode);
+}
+
+// Execute one instruction, or start processing of an interrupt or exception
+static int step(M68k *cpu) {
     DecodedInstruction di;
     di.exception = NO_EXCEPTION;
+
+    uint8_t level = cpu->ilf(cpu->ilfUserdata);
+    uint8_t threshold = (cpu->registers.sr >> 8) & 7;
+    if ((level > cpu->interruptLevel) & (level > threshold)) {
+        return handleInterrupt(cpu, level);
+    }
+
+    uint32_t savedPc = cpu->registers.pc;
+    if (savedPc & 1) {
+        // Instruction fetch from an odd address, e.g. after a jump
+        return raiseAddressError(cpu, savedPc, true, true, cpu->lastOpcode, savedPc);
+    }
+
+    int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
+    if (cycles <= 0) {
+        cpu->cpu.crashed = true;
+        printf("### CPU crash at decode step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
+        showRegisters(&cpu->registers);
+        return - 1;
+    }
+    int execCycles = -1;
+    if (di.execFunc != NULL) {
+        execCycles = di.execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
+    }
+    if (execCycles < 0) {
+        cpu->cpu.crashed = true;
+        printf("### CPU crash at execution step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
+        showRegisters(&cpu->registers);
+        return -1;
+    }
+    cpu->lastOpcode = di.opcode;
+    cycles += execCycles;
+
+    int exceptionCycles = 0;
+    if (cpu->fault.pending) {
+        // The instruction made a word/long access to an odd address
+        exceptionCycles = raiseAddressError(cpu, cpu->fault.address, cpu->fault.read, false, di.opcode,
+            cpu->registers.pc);
+    } else if (di.exception != NO_EXCEPTION) {
+        exceptionCycles = handleException(cpu, &di, savedPc);
+    }
+    if (exceptionCycles < 0) {
+        return -1;
+    }
+    return cycles + exceptionCycles;
+}
+
+int m68kClock(void *userdata) {
+    M68k *cpu = (M68k *)userdata;
     if (cpu->cpu.crashed) {
         return -1;
     }
@@ -626,43 +774,9 @@ int m68kClock(void *userdata) {
         cpu->resetState = false;
         return 0;
     }
-    uint8_t level = cpu->ilf(cpu->ilfUserdata);
-    uint8_t threshold = (cpu->registers.sr >> 8) & 7;
-    if ((level > cpu->interruptLevel) & (level > threshold)) {
-        return handleInterrupt(cpu, level);
-    }
-
-    uint32_t savedPc = cpu->registers.pc;
-    int cycles = decode(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
-    if (cycles <= 0) {
-        cpu->cpu.crashed = true;
-        printf("### CPU crash at decode step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
-        showRegisters(&cpu->registers);
-        return - 1;
-    }    
-    int execCycles = -1;
-    if (di.execFunc != NULL) {        
-        execCycles = di.execFunc(&di, &cpu->registers, &cpu->rwFunc, cpu->readWriteUserdata);
-    }
-    if (execCycles < 0) {
-        cpu->cpu.crashed = true;
-        printf("### CPU crash at execution step (opcode $%04x, PC=$%08x)\n", di.opcode, savedPc);
-        showRegisters(&cpu->registers);
-        return -1;
-    } else if (di.exception != NO_EXCEPTION) {
-        return cycles + execCycles + handleException(cpu, &di, savedPc);
-    }
-
-    if (cpu->registers.pc & 1) {
-        cpu->cpu.crashed =true;
-        printf("### Emulator error, PC has odd value (last opcode $%04x, old PC=$%08x, new PC=$%08x\n",
-            di.opcode,
-            savedPc,
-            cpu->registers.pc);
-        showRegisters(&cpu->registers);
-        return -1;
-    }
-    cycles += execCycles;
+    cpu->executing = true;
+    int cycles = step(cpu);
+    cpu->executing = false;
     return cycles;
 }
 
@@ -671,8 +785,13 @@ void m68kInit(M68k *m68k, RwFunc rwFunc, void *readWriteUserdata, InterruptLevel
     m68k->cpu.cpuStateFunc = getCpuState;
     m68k->cpu.disassemblyFunc = getDisassembly;
     m68k->cpu.probeUserdata = m68k;
-    m68k->rwFunc = rwFunc;
-    m68k->readWriteUserdata = readWriteUserdata;
+    m68k->busRwFunc = rwFunc;
+    m68k->busUserdata = readWriteUserdata;
+    m68k->rwFunc.rb = checkedReadByte;
+    m68k->rwFunc.rw = checkedReadWord;
+    m68k->rwFunc.wb = checkedWriteByte;
+    m68k->rwFunc.ww = checkedWriteWord;
+    m68k->readWriteUserdata = m68k;
     m68k->ilf = ilf;
     m68k->ilfUserdata = ilfUserdata;
 }

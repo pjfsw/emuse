@@ -3,8 +3,8 @@
 
 static int executeRte(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     if (!getFlag(registers, SR_FLAGS_S)) {
-        // Add exception later
-        return -1;
+        di->exception = VECTOR_PRIVILEGE_VIOLATION;
+        return 0;
     }
 
     registers->sr = pop(registers, rwFunc, readWriteUserdata);

@@ -9,6 +9,7 @@
 #include "dbcc.h"
 #include "div.h"
 #include "ext.h"
+#include "illegal.h"
 #include "jump.h"
 #include "lea.h"
 #include "move.h"
@@ -141,6 +142,10 @@ typedef struct {
 // LSL !
 
 static const DecodeRule rules[] = {
+    // Must come before TST, which matches the same opcode
+    { 0xffff, 0x4afc, decodeIllegal, IF_IMPLIED },
+    { 0xf000, 0xa000, decodeLineA, IF_IMPLIED },
+    { 0xf000, 0xf000, decodeLineF, IF_IMPLIED },
     // Must come before ORI/ANDI/EORI, which match the same opcodes
     { 0xffff, 0x003c, decodeOriCcr,  IF_TO_CCR },
     { 0xffff, 0x023c, decodeAndiCcr, IF_TO_CCR },

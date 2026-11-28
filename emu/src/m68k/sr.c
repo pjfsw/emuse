@@ -33,8 +33,8 @@ static int executeToCcr(DecodedInstruction *di, M68kRegisters *registers, RwFunc
 
 static int executeToSr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     if (!getFlag(registers, SR_FLAGS_S)) {
-        // TODO!! Throw privilege violation exception (same as MOVE to SR)
-        return -1;
+        di->exception = VECTOR_PRIVILEGE_VIOLATION;
+        return 0;
     }
     setSr(registers, applyLogicOp(di->opcode, registers->sr, di->src.immediate));
     return 12; // 20 cycles in total

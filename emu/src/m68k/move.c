@@ -67,17 +67,16 @@ int decodeMoveq(
 }
 
 static int executeMoveToSr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
+    if (!getFlag(registers, SR_FLAGS_S)) {
+        di->exception = VECTOR_PRIVILEGE_VIOLATION;    // Before the source operand is read
+        return 0;
+    }
     uint32_t value;
     int cycleCount = readSource(di, registers, &di->src, rwFunc, readWriteUserdata, &value);
     if (cycleCount < 0) {
         return -1;
     }
-    if (getFlag(registers, SR_FLAGS_S)) {
-        setSr(registers, value);
-    } else {
-        // TODO!! Throw exception
-        return -1;
-    }
+    setSr(registers, value);
     return cycleCount + 12;
 }
 
@@ -98,7 +97,8 @@ int decodeMoveToSr(uint16_t opcode, DecodedInstruction *di, M68kRegisters *regis
 static int executeMoveFromSr(DecodedInstruction *di, M68kRegisters *registers, RwFunc *rwFunc, void *readWriteUserdata) {
     uint32_t value;
 
-    int cycleCount = writeDest(di, registers, rwFunc, readWriteUserdata, registers->sr);
+    // MOVE from SR does not affect the condition codes
+    int cycleCount = writeDestNoFlags(di, registers, rwFunc, readWriteUserdata, registers->sr);
     if (cycleCount < 0) {
         return -1;
     }

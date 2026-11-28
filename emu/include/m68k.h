@@ -31,11 +31,23 @@ typedef struct {
 
 typedef uint8_t (*InterruptLevelFunc)(void *user_data);
 
+// Address error recorded during the current instruction (see m68k.c)
+typedef struct {
+    bool pending;
+    uint32_t address;
+    bool read;
+} M68kFault;
+
 typedef struct {
     Cpu cpu;
     M68kRegisters registers;
-    RwFunc rwFunc;
-    void *readWriteUserdata;
+    RwFunc rwFunc;              // Used by instructions: alignment checking wrappers around busRwFunc
+    void *readWriteUserdata;    // The M68k itself, for the wrappers
+    RwFunc busRwFunc;           // Bus access provided to m68kInit
+    void *busUserdata;
+    M68kFault fault;
+    bool executing;             // Only accesses made while executing can cause an address error
+    uint16_t lastOpcode;        // Instruction register for an address error on instruction fetch
     InterruptLevelFunc ilf;
     void *ilfUserdata;
     DisassemblyCache disassemblyCache[DISASSEMBLY_CACHE_SIZE];

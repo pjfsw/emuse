@@ -87,8 +87,7 @@ struct DecodedInstruction {
     uint16_t condition;
     AluFunc aluFunc;
     ExecFunc execFunc;
-    uint32_t faultAddress;
-    uint8_t exception;    
+    uint8_t exception;      // Vector raised after execution, NO_EXCEPTION if none
 };
 
 
